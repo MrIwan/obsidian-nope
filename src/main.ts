@@ -1,5 +1,6 @@
 import { Plugin } from 'obsidian';
-import { DEFAULT_SETTINGS, ObsiPrintSettings, ObsiPrintSettingTab } from './settings';
+import { DEFAULT_SETTINGS, ObsiPrintSettingTab } from './settings';
+import type { ObsiPrintSettings } from './types';
 
 export default class ObsiPrintPlugin extends Plugin {
 	settings!: ObsiPrintSettings;

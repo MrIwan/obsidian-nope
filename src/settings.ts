@@ -1,12 +1,6 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type ObsiPrintPlugin from './main';
-
-export interface ObsiPrintSettings {
-	/** Absolute or vault-relative path where the final PDF is copied after a successful build. */
-	outputPath: string;
-	/** Open the generated PDF automatically after a successful export. */
-	autoOpenPdf: boolean;
-}
+import type { ObsiPrintSettings } from './types';
 
 export const DEFAULT_SETTINGS: ObsiPrintSettings = {
 	outputPath: '',
