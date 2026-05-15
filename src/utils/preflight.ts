@@ -1,6 +1,6 @@
 import { App } from 'obsidian';
 import type { PreflightResults, PreflightCheckResult } from '../types';
-import { DOCKER_BIN, DOCKER_IMAGE_NAME } from './docker';
+import { DOCKER_BIN, getDockerEnv } from './docker';
 
 function execFilePromise(cmd: string, args: string[], timeout = 5000): Promise<{ stdout: string }>
 {
@@ -9,7 +9,7 @@ function execFilePromise(cmd: string, args: string[], timeout = 5000): Promise<{
 	const { execFile } = child_process as typeof import('child_process');
 
 	return new Promise((resolve, reject) => {
-		const proc = execFile(cmd, args, { timeout, windowsHide: true, env: process.env }, (err: any, stdout: string) => {
+		const proc = execFile(cmd, args, { timeout, windowsHide: true, env: getDockerEnv() }, (err: any, stdout: string) => {
 			if (err) return reject(err);
 			resolve({ stdout });
 		});
@@ -38,15 +38,6 @@ export async function runPreflightChecks(_app: App): Promise<PreflightResults> {
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
 		checks.push({ name: 'Docker daemon running', passed: false, message: `Daemon unreachable: ${msg}` });
-	}
-
-	// Docker image
-	try {
-		await execFilePromise(DOCKER_BIN, ['image', 'inspect', DOCKER_IMAGE_NAME], 5000);
-		checks.push({ name: `Docker image "${DOCKER_IMAGE_NAME}" exists`, passed: true, message: `Image ${DOCKER_IMAGE_NAME} found` });
-	} catch (e) {
-		const msg = e instanceof Error ? e.message : String(e);
-		checks.push({ name: `Docker image "${DOCKER_IMAGE_NAME}" exists`, passed: false, message: `Image not found: ${msg}` });
 	}
 
 	return {

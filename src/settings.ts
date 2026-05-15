@@ -1,7 +1,9 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, ButtonComponent, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type ObsiPrintPlugin from './main';
 import type { ObsiPrintSettings, PreflightResults } from './types';
 import { runPreflightChecks } from './utils/preflight';
+import { DOCKER_IMAGE_NAME, buildImage, imageExists } from './utils/docker';
+import { getPluginAbsoluteDir } from './utils/paths';
 
 export const DEFAULT_SETTINGS: ObsiPrintSettings = {
 	outputPath: '',
@@ -21,6 +23,8 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		containerEl.createEl('h2', { text: 'Obsi Print' });
+
+		// ===== Output section =====
 		containerEl.createEl('h3', { text: 'Output' });
 
 		new Setting(containerEl)
@@ -48,30 +52,91 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 				});
 			});
 
-		// Simple example Preflight runner (returns mock/example results)
-		containerEl.createEl('h3', { text: 'Preflight (example)' });
+		// ===== Preflight section =====
+		containerEl.createEl('h3', { text: 'Preflight' });
 
-		const resultsDiv = containerEl.createEl('div');
+		const preflightResultsDiv = containerEl.createEl('div');
 
-		new Setting(containerEl).addButton((btn) => {
-			btn.setButtonText('Run Preflight (Example)').onClick(async () => {
-				btn.setButtonText('Checking...');
-				try {
-					const res: PreflightResults = await runPreflightChecks(this.app);
-					resultsDiv.innerHTML = '';
-					for (const c of res.checks) {
-						const row = resultsDiv.createEl('div');
-						row.createEl('strong', { text: c.passed ? '✓ ' : '✗ ' });
-						row.createEl('span', { text: c.name });
-						row.createEl('div', { text: c.message });
+		const renderPreflightResults = (res: PreflightResults) => {
+			preflightResultsDiv.empty();
+			for (const c of res.checks) {
+				const row = preflightResultsDiv.createEl('div');
+				row.createEl('strong', { text: c.passed ? '✓ ' : '✗ ' });
+				row.createEl('span', { text: c.name });
+				row.createEl('div', { text: c.message });
+			}
+		};
+
+		new Setting(containerEl)
+			.setName('System checks')
+			.setDesc('Verify Docker CLI and daemon are available.')
+			.addButton((btn) => {
+				btn.setButtonText('Re-check').onClick(async () => {
+					btn.setDisabled(true);
+					btn.setButtonText('Checking…');
+					try {
+						const res = await runPreflightChecks(this.app);
+						renderPreflightResults(res);
+					} catch (e) {
+						preflightResultsDiv.setText(
+							`Error: ${e instanceof Error ? e.message : String(e)}`,
+						);
+					} finally {
+						btn.setDisabled(false);
+						btn.setButtonText('Re-check');
 					}
-					console.log('Preflight results:', res);
-				} catch (e) {
-					resultsDiv.innerText = `Error running preflight: ${e instanceof Error ? e.message : String(e)}`;
-				} finally {
-					btn.setButtonText('Run Preflight (Example)');
-				}
+				});
 			});
-		});
+
+		// Auto-run preflight when the tab opens.
+		runPreflightChecks(this.app)
+			.then(renderPreflightResults)
+			.catch(() => {
+				/* errors will surface when user clicks Re-check */
+			});
+
+		// ===== Setup section =====
+		containerEl.createEl('h3', { text: 'Setup' });
+
+		const setupStatusDiv = containerEl.createEl('div', { text: 'Checking image…' });
+		let buildBtnRef: ButtonComponent | null = null;
+
+		const refreshImageStatus = async () => {
+			const exists = await imageExists();
+			if (exists) {
+				setupStatusDiv.setText(`✓ Docker image "${DOCKER_IMAGE_NAME}" is built.`);
+				buildBtnRef?.setButtonText('Rebuild image');
+			} else {
+				setupStatusDiv.setText(`✗ Docker image "${DOCKER_IMAGE_NAME}" is not built yet.`);
+				buildBtnRef?.setButtonText('Build image');
+			}
+		};
+
+		new Setting(containerEl)
+			.setName('Docker image')
+			.setDesc(
+				'Build the pipeline image. First build can take 5–15 minutes. ' +
+					'Full log is written to pipeline/build/last-build.log.',
+			)
+			.addButton((btn) => {
+				buildBtnRef = btn;
+				btn.setButtonText('Build image').onClick(async () => {
+					btn.setDisabled(true);
+					btn.setButtonText('Building… (this may take 5–15 minutes)');
+					try {
+						const pluginDir = getPluginAbsoluteDir(this.plugin);
+						await buildImage(pluginDir);
+						new Notice('Docker image build complete.');
+					} catch (e) {
+						const msg = e instanceof Error ? e.message : String(e);
+						new Notice(`Build failed: ${msg}`);
+					} finally {
+						btn.setDisabled(false);
+						await refreshImageStatus();
+					}
+				});
+			});
+
+		refreshImageStatus();
 	}
 }
