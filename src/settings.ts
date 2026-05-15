@@ -124,7 +124,7 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 					btn.setButtonText('Building… (this may take 5–15 minutes)');
 					try {
 						const pluginDir = getPluginAbsoluteDir(this.plugin);
-						await buildImage(pluginDir);
+						await buildImage(pluginDir, true);
 						new Notice('Docker image build complete.');
 					} catch (e) {
 						const msg = e instanceof Error ? e.message : String(e);

@@ -38,7 +38,7 @@ export async function imageExists(): Promise<boolean> {
 // building the image, can take a while
 // command: docker compose build --no-cache
 // logging to build/last-build.log for debugging and user feedback on failures
-export async function buildImage(pluginDir: string): Promise<void> {
+export async function buildImage(pluginDir: string, noCache: boolean = false): Promise<void> {
 	const pipelineDir = join(pluginDir, 'pipeline');
 	const buildDir = join(pipelineDir, 'build');
 	const logFile = join(buildDir, 'last-build.log');
@@ -48,7 +48,7 @@ export async function buildImage(pluginDir: string): Promise<void> {
 
 	return new Promise<void>((resolve, reject) => {
 		let output = '';
-		const proc = spawn(DOCKER_BIN, ['compose', 'build', '--no-cache'], {
+		const proc = spawn(DOCKER_BIN, ['compose', 'build', noCache ? '--no-cache' : undefined].filter(Boolean) as string[], {
 			cwd: pipelineDir,
 			env: getDockerEnv(),
 			windowsHide: true,

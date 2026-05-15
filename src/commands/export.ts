@@ -3,7 +3,7 @@ import { shell } from 'electron';
 import { copyFileSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 import type ObsiPrintPlugin from '../main';
-import { imageExists, runPipeline } from '../utils/docker';
+import { buildImage, imageExists, runPipeline } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '../utils/paths';
 
 export function registerExportCommand(plugin: ObsiPrintPlugin): void {
@@ -25,7 +25,15 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 	}
 
 	// Image must be built.
+	const pluginDir = getPluginAbsoluteDir(plugin);
 	if (!(await imageExists())) {
+		try {
+			await buildImage(pluginDir);
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			new Notice(`Failed to build Docker image. Try to build in the plugin settings. ${msg}`, 10000);
+			return;
+		}
 		new Notice(
 			'Image not built yet — build it in the plugin settings.',
 			8000,
@@ -34,7 +42,6 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 	}
 
 	// Resolve paths.
-	const pluginDir = getPluginAbsoluteDir(plugin);
 	const vaultPath = getVaultAbsolutePath(plugin.app);
 	const sourceAbs = join(vaultPath, file.path);
 	const destPath = resolveOutputPath(plugin.settings.outputPath, sourceAbs, vaultPath);
