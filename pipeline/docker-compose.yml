@@ -1,0 +1,10 @@
+services:
+  pipeline:
+    build: .
+    image: obsidian2pdf:latest
+    entrypoint: /app/scripts/build.sh
+    volumes:
+      - ./app:/app:ro
+      - ${VAULT_PATH}:/vault:ro
+      - ./build:/build
+    working_dir: /build

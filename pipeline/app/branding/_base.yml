@@ -1,0 +1,22 @@
+# Language settings
+lang: de
+figureTitle: "Abbildung"
+tableTitle: "Tabelle"
+figPrefix: "Abb."
+tblPrefix: "Tab."
+eqnPrefix: "Gl."
+
+# Toc settings
+toc: true
+toc-own-page: true
+toc-title: "Inhaltsverzeichnis"
+toc-depth: 3
+
+# Title page settings
+titlepage: true
+titlepage-color: "FFFFFF"
+titlepage-text-color: "1A1A1A"
+titlepage-background: /app/assets/example-bg.png
+titlepage-logo: /app/assets/example-logo.png
+header-left: |
+  \raisebox{-0.3\height}{\includegraphics[height=0.7cm]{/app/assets/example-logo.png}}
