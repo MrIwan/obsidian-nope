@@ -48,13 +48,9 @@ export async function buildImage(pluginDir: string): Promise<void> {
 	const buildDir = join(pipelineDir, 'build');
 	const logFile = join(buildDir, 'last-build.log');
 
-	// Make sure the build dir exists so we can write the log even on failure.
-	try {
-		mkdirSync(buildDir, { recursive: true });
-	} catch {
-		// no logs
-		console.log('Failed to create build directory.');
-	}
+	// Prepare the build dir. If this fails the plugin is in a broken state
+	// (wrong plugin path, read-only filesystem, disk full) — let it crash.
+	mkdirSync(buildDir, { recursive: true });
 
 	return new Promise<void>((resolve, reject) => {
 		let output = '';
@@ -72,20 +68,12 @@ export async function buildImage(pluginDir: string): Promise<void> {
 		});
 
 		proc.on('error', (err: Error) => {
-			try {
-				writeFileSync(logFile, `Failed to spawn process: ${err.message}\n\n${output}`);
-			} catch {
-				// ignore log-write errors
-			}
+			writeFileSync(logFile, `Failed to spawn process: ${err.message}\n\n${output}`);
 			reject(err);
 		});
 
 		proc.on('close', (code: number | null) => {
-			try {
-				writeFileSync(logFile, output);
-			} catch {
-				// ignore log-write errors
-			}
+			writeFileSync(logFile, output);
 			if (code === 0) {
 				resolve();
 			} else {
