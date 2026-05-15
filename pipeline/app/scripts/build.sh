@@ -52,10 +52,6 @@ cd "$WORK"
 echo ">>> latexmk (pdflatex + makeglossaries, so oft bis stabil)"
 latexmk -pdf -interaction=nonstopmode -r /app/scripts/latexmkrc "$BASE.tex"
 
-
-# Copy final PDF to /build
-cp "$WORK/$BASE.pdf" "/build/$BASE.pdf"
-
 echo ""
 echo ">>> Done: build/$BASE.pdf"
 echo ">>> Intermediates: build/$BASE/"

@@ -16,7 +16,7 @@ toc-depth: 3
 titlepage: true
 titlepage-color: "FFFFFF"
 titlepage-text-color: "1A1A1A"
-titlepage-background: /app/assets/example-bg.png
-titlepage-logo: /app/assets/example-logo.png
+titlepage-background: /app/assets/bg.png
+titlepage-logo: /app/assets/logo.png
 header-left: |
-  \raisebox{-0.3\height}{\includegraphics[height=0.7cm]{/app/assets/example-logo.png}}
+  \raisebox{-0.3\height}{\includegraphics[height=0.7cm]{/app/assets/logo-horizontal.png}}

@@ -1,6 +1,7 @@
 import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, ObsiPrintSettingTab } from './settings';
 import type { ObsiPrintSettings } from './types';
+import { registerExportCommand } from './commands/export';
 
 export default class ObsiPrintPlugin extends Plugin {
 	settings!: ObsiPrintSettings;
@@ -8,6 +9,7 @@ export default class ObsiPrintPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new ObsiPrintSettingTab(this.app, this));
+		registerExportCommand(this);
 	}
 
 	onunload() {

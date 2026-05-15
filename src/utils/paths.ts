@@ -1,13 +1,8 @@
-import { Plugin } from 'obsidian';
-import { join } from 'path';
+import { App, Plugin } from 'obsidian';
+import { homedir } from 'os';
+import { basename, dirname, join } from 'path';
 
-/**
- * Returns the absolute filesystem path to this plugin's folder
- * (e.g. /Users/.../Vault/.obsidian/plugins/obsi-print).
- *
- * Combines the vault base path with manifest.dir when available, falls back
- * to constructing the standard .obsidian/plugins/<id> path.
- */
+// Plugin Directory Resolution
 export function getPluginAbsoluteDir(plugin: Plugin): string {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const adapter = plugin.app.vault.adapter as any;
@@ -16,13 +11,54 @@ export function getPluginAbsoluteDir(plugin: Plugin): string {
 		throw new Error('Cannot resolve vault base path from adapter');
 	}
 
-	// manifest.dir is provided by Obsidian at runtime but not in the public
-	// type definitions. It is vault-relative (e.g. ".obsidian/plugins/obsi-print").
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const relDir: string | undefined = (plugin.manifest as any).dir;
 	if (relDir) {
 		return join(basePath, relDir);
 	}
 
 	return join(basePath, '.obsidian', 'plugins', plugin.manifest.id);
+}
+
+// Vault Path Resolution
+export function getVaultAbsolutePath(app: App): string {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const adapter = app.vault.adapter as any;
+	const basePath: string | undefined = adapter.basePath ?? adapter.getBasePath?.();
+	if (!basePath) {
+		throw new Error('Cannot resolve vault base path from adapter');
+	}
+	return basePath;
+}
+
+// Output Path Resolution
+export function resolveOutputPath(
+	outputPath: string,
+	sourceNoteAbsPath: string,
+	vaultBasePath: string,
+): string {
+	const sourceBase = basename(sourceNoteAbsPath).replace(/\.md$/i, '');
+	const pdfFilename = `${sourceBase}.pdf`;
+
+	const trimmed = outputPath.trim();
+
+	// Empty → place next to source note.
+	if (!trimmed) {
+		return join(dirname(sourceNoteAbsPath), pdfFilename);
+	}
+
+	// Resolve the "base" path (folder OR explicit file).
+	let resolved: string;
+	if (trimmed.startsWith('~/') || trimmed === '~') {
+		resolved = join(homedir(), trimmed.slice(1).replace(/^\//, ''));
+	} else if (trimmed.startsWith('/')) {
+		resolved = trimmed;
+	} else {
+		resolved = join(vaultBasePath, trimmed);
+	}
+
+	// File-vs-folder heuristic.
+	if (/\.pdf$/i.test(resolved)) {
+		return resolved;
+	}
+	return join(resolved, pdfFilename);
 }

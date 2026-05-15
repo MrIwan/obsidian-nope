@@ -30,7 +30,7 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Output path')
 			.setDesc(
-				'Leave empty to place the PDF next to the source note. Paths without leading / are vault-relative. Paths starting with / or ~/ are treated as absolute.',
+				'empty = same as source note\nwithout leading "/" = relative to vault root\n leading "/" or "~/" absolute paths',
 			)
 			.addText((text) => {
 				text
@@ -115,8 +115,7 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Docker image')
 			.setDesc(
-				'Build the pipeline image. First build can take 5–15 minutes. ' +
-					'Full log is written to pipeline/build/last-build.log.',
+				'Build the pipeline image. log is written to pipeline/build/last-build.log in Plugin folder.',
 			)
 			.addButton((btn) => {
 				buildBtnRef = btn;

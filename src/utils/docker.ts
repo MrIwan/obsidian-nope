@@ -6,7 +6,7 @@ import { join } from 'path';
 export const DOCKER_BIN = '/usr/local/bin/docker';
 export const DOCKER_IMAGE_NAME = 'obsidian2pdf:latest';
 
-// Check for the Docker binary
+// Check for the Docker binary ( ony tested on macOS )
 export function getDockerEnv(): NodeJS.ProcessEnv {
 	const extraPaths = [
 		'/usr/local/bin',
@@ -19,7 +19,7 @@ export function getDockerEnv(): NodeJS.ProcessEnv {
 }
 
 // Check if the Docker image exists
-// command: docker image inspect obsidian2pdf:latest
+// command: docker image inspect DOCKER_IMAGE_NAME
 export async function imageExists(): Promise<boolean> {
 	const child_process = require('child_process');
 	const { execFile } = child_process as typeof import('child_process');
@@ -39,6 +39,7 @@ export async function imageExists(): Promise<boolean> {
 }
 
 // building the image, can take a while
+// command: docker compose build
 // logging to build/last-build.log for debugging and user feedback on failures
 export async function buildImage(pluginDir: string): Promise<void> {
 	const child_process = require('child_process');
@@ -48,13 +49,12 @@ export async function buildImage(pluginDir: string): Promise<void> {
 	const buildDir = join(pipelineDir, 'build');
 	const logFile = join(buildDir, 'last-build.log');
 
-	// Prepare the build dir. If this fails the plugin is in a broken state
-	// (wrong plugin path, read-only filesystem, disk full) — let it crash.
+	// Prepare the build dir.
 	mkdirSync(buildDir, { recursive: true });
 
 	return new Promise<void>((resolve, reject) => {
 		let output = '';
-		const proc = spawn(DOCKER_BIN, ['compose', 'build'], {
+		const proc = spawn(DOCKER_BIN, ['compose', 'build', '--no-cache'], {
 			cwd: pipelineDir,
 			env: getDockerEnv(),
 			windowsHide: true,
@@ -79,6 +79,62 @@ export async function buildImage(pluginDir: string): Promise<void> {
 			} else {
 				reject(
 					new Error(`docker compose build exited with code ${code}. See log: ${logFile}`),
+				);
+			}
+		});
+	});
+}
+
+// Runs the pipeline
+// command: docker compose run --rm pipeline <mdRelPath>
+export async function runPipeline(
+	pluginDir: string,
+	vaultPath: string,
+	mdRelPath: string,
+): Promise<string> {
+	const child_process = require('child_process');
+	const { spawn } = child_process as typeof import('child_process');
+
+	const pipelineDir = join(pluginDir, 'pipeline');
+	const buildDir = join(pipelineDir, 'build');
+	const logFile = join(buildDir, 'last_latex_run.log');
+
+	// Pipeline writes its output PDF to /build/<basename>/<basename>.pdf inside the container, which maps to <pluginDir>/pipeline/build/... on host.
+	const baseName = mdRelPath
+		.split('/')
+		.pop()!
+		.replace(/\.md$/i, '');
+	const pdfPath = join(buildDir, baseName, `${baseName}.pdf`);
+
+	mkdirSync(buildDir, { recursive: true });
+
+	return new Promise<string>((resolve, reject) => {
+		let output = '';
+		const proc = spawn(DOCKER_BIN, ['compose', 'run', '--rm', 'pipeline', mdRelPath], {
+			cwd: pipelineDir,
+			env: { ...getDockerEnv(), VAULT_PATH: vaultPath },
+			windowsHide: true,
+		});
+
+		proc.stdout?.on('data', (chunk: Buffer) => {
+			output += chunk.toString();
+		});
+		proc.stderr?.on('data', (chunk: Buffer) => {
+			output += chunk.toString();
+		});
+
+		proc.on('error', (err: Error) => {
+			writeFileSync(logFile, `Failed to spawn process: ${err.message}\n\n${output}`);
+			reject(err);
+		});
+
+		proc.on('close', (code: number | null) => {
+			writeFileSync(logFile, output);
+			if (code === 0) {
+				resolve(pdfPath);
+			} else {
+				reject(
+					new Error(`docker compose run exited with code ${code}. See log: ${logFile}`),
 				);
 			}
 		});
