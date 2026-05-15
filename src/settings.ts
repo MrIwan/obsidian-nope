@@ -22,15 +22,15 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'Obsi Print' });
-
 		// ===== Output section =====
-		containerEl.createEl('h3', { text: 'Output' });
+		new Setting(containerEl).setName('Output').setHeading();
 
 		new Setting(containerEl)
 			.setName('Output path')
 			.setDesc(
-				'empty = same as source note\nwithout leading "/" = relative to vault root\n leading "/" or "~/" absolute paths',
+				'Empty = same folder as the source note. ' +
+					'Without leading "/" → relative to the vault root. ' +
+					'Leading "/" or "~/" → absolute path.',
 			)
 			.addText((text) => {
 				text
@@ -53,7 +53,7 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 			});
 
 		// ===== Preflight section =====
-		containerEl.createEl('h3', { text: 'Preflight' });
+		new Setting(containerEl).setName('Preflight').setHeading();
 
 		const preflightResultsDiv = containerEl.createEl('div');
 
@@ -69,7 +69,7 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('System checks')
-			.setDesc('Verify Docker CLI and daemon are available.')
+			.setDesc('Verify that the docker CLI and daemon are available.')
 			.addButton((btn) => {
 				btn.setButtonText('Re-check').onClick(async () => {
 					btn.setDisabled(true);
@@ -89,14 +89,14 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 			});
 
 		// Auto-run preflight when the tab opens.
-		runPreflightChecks(this.app)
+		void runPreflightChecks(this.app)
 			.then(renderPreflightResults)
 			.catch(() => {
 				/* errors will surface when user clicks Re-check */
 			});
 
 		// ===== Setup section =====
-		containerEl.createEl('h3', { text: 'Setup' });
+		new Setting(containerEl).setName('Setup').setHeading();
 
 		const setupStatusDiv = containerEl.createEl('div', { text: 'Checking image…' });
 		let buildBtnRef: ButtonComponent | null = null;
@@ -136,6 +136,6 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 				});
 			});
 
-		refreshImageStatus();
+		void refreshImageStatus();
 	}
 }

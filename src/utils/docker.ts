@@ -1,5 +1,6 @@
 // Docker-compose invocation wrapper and shared docker constants.
 
+import { execFile, spawn } from 'child_process';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
@@ -7,7 +8,7 @@ export const DOCKER_BIN = '/usr/local/bin/docker';
 export const DOCKER_IMAGE_NAME = 'obsidian2pdf:latest';
 
 // Check for the Docker binary ( ony tested on macOS )
-export function getDockerEnv(): NodeJS.ProcessEnv {
+export function getDockerEnv(): typeof process.env {
 	const extraPaths = [
 		'/usr/local/bin',
 		'/opt/homebrew/bin',
@@ -21,16 +22,12 @@ export function getDockerEnv(): NodeJS.ProcessEnv {
 // Check if the Docker image exists
 // command: docker image inspect DOCKER_IMAGE_NAME
 export async function imageExists(): Promise<boolean> {
-	const child_process = require('child_process');
-	const { execFile } = child_process as typeof import('child_process');
-
 	return new Promise<boolean>((resolve) => {
 		const proc = execFile(
 			DOCKER_BIN,
 			['image', 'inspect', DOCKER_IMAGE_NAME],
 			{ timeout: 5000, windowsHide: true, env: getDockerEnv() },
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			(err: any) => {
+			(err) => {
 				resolve(!err);
 			},
 		);
@@ -39,12 +36,9 @@ export async function imageExists(): Promise<boolean> {
 }
 
 // building the image, can take a while
-// command: docker compose build
+// command: docker compose build --no-cache
 // logging to build/last-build.log for debugging and user feedback on failures
 export async function buildImage(pluginDir: string): Promise<void> {
-	const child_process = require('child_process');
-	const { spawn } = child_process as typeof import('child_process');
-
 	const pipelineDir = join(pluginDir, 'pipeline');
 	const buildDir = join(pipelineDir, 'build');
 	const logFile = join(buildDir, 'last-build.log');
@@ -92,9 +86,6 @@ export async function runPipeline(
 	vaultPath: string,
 	mdRelPath: string,
 ): Promise<string> {
-	const child_process = require('child_process');
-	const { spawn } = child_process as typeof import('child_process');
-
 	const pipelineDir = join(pluginDir, 'pipeline');
 	const buildDir = join(pipelineDir, 'build');
 	const logFile = join(buildDir, 'last_latex_run.log');

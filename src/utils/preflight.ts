@@ -1,18 +1,22 @@
 import { App } from 'obsidian';
+import { execFile, ExecException } from 'child_process';
 import type { PreflightResults, PreflightCheckResult } from '../types';
 import { DOCKER_BIN, getDockerEnv } from './docker';
 
-function execFilePromise(cmd: string, args: string[], timeout = 5000): Promise<{ stdout: string }>
-{
-	// eslint-disable-next-line @typescript-eslint/no-var-requires
-	const child_process = require('child_process');
-	const { execFile } = child_process as typeof import('child_process');
-
+function execFilePromise(cmd: string, args: string[], timeout = 5000): Promise<{ stdout: string }> {
 	return new Promise((resolve, reject) => {
-		const proc = execFile(cmd, args, { timeout, windowsHide: true, env: getDockerEnv() }, (err: any, stdout: string) => {
-			if (err) return reject(err);
-			resolve({ stdout });
-		});
+		const proc = execFile(
+			cmd,
+			args,
+			{ timeout, windowsHide: true, env: getDockerEnv() },
+			(err: ExecException | null, stdout: string) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+				resolve({ stdout });
+			},
+		);
 
 		// in case the process is nullish
 		if (!proc) reject(new Error('Failed to spawn process'));

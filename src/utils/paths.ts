@@ -1,33 +1,38 @@
-import { App, Plugin } from 'obsidian';
+import { App, FileSystemAdapter, Plugin } from 'obsidian';
 import { homedir } from 'os';
 import { basename, dirname, join } from 'path';
 
+// Augment Obsidian's PluginManifest with the (undocumented but stable) runtime
+// `dir` property — vault-relative path to the plugin folder.
+declare module 'obsidian' {
+	interface PluginManifest {
+		dir?: string;
+	}
+}
+
 // Plugin Directory Resolution
 export function getPluginAbsoluteDir(plugin: Plugin): string {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const adapter = plugin.app.vault.adapter as any;
-	const basePath: string | undefined = adapter.basePath ?? adapter.getBasePath?.();
-	if (!basePath) {
-		throw new Error('Cannot resolve vault base path from adapter');
+	const adapter = plugin.app.vault.adapter;
+	if (!(adapter instanceof FileSystemAdapter)) {
+		throw new Error('Vault adapter is not a FileSystemAdapter');
 	}
+	const basePath = adapter.getBasePath();
 
-	const relDir: string | undefined = (plugin.manifest as any).dir;
+	const relDir = plugin.manifest.dir;
 	if (relDir) {
 		return join(basePath, relDir);
 	}
 
-	return join(basePath, '.obsidian', 'plugins', plugin.manifest.id);
+	return join(basePath, plugin.app.vault.configDir, 'plugins', plugin.manifest.id);
 }
 
 // Vault Path Resolution
 export function getVaultAbsolutePath(app: App): string {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const adapter = app.vault.adapter as any;
-	const basePath: string | undefined = adapter.basePath ?? adapter.getBasePath?.();
-	if (!basePath) {
-		throw new Error('Cannot resolve vault base path from adapter');
+	const adapter = app.vault.adapter;
+	if (!(adapter instanceof FileSystemAdapter)) {
+		throw new Error('Vault adapter is not a FileSystemAdapter');
 	}
-	return basePath;
+	return adapter.getBasePath();
 }
 
 // Output Path Resolution

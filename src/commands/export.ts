@@ -1,4 +1,5 @@
 import { Notice, TFile } from 'obsidian';
+import { shell } from 'electron';
 import { copyFileSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 import type ObsiPrintPlugin from '../main';
@@ -19,45 +20,44 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 	// Get the active markdown file.
 	const file = plugin.app.workspace.getActiveFile();
 	if (!file || !(file instanceof TFile) || file.extension.toLowerCase() !== 'md') {
-		new Notice('Obsi Print: no active markdown note to export.');
+		new Notice('No active note to export.');
 		return;
 	}
 
-	//  image must be built
+	// Image must be built.
 	if (!(await imageExists())) {
 		new Notice(
-			'Obsi Print: Docker image not built yet. Open Settings → Obsi Print → Build image.',
+			'Image not built yet — build it in the plugin settings.',
 			8000,
 		);
 		return;
 	}
 
-	// resolve paths.
+	// Resolve paths.
 	const pluginDir = getPluginAbsoluteDir(plugin);
 	const vaultPath = getVaultAbsolutePath(plugin.app);
 	const sourceAbs = join(vaultPath, file.path);
 	const destPath = resolveOutputPath(plugin.settings.outputPath, sourceAbs, vaultPath);
 
-	// run the pipeline.
-	new Notice(`Obsi Print: exporting "${file.basename}"…`);
+	// Run the pipeline.
+	new Notice(`Exporting "${file.basename}"…`);
 	let producedPdf: string;
 	try {
 		producedPdf = await runPipeline(pluginDir, vaultPath, file.path);
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
-		new Notice(`Obsi Print: export failed. ${msg}`, 10000);
+		new Notice(`Export failed. ${msg}`, 10000);
 		return;
 	}
 
-	// copy the produced PDF to the user's destination.
+	// Copy the produced PDF to the user's destination.
 	mkdirSync(dirname(destPath), { recursive: true });
 	copyFileSync(producedPdf, destPath);
 
-	new Notice(`Obsi Print: exported to ${destPath}`);
+	new Notice(`Exported to ${destPath}`);
 
-	// optional auto-open.
+	// Optional auto-open.
 	if (plugin.settings.autoOpenPdf) {
-		const electron = require('electron');
-		electron.shell.openPath(destPath);
+		void shell.openPath(destPath);
 	}
 }
