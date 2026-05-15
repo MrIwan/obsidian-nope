@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type ObsiPrintPlugin from './main';
-import type { ObsiPrintSettings } from './types';
+import type { ObsiPrintSettings, PreflightResults } from './types';
+import { runPreflightChecks } from './utils/preflight';
 
 export const DEFAULT_SETTINGS: ObsiPrintSettings = {
 	outputPath: '',
@@ -46,5 +47,31 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 			});
+
+		// Simple example Preflight runner (returns mock/example results)
+		containerEl.createEl('h3', { text: 'Preflight (example)' });
+
+		const resultsDiv = containerEl.createEl('div');
+
+		new Setting(containerEl).addButton((btn) => {
+			btn.setButtonText('Run Preflight (Example)').onClick(async () => {
+				btn.setButtonText('Checking...');
+				try {
+					const res: PreflightResults = await runPreflightChecks(this.app);
+					resultsDiv.innerHTML = '';
+					for (const c of res.checks) {
+						const row = resultsDiv.createEl('div');
+						row.createEl('strong', { text: c.passed ? '✓ ' : '✗ ' });
+						row.createEl('span', { text: c.name });
+						row.createEl('div', { text: c.message });
+					}
+					console.log('Preflight results:', res);
+				} catch (e) {
+					resultsDiv.innerText = `Error running preflight: ${e instanceof Error ? e.message : String(e)}`;
+				} finally {
+					btn.setButtonText('Run Preflight (Example)');
+				}
+			});
+		});
 	}
 }
