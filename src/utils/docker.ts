@@ -1,9 +1,4 @@
 // Docker-compose invocation wrapper and shared docker constants.
-//
-// PATH-Note: GUI-launched apps on macOS inherit a minimal PATH that usually
-// does not include /usr/local/bin or /opt/homebrew/bin. As a pragmatic first
-// step we hardcode the absolute path here. Robust PATH discovery (look in
-// known locations, optionally `bash -lc which docker`) is a later iteration.
 
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
@@ -11,13 +6,7 @@ import { join } from 'path';
 export const DOCKER_BIN = '/usr/local/bin/docker';
 export const DOCKER_IMAGE_NAME = 'obsidian2pdf:latest';
 
-/**
- * Returns a process env with PATH extended to include common locations for
- * the docker binary and its credential helpers. macOS GUI apps inherit a
- * minimal PATH that typically omits /usr/local/bin, /opt/homebrew/bin and
- * Docker Desktop's bundled binaries (which includes docker-credential-desktop,
- * needed for any image pull when credsStore=desktop is configured).
- */
+// Check for the Docker binary
 export function getDockerEnv(): NodeJS.ProcessEnv {
 	const extraPaths = [
 		'/usr/local/bin',
@@ -29,12 +18,9 @@ export function getDockerEnv(): NodeJS.ProcessEnv {
 	return { ...process.env, PATH: newPath };
 }
 
-/**
- * Checks whether the pipeline Docker image is present on the host.
- * Returns false on any error (image not built, daemon unreachable, etc.).
- */
+// Check if the Docker image exists
+// command: docker image inspect obsidian2pdf:latest
 export async function imageExists(): Promise<boolean> {
-	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	const child_process = require('child_process');
 	const { execFile } = child_process as typeof import('child_process');
 
@@ -52,17 +38,9 @@ export async function imageExists(): Promise<boolean> {
 	});
 }
 
-/**
- * Builds the pipeline image by running `docker compose build` with cwd set
- * to <pluginDir>/pipeline. No timeout — first-time builds can take 5–15
- * minutes. stdout + stderr are aggregated and written to
- * <pluginDir>/pipeline/build/last-build.log regardless of success/failure.
- *
- * Resolves on exit code 0. Rejects with an Error containing the exit code
- * and a hint to the log file otherwise.
- */
+// building the image, can take a while
+// logging to build/last-build.log for debugging and user feedback on failures
 export async function buildImage(pluginDir: string): Promise<void> {
-	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	const child_process = require('child_process');
 	const { spawn } = child_process as typeof import('child_process');
 
@@ -74,8 +52,8 @@ export async function buildImage(pluginDir: string): Promise<void> {
 	try {
 		mkdirSync(buildDir, { recursive: true });
 	} catch {
-		// non-fatal — if we can't create the dir, the writeFile below will fail
-		// and we'll just lose the log. Build itself still proceeds.
+		// no logs
+		console.log('Failed to create build directory.');
 	}
 
 	return new Promise<void>((resolve, reject) => {
