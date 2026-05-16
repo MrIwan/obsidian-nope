@@ -103,6 +103,9 @@ end
 
 local available_targets = {}
 
+-- Notes whose embed is wrapped in a labeled LaTeX environment (e.g. theorem, lemma) via `latex-env` frontmatter. The wikilink resolver switches to \autoref for default-display links on these targets so the rendered text becomes "Theorem N" instead of the note name.
+local autoref_targets = {}
+
 -- Strip a trailing ^id Str (with preceding whitespace) from a block's inlines.
 local function inlines_without_block_id(content)
   local out = {}
@@ -116,13 +119,15 @@ local function inlines_without_block_id(content)
   return out
 end
 
-local function annotate_with_labels(blocks, notename)
+local function annotate_with_labels(blocks, notename, skip_outer_anchor)
   local note_label = "note:" .. sanitize_label_id(notename)
   local result = {}
 
   if not available_targets[notename] then
     available_targets[notename] = note_label
-    table.insert(result, pandoc.RawBlock("latex", "\\phantomsection\\label{" .. note_label .. "}"))
+    if not skip_outer_anchor then
+      table.insert(result, pandoc.RawBlock("latex", "\\phantomsection\\label{" .. note_label .. "}"))
+    end
   end
 
   for _, block in ipairs(blocks) do
@@ -214,6 +219,32 @@ local function load_note(src)
     sliced = blocks
   end
 
+  -- LaTeX-environment wrap on full embeds
+  if anchor_type == "none" then
+    local meta_env = doc.meta["latex-env"]
+    if meta_env then
+      local env_name = pandoc.utils.stringify(meta_env)
+      local env_short = doc.meta["latex-short"] and pandoc.utils.stringify(doc.meta["latex-short"]) or nil
+      local note_label = "note:" .. sanitize_label_id(notename)
+
+      -- Annotate inner headings/block-IDs
+      local annotated_inner = annotate_with_labels(sliced, notename, true)
+
+      local opener = "\\begin{" .. env_name .. "}"
+      if env_short and env_short ~= "" then
+        opener = opener .. "[" .. env_short .. "]"
+      end
+      opener = opener .. "\\label{" .. note_label .. "}"
+
+      local wrapped = { pandoc.RawBlock("latex", opener) }
+      for _, b in ipairs(annotated_inner) do table.insert(wrapped, b) end
+      table.insert(wrapped, pandoc.RawBlock("latex", "\\end{" .. env_name .. "}"))
+
+      autoref_targets[notename] = true
+      return wrapped
+    end
+  end
+
   return annotate_with_labels(sliced, notename)
 end
 
@@ -303,6 +334,13 @@ local function resolve_wikilink(link)
 
   local label = available_targets[target]
   if label then
+    -- If the target is wrapped in a labeled environment AND the user used the default display (no |Custom), switch to \autoref so the rendered text becomes "Theorem N" instead of the bare note name. Custom-display links
+    -- always stay on \hyperref to preserve the user's chosen text.
+    local content_str = pandoc.utils.stringify(link.content)
+    local is_default_display = (content_str == link.target or content_str == target)
+    if autoref_targets[target] and is_default_display then
+      return pandoc.RawInline("latex", "\\autoref{" .. label .. "}")
+    end
     -- Wrap link.content in \hyperref[label]{...}, keeping Markdown inlines intact.
     local result = { pandoc.RawInline("latex", "\\hyperref[" .. label .. "]{") }
     for _, inline in ipairs(link.content) do table.insert(result, inline) end
@@ -315,11 +353,9 @@ local function resolve_wikilink(link)
 end
 
 function Pandoc(doc)
-  -- Phase 1: expand embeds (this also populates available_targets via annotate)
+  -- Phase 1: expand embeds and annotate targets
   doc.blocks = process_blocks(doc.blocks)
-  -- Phase 2: resolve wikilinks against the targets that actually made it in.
-  -- pandoc.walk_block works on a single block tree; wrap in a Div to walk all
-  -- top-level blocks at once. Compatible with older Pandoc 3.x that doesn't
+  -- Phase 2: resolve wikilinks against the targets that actually made it in pandoc.walk_block works on a single block tree; wrap in a Div to walk all top-level blocks at once. Compatible with older Pandoc 3.x that doesn't
   -- expose the :walk method on Blocks lists.
   local walked = pandoc.walk_block(pandoc.Div(doc.blocks), { Link = resolve_wikilink })
   doc.blocks = walked.content

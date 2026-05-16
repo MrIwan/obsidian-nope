@@ -942,10 +942,34 @@ $endif$
 \usepackage{ragged2e}
 
 
-% --- Callout-Boxen (von callouts.lua benutzt) ---
+% --- Obsi Print Imports ---
 \usepackage{awesomebox}
 \usepackage{svg}
 \usepackage{soul}
+\usepackage{amsthm}
+
+% --- Obsi Print: Standard theorem-like environments ----------------------
+% Required when notes use the `latex-env:` frontmatter feature.
+\usepackage{amsthm}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+\newtheorem*{note}{Note}
+
+% Optional: customize the "Theorem N (Name)" prefix rendered by \autoref.
+% Without these overrides hyperref shows "Theorem N" by default which is
+% what most users want.
+% --------------------------------------------------------------------------
 
 
 \begin{document}
