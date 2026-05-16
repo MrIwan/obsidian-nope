@@ -1,0 +1,31 @@
+# Verbraucht fast 9 GB
+# 17 GB mit docker system prune freigegeben! 
+ARG PANDOC_VERSION=3.6.4
+ARG PANDOC_CROSSREF_VERSION=0.3.18.1
+
+FROM pandoc/latex:${PANDOC_VERSION}-ubuntu
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        librsvg2-bin \
+        texlive-full \
+ && rm -rf /var/lib/apt/lists/*
+
+# pandoc-crossref isn't bundled with pandoc/latex (only with pandoc/extra).
+# Re-declare ARG after FROM to make it visible in the build stage.
+ARG PANDOC_CROSSREF_VERSION
+RUN curl -fsSL -o /tmp/pandoc-crossref.tar.xz \
+        "https://github.com/lierdakil/pandoc-crossref/releases/download/v${PANDOC_CROSSREF_VERSION}/pandoc-crossref-Linux-X64.tar.xz" \
+ && tar -xJf /tmp/pandoc-crossref.tar.xz -C /usr/local/bin \
+ && chmod +x /usr/local/bin/pandoc-crossref \
+ && rm /tmp/pandoc-crossref.tar.xz
+
+ RUN tlmgr install scrartcl
+
+ENTRYPOINT []
+WORKDIR /build

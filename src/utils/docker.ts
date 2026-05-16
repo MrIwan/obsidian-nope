@@ -5,7 +5,7 @@ import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 export const DOCKER_BIN = '/usr/local/bin/docker';
-export const DOCKER_IMAGE_NAME = 'obsidian2pdf:latest';
+export const DOCKER_IMAGE_NAME = 'obsidian2pdf';
 
 // Check for the Docker binary ( ony tested on macOS )
 export function getDockerEnv(): typeof process.env {

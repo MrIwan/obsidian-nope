@@ -1,7 +1,7 @@
 services:
   pipeline:
     build: .
-    image: obsidian2pdf:latest
+    image: obsidian2pdf
     entrypoint: /app/scripts/build.sh
     volumes:
       - ./app:/app:ro
