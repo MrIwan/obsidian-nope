@@ -39,6 +39,7 @@ pandoc \
   --template=/app/template/eisvogel.tex \
   --lua-filter=/app/filters/pdf.lua \
   --lua-filter=/app/filters/obsidian-transclude.lua \
+  --lua-filter=/app/filters/obsidian-inline.lua \
   --lua-filter=/app/filters/callouts.lua \
   --lua-filter=/app/filters/glossary.lua \
   --filter=pandoc-crossref \
