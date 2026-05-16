@@ -1,4 +1,8 @@
 -- Recursively include ![[Note]] transclusions. Pandoc 3.x compatible.
+-- Supports:
+--   ![[Note]]                  full note
+--   ![[Note#Heading]]          slice from Heading to next heading of same/higher level
+--   ![[Note#^block-id]]        single block ending in "^block-id"
 
 local image_exts = {
   png=true, jpg=true, jpeg=true, gif=true, svg=true,
@@ -21,11 +25,107 @@ local function find_note_path(notename)
   return nil
 end
 
+-- Parse a transclusion source into (notename, anchor_type, anchor_value).
+-- anchor_type is "none", "heading", or "block_id".
+local function parse_anchor(src)
+  local hash = src:find("#", 1, true)
+  if not hash then
+    return src, "none", nil
+  end
+  local notename = src:sub(1, hash - 1)
+  local rest = src:sub(hash + 1)
+  if notename == "" then notename = src end
+  if rest == "" then return notename, "none", nil end
+  if rest:sub(1, 1) == "^" then
+    return notename, "block_id", rest:sub(2)
+  end
+  return notename, "heading", rest
+end
+
+-- Stringify inlines for case-sensitive heading-text comparison.
+local function inlines_text(inlines)
+  return pandoc.utils.stringify(inlines)
+end
+
+-- Slice blocks from the first Header matching `heading_text` up to (but not
+-- including) the next Header of equal or higher level. The matched Header
+-- itself is included so the section keeps its title in the PDF.
+local function slice_by_heading(blocks, heading_text)
+  local result = {}
+  local started = false
+  local start_level = nil
+  for _, block in ipairs(blocks) do
+    if block.t == "Header" then
+      if not started then
+        if inlines_text(block.content) == heading_text then
+          started = true
+          start_level = block.level
+          table.insert(result, block)
+        end
+      else
+        if block.level <= start_level then
+          break
+        else
+          table.insert(result, block)
+        end
+      end
+    elseif started then
+      table.insert(result, block)
+    end
+  end
+  return result, started
+end
+
+-- True if the block's content ends in a Str element of the form "^<target_id>".
+local function block_has_id(block, target_id)
+  if block.t ~= "Para" and block.t ~= "Plain" then return false end
+  local content = block.content
+  if #content == 0 then return false end
+  local last = content[#content]
+  if last.t ~= "Str" then return false end
+  return last.text == "^" .. target_id
+end
+
+-- Return a copy of the block with the trailing "^id" Str (and any preceding
+-- whitespace inlines) removed.
+local function strip_block_id_suffix(block, target_id)
+  if block.t ~= "Para" and block.t ~= "Plain" then return block end
+  local content = {}
+  for _, inline in ipairs(block.content) do
+    table.insert(content, inline)
+  end
+  if #content > 0 then
+    local last = content[#content]
+    if last.t == "Str" and last.text == "^" .. target_id then
+      table.remove(content)
+      while #content > 0 do
+        local tail = content[#content]
+        if tail.t == "Space" or tail.t == "SoftBreak" or tail.t == "LineBreak" then
+          table.remove(content)
+        else
+          break
+        end
+      end
+    end
+  end
+  if block.t == "Para" then return pandoc.Para(content) end
+  return pandoc.Plain(content)
+end
+
+local function slice_by_block_id(blocks, target_id)
+  for _, block in ipairs(blocks) do
+    if block_has_id(block, target_id) then
+      return { strip_block_id_suffix(block, target_id) }, true
+    end
+  end
+  return {}, false
+end
+
 local visiting = {}
 local process_blocks
 
 local function load_note(src)
-  local notename = src:match("^([^#]+)") or src
+  local notename, anchor_type, anchor_value = parse_anchor(src)
   local path = find_note_path(notename)
   if not path then
     return {pandoc.Para({pandoc.Str("[Nicht gefunden: " .. notename .. "]")})}
@@ -39,6 +139,20 @@ local function load_note(src)
   local doc = pandoc.read(content, "markdown+wikilinks_title_after_pipe")
   local blocks = process_blocks(doc.blocks)
   visiting[path] = nil
+
+  if anchor_type == "heading" then
+    local slice, found = slice_by_heading(blocks, anchor_value)
+    if not found then
+      return {pandoc.Para({pandoc.Str("[Section nicht gefunden: " .. notename .. "#" .. anchor_value .. "]")})}
+    end
+    return slice
+  elseif anchor_type == "block_id" then
+    local slice, found = slice_by_block_id(blocks, anchor_value)
+    if not found then
+      return {pandoc.Para({pandoc.Str("[Block-ID nicht gefunden: " .. notename .. "#^" .. anchor_value .. "]")})}
+    end
+    return slice
+  end
   return blocks
 end
 
