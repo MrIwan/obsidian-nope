@@ -3,6 +3,11 @@
 --   ![[Note]]                  full note
 --   ![[Note#Heading]]          slice from Heading to next heading of same/higher level
 --   ![[Note#^block-id]]        single block ending in "^block-id"
+--
+-- After embedding, the filter also resolves wikilinks ([[Note]], [[Note#H]],
+-- [[Note#^id]]) against the targets that ended up in the PDF.
+-- table-based Resolution 
+-- Wikilinks to non-embedded targets fall back to plain text — content is preserved
 
 local image_exts = {
   png=true, jpg=true, jpeg=true, gif=true, svg=true,
@@ -29,31 +34,30 @@ end
 -- anchor_type is "none", "heading", or "block_id".
 local function parse_anchor(src)
   local hash = src:find("#", 1, true)
-  if not hash then
-    return src, "none", nil
-  end
+  if not hash then return src, "none", nil end
   local notename = src:sub(1, hash - 1)
   local rest = src:sub(hash + 1)
   if notename == "" then notename = src end
   if rest == "" then return notename, "none", nil end
-  if rest:sub(1, 1) == "^" then
-    return notename, "block_id", rest:sub(2)
-  end
+  if rest:sub(1, 1) == "^" then return notename, "block_id", rest:sub(2) end
   return notename, "heading", rest
 end
 
--- Stringify inlines for case-sensitive heading-text comparison.
 local function inlines_text(inlines)
   return pandoc.utils.stringify(inlines)
 end
 
--- Slice blocks from the first Header matching `heading_text` up to (but not
--- including) the next Header of equal or higher level. The matched Header
--- itself is included so the section keeps its title in the PDF.
+-- Reduce a string to a LaTeX-label-safe form: alphanum, dash, underscore, colon.
+local function sanitize_label_id(s)
+  return (s:gsub("[^%w%-_:]", "_"))
+end
+
+-- ============================================================================
+-- Phase 1 helpers — slicing
+-- ============================================================================
+
 local function slice_by_heading(blocks, heading_text)
-  local result = {}
-  local started = false
-  local start_level = nil
+  local result, started, start_level = {}, false, nil
   for _, block in ipairs(blocks) do
     if block.t == "Header" then
       if not started then
@@ -63,11 +67,8 @@ local function slice_by_heading(blocks, heading_text)
           table.insert(result, block)
         end
       else
-        if block.level <= start_level then
-          break
-        else
-          table.insert(result, block)
-        end
+        if block.level <= start_level then break end
+        table.insert(result, block)
       end
     elseif started then
       table.insert(result, block)
@@ -76,7 +77,6 @@ local function slice_by_heading(blocks, heading_text)
   return result, started
 end
 
--- True if the block's content ends in a Str element of the form "^<target_id>".
 local function block_has_id(block, target_id)
   if block.t ~= "Para" and block.t ~= "Plain" then return false end
   local content = block.content
@@ -86,40 +86,97 @@ local function block_has_id(block, target_id)
   return last.text == "^" .. target_id
 end
 
--- Return a copy of the block with the trailing "^id" Str (and any preceding
--- whitespace inlines) removed.
-local function strip_block_id_suffix(block, target_id)
-  if block.t ~= "Para" and block.t ~= "Plain" then return block end
-  local content = {}
-  for _, inline in ipairs(block.content) do
-    table.insert(content, inline)
-  end
-  if #content > 0 then
-    local last = content[#content]
-    if last.t == "Str" and last.text == "^" .. target_id then
-      table.remove(content)
-      while #content > 0 do
-        local tail = content[#content]
-        if tail.t == "Space" or tail.t == "SoftBreak" or tail.t == "LineBreak" then
-          table.remove(content)
-        else
-          break
-        end
-      end
-    end
-  end
-  if block.t == "Para" then return pandoc.Para(content) end
-  return pandoc.Plain(content)
-end
-
 local function slice_by_block_id(blocks, target_id)
   for _, block in ipairs(blocks) do
     if block_has_id(block, target_id) then
-      return { strip_block_id_suffix(block, target_id) }, true
+      -- Keep the trailing ^id here; annotate_with_labels strips & labels it.
+      return { block }, true
     end
   end
   return {}, false
 end
+
+-- ============================================================================
+-- Phase 1 — annotate embedded blocks with hyperref targets,
+-- populate the available_targets map for the resolver.
+-- ============================================================================
+
+local available_targets = {}
+
+-- Strip a trailing ^id Str (with preceding whitespace) from a block's inlines.
+local function inlines_without_block_id(content)
+  local out = {}
+  for i = 1, #content - 1 do table.insert(out, content[i]) end
+  while #out > 0 do
+    local tail = out[#out]
+    if tail.t == "Space" or tail.t == "SoftBreak" or tail.t == "LineBreak" then
+      table.remove(out)
+    else break end
+  end
+  return out
+end
+
+local function annotate_with_labels(blocks, notename)
+  local note_label = "note:" .. sanitize_label_id(notename)
+  local result = {}
+
+  if not available_targets[notename] then
+    available_targets[notename] = note_label
+    table.insert(result, pandoc.RawBlock("latex", "\\phantomsection\\label{" .. note_label .. "}"))
+  end
+
+  for _, block in ipairs(blocks) do
+    if block.t == "Header" then
+      local heading_text = inlines_text(block.content)
+      local key = notename .. "#" .. heading_text
+      if not available_targets[key] then
+        local heading_label = note_label .. ":sec-" .. sanitize_label_id(heading_text)
+        local new_content = {}
+        for _, inline in ipairs(block.content) do table.insert(new_content, inline) end
+        table.insert(new_content, pandoc.RawInline("latex", "\\label{" .. heading_label .. "}"))
+        table.insert(result, pandoc.Header(block.level, new_content, block.attr))
+        available_targets[key] = heading_label
+      else
+        -- Already labeled in a previous embed
+        table.insert(result, block)
+      end
+
+    elseif block.t == "Para" or block.t == "Plain" then
+      local content = block.content
+      local block_id = nil
+      if #content > 0 then
+        local last = content[#content]
+        if last.t == "Str" then
+          block_id = last.text:match("^%^([%w%-_]+)$")
+        end
+      end
+
+      if block_id then
+        local stripped_inlines = inlines_without_block_id(content)
+        local key = notename .. "#^" .. block_id
+        if not available_targets[key] then
+          local block_label = note_label .. ":blk-" .. sanitize_label_id(block_id)
+          table.insert(stripped_inlines, pandoc.RawInline("latex", "\\label{" .. block_label .. "}"))
+          available_targets[key] = block_label
+        end
+        -- Either way the ^id suffix is gone from visible text.
+        local new_block = (block.t == "Para") and pandoc.Para(stripped_inlines) or pandoc.Plain(stripped_inlines)
+        table.insert(result, new_block)
+      else
+        table.insert(result, block)
+      end
+
+    else
+      table.insert(result, block)
+    end
+  end
+
+  return result
+end
+
+-- ============================================================================
+-- Embedding (recursive)
+-- ============================================================================
 
 local visiting = {}
 local process_blocks
@@ -140,29 +197,30 @@ local function load_note(src)
   local blocks = process_blocks(doc.blocks)
   visiting[path] = nil
 
+  local sliced
   if anchor_type == "heading" then
-    local slice, found = slice_by_heading(blocks, anchor_value)
+    local s, found = slice_by_heading(blocks, anchor_value)
     if not found then
       return {pandoc.Para({pandoc.Str("[Section nicht gefunden: " .. notename .. "#" .. anchor_value .. "]")})}
     end
-    return slice
+    sliced = s
   elseif anchor_type == "block_id" then
-    local slice, found = slice_by_block_id(blocks, anchor_value)
+    local s, found = slice_by_block_id(blocks, anchor_value)
     if not found then
       return {pandoc.Para({pandoc.Str("[Block-ID nicht gefunden: " .. notename .. "#^" .. anchor_value .. "]")})}
     end
-    return slice
+    sliced = s
+  else
+    sliced = blocks
   end
-  return blocks
+
+  return annotate_with_labels(sliced, notename)
 end
 
--- Detect figure
 local function figure_transclusion_src(block)
   if block.t ~= "Figure" or #block.content ~= 1 then return nil end
   local inner = block.content[1]
-  if (inner.t ~= "Plain" and inner.t ~= "Para") or #inner.content ~= 1 then
-    return nil
-  end
+  if (inner.t ~= "Plain" and inner.t ~= "Para") or #inner.content ~= 1 then return nil end
   local img = inner.content[1]
   if img.t == "Image" and not is_image_file(img.src) then return img.src end
   return nil
@@ -171,9 +229,7 @@ end
 local function process_para(el)
   local has = false
   for _, inline in ipairs(el.content) do
-    if inline.t == "Image" and not is_image_file(inline.src) then
-      has = true; break
-    end
+    if inline.t == "Image" and not is_image_file(inline.src) then has = true; break end
   end
   if not has then return nil end
 
@@ -223,7 +279,49 @@ process_blocks = function(blocks)
   return result
 end
 
+-- ============================================================================
+-- Phase 2 — wikilink resolution against available_targets
+-- ============================================================================
+
+local function is_wikilink_like(target)
+  if target == nil or target == "" then return false end
+  if target:match("^[a-zA-Z]+://") then return false end
+  if target:match("^mailto:") then return false end
+  if target:match("^#") then return false end
+  return true
+end
+
+local function resolve_wikilink(link)
+  if not is_wikilink_like(link.target) then return nil end
+
+  -- Pandoc may keep ".md" in target; map keys are without extension.
+  -- Also strip a leading "./" if Pandoc prefixes relative-file targets.
+  local target = link.target
+  target = target:gsub("^%./", "")
+  target = target:gsub("%.md$", "")
+
+
+  local label = available_targets[target]
+  if label then
+    -- Wrap link.content in \hyperref[label]{...}, keeping Markdown inlines intact.
+    local result = { pandoc.RawInline("latex", "\\hyperref[" .. label .. "]{") }
+    for _, inline in ipairs(link.content) do table.insert(result, inline) end
+    table.insert(result, pandoc.RawInline("latex", "}"))
+    return result
+  end
+
+  -- Fallback: target not embedded → render link content as plain inlines.
+  return link.content
+end
+
 function Pandoc(doc)
+  -- Phase 1: expand embeds (this also populates available_targets via annotate)
   doc.blocks = process_blocks(doc.blocks)
+  -- Phase 2: resolve wikilinks against the targets that actually made it in.
+  -- pandoc.walk_block works on a single block tree; wrap in a Div to walk all
+  -- top-level blocks at once. Compatible with older Pandoc 3.x that doesn't
+  -- expose the :walk method on Blocks lists.
+  local walked = pandoc.walk_block(pandoc.Div(doc.blocks), { Link = resolve_wikilink })
+  doc.blocks = walked.content
   return doc
 end
