@@ -6,12 +6,19 @@
 --   ![[Bild.png|Caption]]      labeled figure with caption
 --   ![[Bild.png]]              labeled figure, filename as caption
 --
+-- Frontmatter-gesteuerte Wraps (Single-Source: Konfiguration immer im
+-- Frontmatter der embedded Note, nie über den Embed-Tag):
+--   latex-env: theorem (oder lemma, definition, …)
+--       → \begin{env}[latex-short]\label{note:X}…\end{env}
+--   latex-env: table
+--       caption: "…"   ← MANDATORY, sonst Filter-Fehler
+--       → Pandoc-Table mit Caption aus Frontmatter, injiziertes \label{tab:X}.
+--
 -- After embedding, the filter also resolves wikilinks ([[Note]], [[Note#H]],
 -- [[Note#^id]], [[Bild.png]]) against the targets that ended up in the PDF.
--- Image-Wikilinks ([[Bild.png]]) auf eingebettete Bilder werden zu
--- \autoref{fig:...} ("Abbildung N"), Custom-Display bleibt \hyperref.
--- table-based Resolution
--- Wikilinks to non-embedded targets fall back to plain text — content is preserved
+-- Image-Wikilinks und Tabellen-Wikilinks auf eingebettete Targets werden zu
+-- \autoref ("Abbildung N" / "Tabelle N"), Custom-Display bleibt \hyperref.
+-- Wikilinks to non-embedded targets fall back to plain text — content is preserved.
 
 local image_exts = {
   png=true, jpg=true, jpeg=true, gif=true, svg=true,
@@ -190,8 +197,32 @@ end
 local visiting = {}
 local process_blocks
 
+-- Extrahiert Frontmatter-Inlines (z.B. caption: "Text") als flache
+-- Inline-Liste. Unterstützt MetaInlines, MetaString und MetaBlocks (1. Block).
+local function meta_to_inlines(meta_value)
+  if not meta_value then return nil end
+  local t = type(meta_value)
+  if t == "string" then
+    return { pandoc.Str(meta_value) }
+  end
+  -- MetaInlines: iterierbare Liste von Inlines
+  local out = {}
+  for _, x in ipairs(meta_value) do
+    if x.t == "Plain" or x.t == "Para" then
+      for _, inner in ipairs(x.content) do table.insert(out, inner) end
+    else
+      table.insert(out, x)
+    end
+  end
+  return out
+end
+
 local function load_note(src)
   local notename, anchor_type, anchor_value = parse_anchor(src)
+  -- Canonical-Form ohne .md, damit Map-Keys konsistent zum Resolver bleiben
+  -- (der Resolver strippt .md vom Wikilink-Target — Embedder muss das gleiche tun).
+  -- Andere Extensions (z.B. .png für Images) bleiben unverändert.
+  notename = notename:gsub("%.md$", "")
   local path = find_note_path(notename)
   if not path then
     return {pandoc.Para({pandoc.Str("[Nicht gefunden: " .. notename .. "]")})}
@@ -228,6 +259,63 @@ local function load_note(src)
     local meta_env = doc.meta["latex-env"]
     if meta_env then
       local env_name = pandoc.utils.stringify(meta_env)
+
+      -- ----------------------------------------------------------------
+      -- Sondersyntax: latex-env: table
+      -- Pandoc rendert Markdown-Tabellen als (long)table — die dürfen
+      -- NICHT in einem `\begin{table}` floaten. Stattdessen labeln wir
+      -- die Pandoc-Table direkt an ihrer Caption.
+      --
+      -- Single-Source-Konfiguration: Caption MUSS im Frontmatter der Note
+      -- als `caption: "…"` stehen. Keine Pipe-Caption, kein Pandoc-Native-
+      -- `: …`-Fallback. Wenn die Caption fehlt → harter Filter-Error.
+      -- \autoref auf das tab:-Label rendert "Tabelle N" (siehe
+      -- \tableautorefname-Override im eisvogel.tex).
+      -- ----------------------------------------------------------------
+      if env_name == "table" then
+        local caption_inlines = meta_to_inlines(doc.meta.caption)
+        if not caption_inlines or #caption_inlines == 0 then
+          error("[obsidian-transclude] Note '" .. notename
+            .. "' hat latex-env: table, aber kein 'caption:' im Frontmatter.")
+        end
+
+        local note_label = "tab:" .. sanitize_label_id(notename)
+        local first_embed = (available_targets[notename] == nil)
+        available_targets[notename] = note_label
+        autoref_targets[notename] = true
+
+        local annotated = annotate_with_labels(sliced, notename, true)
+
+        local table_found = false
+        for _, b in ipairs(annotated) do
+          if b.t == "Table" then
+            -- Caption immer aus Frontmatter setzen (überschreibt evtl.
+            -- existierende Pandoc-Caption — Single-Source-Garantie).
+            b.caption = pandoc.Caption({ pandoc.Plain(caption_inlines) })
+
+            -- \label nur beim ersten Embed setzen (Mehrfach-Embed der
+            -- gleichen Note würde sonst zu "multiply defined"-Warnungen führen).
+            if first_embed then
+              local last = b.caption.long[#b.caption.long]
+              table.insert(last.content,
+                pandoc.RawInline("latex", "\\label{" .. note_label .. "}"))
+            end
+            table_found = true
+            break
+          end
+        end
+
+        if not table_found then
+          error("[obsidian-transclude] Note '" .. notename
+            .. "' hat latex-env: table, aber keine Tabelle im Inhalt gefunden.")
+        end
+
+        return annotated
+      end
+
+      -- ----------------------------------------------------------------
+      -- Default-Env-Wrap (theorem, lemma, definition, …)
+      -- ----------------------------------------------------------------
       local env_short = doc.meta["latex-short"] and pandoc.utils.stringify(doc.meta["latex-short"]) or nil
       local note_label = "note:" .. sanitize_label_id(notename)
 
@@ -252,13 +340,15 @@ local function load_note(src)
   return annotate_with_labels(sliced, notename)
 end
 
+-- Liefert die src eines Figure-Blocks, der einen Note-Embed enthält
+-- (Image mit nicht-image-Extension wie .md). nil sonst.
 local function figure_transclusion_src(block)
   if block.t ~= "Figure" or #block.content ~= 1 then return nil end
   local inner = block.content[1]
   if (inner.t ~= "Plain" and inner.t ~= "Para") or #inner.content ~= 1 then return nil end
   local img = inner.content[1]
-  if img.t == "Image" and not is_image_file(img.src) then return img.src end
-  return nil
+  if img.t ~= "Image" or is_image_file(img.src) then return nil end
+  return img.src
 end
 
 -- ============================================================================
@@ -292,7 +382,7 @@ local function register_image_figure(figure_block)
   -- den Dateinamen.
   local caption = figure_block.caption
   if not caption or not caption.long or #caption.long == 0 then
-    caption = pandoc.Caption(nil, { pandoc.Plain({ pandoc.Str(src) }) })
+    caption = pandoc.Caption({ pandoc.Plain({ pandoc.Str(src) }) })
     figure_block.caption = caption
   end
 
