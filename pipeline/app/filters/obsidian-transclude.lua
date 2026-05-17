@@ -134,6 +134,7 @@ local function annotate_with_labels(blocks, notename, skip_outer_anchor)
     if block.t == "Header" then
       local heading_text = inlines_text(block.content)
       local key = notename .. "#" .. heading_text
+
       if not available_targets[key] then
         local heading_label = note_label .. ":sec-" .. sanitize_label_id(heading_text)
         local new_content = {}
@@ -142,7 +143,9 @@ local function annotate_with_labels(blocks, notename, skip_outer_anchor)
         table.insert(result, pandoc.Header(block.level, new_content, block.attr))
         available_targets[key] = heading_label
       else
-        -- Already labeled in a previous embed
+        -- Already labeled in a previous embed (shouldn't happen since each
+        -- (notename, anchor) tuple is embeddable only once now, but kept as
+        -- defensive idempotency).
         table.insert(result, block)
       end
 
@@ -184,6 +187,9 @@ end
 -- ============================================================================
 
 local visiting = {}
+-- Tracks already-emitted embeds keyed by "<notename>#<anchor or empty>".
+-- Content only can be embedded once ( nop duplicate embeds, no rekursive embeds ) - Just wikilink references to already embedded content.
+local embedded_keys = {}
 local process_blocks
 
 local function load_note(src)
@@ -195,6 +201,13 @@ local function load_note(src)
   if visiting[path] then
     return {pandoc.Para({pandoc.Str("[Zirkulärer Embed: " .. notename .. "]")})}
   end
+  local embed_key = notename .. "#" .. (anchor_value or "")
+  if embedded_keys[embed_key] then
+    return {pandoc.Para({pandoc.Str(
+      "[Bereits eingebettet: " .. src ..
+      " — bitte mit [[" .. src .. "]] referenzieren statt erneut einzubinden]")})}
+  end
+  embedded_keys[embed_key] = true
   visiting[path] = true
   local f = io.open(path, "rb")
   local content = f:read("*all"); f:close()
@@ -257,6 +270,53 @@ local function figure_transclusion_src(block)
   return nil
 end
 
+-- For a Figure block, return the inner Image element if the figure
+--   (a) wraps a real image file (not a note transclusion), and
+--   (b) has a non-empty caption.
+-- Otherwise image embeds but no figure registration, no autoref hook.
+local function figure_image_with_caption(block)
+  if block.t ~= "Figure" or #block.content ~= 1 then return nil end
+  local inner = block.content[1]
+  if (inner.t ~= "Plain" and inner.t ~= "Para") or #inner.content ~= 1 then return nil end
+  local img = inner.content[1]
+  if img.t ~= "Image" or not is_image_file(img.src) then return nil end
+
+  -- Caption may live on the Figure block (Pandoc 3.x) or on the inner Image's
+  -- caption attribute (older Pandoc / certain readers). Accept either.
+  local fig_caption = block.caption and block.caption.long
+  local fig_has_text = fig_caption and #fig_caption > 0
+    and #pandoc.utils.stringify(fig_caption) > 0
+  local img_has_text = img.caption and #img.caption > 0
+    and #pandoc.utils.stringify(img.caption) > 0
+  if not fig_has_text and not img_has_text then return nil end
+  return img
+end
+
+-- Register a captioned image figure
+-- Sets the identifier "fig:<src>" on Figure block and the Image inline -> pandoc-crossref picks that up and emits \label{fig:<src>}
+local function register_image_figure(figure_block, src)
+  local label = "fig:" .. sanitize_label_id(src)
+
+  local fig_classes = (figure_block.attr and figure_block.attr.classes) or {}
+  local fig_attrs = (figure_block.attr and figure_block.attr.attributes) or {}
+  figure_block.attr = pandoc.Attr(label, fig_classes, fig_attrs)
+
+  if figure_block.content and #figure_block.content > 0 then
+    local inner = figure_block.content[1]
+    if inner and inner.content and #inner.content > 0 then
+      local img = inner.content[1]
+      if img and img.t == "Image" then
+        local img_classes = (img.attr and img.attr.classes) or {}
+        local img_attrs = (img.attr and img.attr.attributes) or {}
+        img.attr = pandoc.Attr(label, img_classes, img_attrs)
+      end
+    end
+  end
+
+  available_targets[src] = label
+  autoref_targets[src] = true
+end
+
 local function process_para(el)
   local has = false
   for _, inline in ipairs(el.content) do
@@ -293,9 +353,15 @@ end
 process_blocks = function(blocks)
   local result = {}
   for _, block in ipairs(blocks) do
-    local src = figure_transclusion_src(block)
-    if src then
-      for _, b in ipairs(load_note(src)) do table.insert(result, b) end
+    local note_src = figure_transclusion_src(block)
+    if note_src then
+      -- Note-embed via figure-wrapped wikilink
+      for _, b in ipairs(load_note(note_src)) do table.insert(result, b) end
+    elseif block.t == "Figure" then
+      -- Image figure: register as numbered target only when captioned.
+      local img = figure_image_with_caption(block)
+      if img then register_image_figure(block, img.src) end
+      table.insert(result, block)
     elseif block.t == "Para" or block.t == "Plain" then
       local replaced = process_para(block)
       if replaced then
@@ -325,8 +391,6 @@ end
 local function resolve_wikilink(link)
   if not is_wikilink_like(link.target) then return nil end
 
-  -- Pandoc may keep ".md" in target; map keys are without extension.
-  -- Also strip a leading "./" if Pandoc prefixes relative-file targets.
   local target = link.target
   target = target:gsub("^%./", "")
   target = target:gsub("%.md$", "")
@@ -334,21 +398,25 @@ local function resolve_wikilink(link)
 
   local label = available_targets[target]
   if label then
-    -- If the target is wrapped in a labeled environment AND the user used the default display (no |Custom), switch to \autoref so the rendered text becomes "Theorem N" instead of the bare note name. Custom-display links
-    -- always stay on \hyperref to preserve the user's chosen text.
+    -- If the target is in a labeled environment -> use \autoref ("Theorem N")
+    -- Custom-display links stay on \hyperref and use display text
     local content_str = pandoc.utils.stringify(link.content)
     local is_default_display = (content_str == link.target or content_str == target)
     if autoref_targets[target] and is_default_display then
       return pandoc.RawInline("latex", "\\autoref{" .. label .. "}")
     end
-    -- Wrap link.content in \hyperref[label]{...}, keeping Markdown inlines intact.
     local result = { pandoc.RawInline("latex", "\\hyperref[" .. label .. "]{") }
     for _, inline in ipairs(link.content) do table.insert(result, inline) end
     table.insert(result, pandoc.RawInline("latex", "}"))
     return result
   end
 
-  -- Fallback: target not embedded → render link content as plain inlines.
+  -- Target not in map.
+  -- For IMAGE -> pdflatex crashes
+  -- For note refs -> displyed text
+  if is_image_file(target) then
+    return pandoc.RawInline("latex", "\\autoref{fig:" .. sanitize_label_id(target) .. "}")
+  end
   return link.content
 end
 

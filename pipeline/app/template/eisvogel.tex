@@ -533,7 +533,7 @@ $endif$
 $if(csquotes)$
 \usepackage{csquotes}
 $endif$
-\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+% \IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \urlstyle{$if(urlstyle)$$urlstyle$$else$same$endif$}
 $if(links-as-notes)$
@@ -947,6 +947,7 @@ $endif$
 \usepackage{svg}
 \usepackage{soul}
 \usepackage{amsthm}
+\usepackage{hyperref}
 
 % --- Obsi Print: Standard theorem-like environments ----------------------
 % Required when notes use the `latex-env:` frontmatter feature.
@@ -966,11 +967,26 @@ $endif$
 \newtheorem*{remark}{Remark}
 \newtheorem*{note}{Note}
 
-% Optional: customize the "Theorem N (Name)" prefix rendered by \autoref.
-% Without these overrides hyperref shows "Theorem N" by default which is
-% what most users want.
-% --------------------------------------------------------------------------
 
+% --- Obsi Print: language-aware \autoref names --------------------------
+% hyperref's \autoref{} uses its own naming table (\figureautorefname etc.)
+\AtBeginDocument{%
+  \@ifpackageloaded{babel}{%
+    \iflanguage{ngerman}{%
+      \renewcommand{\figureautorefname}{Abbildung}%
+      \renewcommand{\tableautorefname}{Tabelle}%
+      \renewcommand{\equationautorefname}{Gleichung}%
+      \renewcommand{\sectionautorefname}{Abschnitt}%
+      \renewcommand{\subsectionautorefname}{Unterabschnitt}%
+      \renewcommand{\subsubsectionautorefname}{Unterunterabschnitt}%
+      \renewcommand{\paragraphautorefname}{Absatz}%
+      \renewcommand{\itemautorefname}{Punkt}%
+      \renewcommand{\footnoteautorefname}{Fußnote}%
+    }{}%
+    % --- Add further \iflanguage{<lang>}{...} blocks below if needed ---
+  }{}%
+}
+% ------------------------------------------------------------------------
 
 \begin{document}
 
