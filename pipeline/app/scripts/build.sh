@@ -42,16 +42,17 @@ pandoc \
   --lua-filter=/app/filters/obsidian-inline.lua \
   --lua-filter=/app/filters/callouts.lua \
   --lua-filter=/app/filters/glossary.lua \
-  --filter=pandoc-crossref \
   --toc \
   -s \
   -t latex \
   -o "$WORK/$BASE.tex" \
   "$INPUT_ABS"
+#   --filter=pandoc-crossref \
 
 cd "$WORK"
 echo ">>> latexmk (pdflatex + makeglossaries, so oft bis stabil)"
 latexmk -pdf -interaction=nonstopmode -r /app/scripts/latexmkrc "$BASE.tex"
+
 
 echo ""
 echo ">>> Done: build/$BASE.pdf"

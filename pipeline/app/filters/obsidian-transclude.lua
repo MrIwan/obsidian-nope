@@ -3,10 +3,14 @@
 --   ![[Note]]                  full note
 --   ![[Note#Heading]]          slice from Heading to next heading of same/higher level
 --   ![[Note#^block-id]]        single block ending in "^block-id"
+--   ![[Bild.png|Caption]]      labeled figure with caption
+--   ![[Bild.png]]              labeled figure, filename as caption
 --
 -- After embedding, the filter also resolves wikilinks ([[Note]], [[Note#H]],
--- [[Note#^id]]) against the targets that ended up in the PDF.
--- table-based Resolution 
+-- [[Note#^id]], [[Bild.png]]) against the targets that ended up in the PDF.
+-- Image-Wikilinks ([[Bild.png]]) auf eingebettete Bilder werden zu
+-- \autoref{fig:...} ("Abbildung N"), Custom-Display bleibt \hyperref.
+-- table-based Resolution
 -- Wikilinks to non-embedded targets fall back to plain text — content is preserved
 
 local image_exts = {
@@ -257,6 +261,50 @@ local function figure_transclusion_src(block)
   return nil
 end
 
+-- ============================================================================
+-- Image-Figure-Feature
+-- Pandoc baut aus einem alleinstehenden Image-Inline automatisch ein
+-- `Figure` mit Caption (alt-text). Wir hängen hier nur einen \label{fig:...}
+-- ans Ende der Caption und tragen den Image-Source in die Wikilink-Map ein,
+-- damit [[bild.png]] zu \autoref{fig:...} aufgelöst wird → "Abbildung N".
+-- Pandoc 3.9.x emit kein \label aus Figure.attr.identifier — RawInline in
+-- der Caption ist der portable Weg, der unabhängig von Pandoc-Version
+-- funktioniert (\label im \caption ist Standard-LaTeX und greift auf den
+-- bereits erhöhten figure-Counter zu).
+-- ============================================================================
+local function register_image_figure(figure_block)
+  if figure_block.t ~= "Figure" or #figure_block.content ~= 1 then return nil end
+  local inner = figure_block.content[1]
+  if (inner.t ~= "Plain" and inner.t ~= "Para") or #inner.content ~= 1 then return nil end
+  local img = inner.content[1]
+  if img.t ~= "Image" or not is_image_file(img.src) then return nil end
+
+  local src = img.src
+  -- Mehrfach-Embed des gleichen Bildes: nur erstes registrieren/labeln.
+  if available_targets[src] then return figure_block end
+
+  local label = "fig:" .. sanitize_label_id(src)
+  available_targets[src] = label
+  autoref_targets[src] = true
+
+  -- Pandoc legt für ![file.png|Caption] die Caption in figure.caption.long ab.
+  -- Falls leer (sollte nicht vorkommen, aber sicher ist sicher), fallback auf
+  -- den Dateinamen.
+  local caption = figure_block.caption
+  if not caption or not caption.long or #caption.long == 0 then
+    caption = pandoc.Caption(nil, { pandoc.Plain({ pandoc.Str(src) }) })
+    figure_block.caption = caption
+  end
+
+  -- \label ans Ende der letzten Caption-Block-Inlines hängen.
+  local last_block = caption.long[#caption.long]
+  if last_block.content then
+    table.insert(last_block.content, pandoc.RawInline("latex", "\\label{" .. label .. "}"))
+  end
+
+  return figure_block
+end
+
 local function process_para(el)
   local has = false
   for _, inline in ipairs(el.content) do
@@ -296,6 +344,10 @@ process_blocks = function(blocks)
     local src = figure_transclusion_src(block)
     if src then
       for _, b in ipairs(load_note(src)) do table.insert(result, b) end
+    elseif block.t == "Figure" then
+      -- Image-Embed: caption + \label{fig:...} setzen, in Wikilink-Map eintragen.
+      local labeled = register_image_figure(block)
+      table.insert(result, labeled or block)
     elseif block.t == "Para" or block.t == "Plain" then
       local replaced = process_para(block)
       if replaced then
