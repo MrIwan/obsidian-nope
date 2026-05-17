@@ -972,6 +972,28 @@ $endif$
 % --------------------------------------------------------------------------
 
 
+% --- Obsi Print: language-aware \autoref names --------------------------
+% hyperref's \autoref{} uses its own naming table (\figureautorefname etc.).
+% \IfPackageLoadedTF is a LaTeX2e kernel macro (2020+) — no \makeatletter
+% wrap needed, unlike the internal \@ifpackageloaded form.
+\AtBeginDocument{%
+  \IfPackageLoadedTF{babel}{%
+    \iflanguage{ngerman}{%
+      \renewcommand{\figureautorefname}{Abbildung}%
+      \renewcommand{\tableautorefname}{Tabelle}%
+      \renewcommand{\equationautorefname}{Gleichung}%
+      \renewcommand{\sectionautorefname}{Abschnitt}%
+      \renewcommand{\subsectionautorefname}{Unterabschnitt}%
+      \renewcommand{\subsubsectionautorefname}{Unterunterabschnitt}%
+      \renewcommand{\paragraphautorefname}{Absatz}%
+      \renewcommand{\itemautorefname}{Punkt}%
+      \renewcommand{\footnoteautorefname}{Fu\ss note}%
+    }{}%
+    % --- Add further \iflanguage{<lang>}{...} blocks below if needed ---
+  }{}%
+}
+% ------------------------------------------------------------------------
+
 \begin{document}
 
 %%
