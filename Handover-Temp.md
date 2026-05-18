@@ -32,22 +32,65 @@ Image-Figures: `![[bild.png|Caption]]` und `![[bild.png]]` (ohne Caption → Fil
 
 Inline-Filter: `%%text%%` Comments (auch multi-block über Leerzeilen hinweg), `==text==` Highlights (paragraph-scoped, unbalanced wird literal reverted), in `obsidian-inline.lua`.
 
-Mehrfach-Embed der gleichen Note: für Note-Embeds (normal + table-env + equation-env + image-figure) wird das `\label{}` nur beim ersten Embed gesetzt — vermeidet „multiply defined"-Warnungen. Für theorem-Env-Wraps wird das Label aktuell noch bei jedem Embed neu emitted (latenter Bug, falls jemand das gleiche Theorem zweimal voll-embedded; bisher nicht real getroffen).
+Mehrfach-Embed der gleichen Note: für alle Note-Embed-Wrap-Pfade (normal, table-env, equation-env, theorem-env + andere amsthm-Envs, image-figure) wird das `\label{}` nur beim ersten Embed gesetzt — vermeidet „multiply defined"-Warnungen. Counter (z.B. Theorem-Nummer, Tabellen-Nummer) inkrementieren bei jedem Embed, weil jeder Wrap eine eigene Environment-Instanz ist; Wikilinks zeigen über das eine Label weiterhin auf das erste Embed.
 
 ## Was offen / nicht erledigt
 
-**1. Dead-Metadata in `branding/_base.yml` aufräumen.** Nach dem crossref-Schnitt sind `figureTitle`, `tableTitle`, `figPrefix`, `tblPrefix`, `eqnPrefix` reine No-Ops (Pandoc reicht sie weiter, niemand liest sie mehr). `lang: de` muss bleiben (treibt Babel-`ngerman`). Reines Cleanup, niedrige Priorität.
+**1. Architektur-Refactor: env-Dispatch generalisieren.** Aktuell ein eigener `if env_name == ... then ... end`-Branch pro env-Wert in `load_note`, ~30-40 Zeilen Boilerplate pro Branch (`first_embed`-Guard, Target-Registrierung, Block-Suche, Error-Pfad). Schon bei 3 Envs (table/equation/theorem) sichtbar repetitiv; bei 5-8 Envs unwartbar. Geplanter Refactor: drei Handler nach Env-Family — `wrap_math` (equation, align, gather, multline, alignat), `wrap_table` (nur table wegen Caption-Pflicht), `wrap_block` (alles andere — theorem, lemma, definition, proof + user-defined). Plus shared Helpers `register_target(notename, prefix)` und `find_block(blocks, predicate)`. Senkt Cost pro neuem Env auf ~1 Zeile Config. Vor dem nächsten Math-Env-Add (align o.ä.) angehen — dann ist die Code-Konvergenz auf saubere Helpers maximal.
 
-**2. Aufräumen: `Tabelle-Mit-Eigener-Caption.md`.** Beim Single-Source-Refactor wurde die Test-Note inhaltlich auf „Risikomatrix" umgestellt — der Filename passt semantisch nicht mehr. Beim nächsten Mal manuell zu `Tabelle-Risiken.md` umbenennen.
+**2. Heading-Shifting bei Note-Embeds.** Aktuell werden Headings der embedded Note unverändert übernommen — eine Note mit „# Definition" als Top-Level-Heading wirkt im Host-Dokument wie ein neuer H1-Abschnitt, was die Hierarchie zerschießt. Mögliche Strategien: (a) Headings um N Level nach unten shiften (analog Pandoc's `--shift-heading-level-by`, auto-detect aus Host-Context), (b) Headings strippen wenn Note via `latex-env` gewrappt wird (typisch für atomic Theorem/Equation-Notes — die haben sowieso keine sinnvolle eigene Hierarchie), (c) Embed-Tag mit Level-Hint (`![[Note:h+1]]` o.ä., aber bricht Obsidian-Syntax-Kompat). Vermutlich (b) als Default + (a) für nicht-gewrappte Embeds. Konvention noch offen.
 
-**3. Latenter Bug: Theorem-Mehrfach-Embed.** `latex-env: theorem`-Notes setzen das `\label` bei jedem Embed neu — würde bei tatsächlichem Doppel-Embed „multiply defined"-Warnungen geben. Fix wäre analog zu Tabellen/Bildern/Equations: `first_embed`-Check vor dem Label-Emit. Aktuell nicht-blockierend, weil Theoreme typisch einmal embedded werden.
+**3. Mermaid-Render-Engine.** Aktuell werden Mermaid-Codeblöcke einfach als Code-Fence im PDF gerendert (= Quelltext, nicht Diagramm). Für technische Doku mit Architektur-/Flow-Diagrammen sinnvoll. Standard-Lösung: Pandoc-Filter (`pandoc-mermaid`, `mermaid-filter`, `diagram-filter`) der die Code-Block-Inhalte über CLI an mermaid-cli übergibt und das resultierende SVG/PDF einbindet. Pipeline-Kosten: Node + `@mermaid-js/mermaid-cli` ins Docker-Image (zieht Headless-Chromium nach — Image wird deutlich größer). Alternative: vorgerenderte Mermaid-Bilder im Vault speichern und als normale `![[diagram.svg]]`-Embeds — kein Filter nötig, dafür manueller Render-Step. Entscheidung Pipeline-Integration vs. Pre-Render-Convention offen.
+
+**4. Plugin-Settings-Erweiterungen (UX).** Quality-of-Life-Features die noch fehlen:
+- „Remove docker image"-Button — Pendant zu „Build image", räumt das Plugin-Image weg (`docker image rm <image>` oder `docker compose down --rmi all`). Aktuell muss man manuell die Shell bemühen.
+- „Cleanup build folder"-Button — Löscht `pipeline/build/*` (Intermediates + alte PDFs). Wird mit der Zeit groß.
+- Toggle „Keep LaTeX intermediates after build" — Default `false` (Build-Folder wird nach erfolgreichem Export geleert), Debug-Mode `true` (Verhalten wie heute, alles bleibt persistent für Diagnose). Heute sind die Intermediates immer persistent; das ist gut beim Debuggen, beim normalen Nutzer aber unnötiger Müll.
+
+**5. Branding-Override per Vault-`.md`-File.** Aktuell sind alle Branding-Werte hardcoded in `_base.yml` (titlepage-background, titlepage-logo, header-left, titlepage-text-color etc.). Nutzer soll das pro Vault und pro Kunde überschreiben können, ohne bei Plugin-Updates Settings zu verlieren.
+
+Konvention: Branding wird als normale Obsidian-`.md`-Datei mit Frontmatter angelegt (z.B. `Branding-Kunde1.md` irgendwo im Vault). Frontmatter enthält die YAML-Keys die `_base.yml` überschreiben sollen — z.B.:
+```yaml
+---
+toc-own-page: true
+header-left: "Draft"
+titlepage-text-color: "1A1A1A"
+titlepage-logo: "[[logo_kunde.png]]"
+titlepage-background: "[[kunde_1/branding/bg.png]]"
+---
+```
+Unter dem Frontmatter folgt Markdown-Body, der für Endnutzer dokumentiert was die Keys bedeuten (TOC = „Table of Contents", was `titlepage-text-color` macht, etc.). Body wird beim Export ignoriert — er ist nur Doku für den Editor in Obsidian.
+
+Doc-Selection: Im Frontmatter des zu exportierenden Dokuments ein Key `obsi-print-branding: "[[Branding-Kunde1]]"`. Default: kein Key gesetzt → kein Override → reine `_base.yml`-Defaults (heutiges Verhalten).
+
+Wikilink-Pflicht: Wikilinks in YAML MÜSSEN quoted sein — `"[[foo.png]]"`, nicht `[[foo.png]]`. Sonst interpretiert YAML das als Flow-Sequence (Liste-in-Liste) und parsed falsch. Im Template-Body als auffälligen Hinweis dokumentieren.
+
+Wikilink-Resolution: über Obsidians `metadataCache.getFirstLinkpathDest(linkpath, sourcePath)` mit `sourcePath` = Branding-File. Standard-Disambiguierung von Obsidian (gleicher Folder zuerst, dann nearest, dann alphabetisch) wird damit übernommen. Forced-Root-Path bei Bedarf via führendem Slash: `"[[/kunde_1/branding/logo.png]]"`.
+
+Resolution-Strategie KEY-AGNOSTIC: Plugin scannt alle String-Values der Branding-Frontmatter auf `[[…]]`-Pattern (general purpose) und ersetzt jeden Treffer durch den resolved absoluten Build-Pfad. Funktioniert auch wenn `[[…]]` innerhalb von LaTeX-Snippets steht (Beispiel: `header-left` enthält `\includegraphics{[[logo.png]]}`). Keine hardcoded Key-Liste — neue Override-Keys funktionieren ohne Code-Change.
+
+Keine Rekursion: Wenn das Branding-File selbst einen `obsi-print-branding`-Key hat, wird der ignoriert. Plugin liest genau einmal und materialisiert daraus eine `branding-override.yml`.
+
+Merge-Reihenfolge: `_base.yml` → `branding-override.yml` → `<doc-frontmatter>`. Pandoc-CLI: `--metadata-file _base.yml --metadata-file branding-override.yml --metadata-file <generierte-doc-frontmatter.yml>` (oder die Doc-Frontmatter wandert via Pandoc-Default-Pfad rein). Bedeutet: doc-eigene Frontmatter-Keys schlagen Branding (Spezialfall im Doc kann Branding lokal kippen), Branding schlägt Base-Defaults.
+
+Asset-Pipeline beim Export (TypeScript-Seite):
+1. Lese Frontmatter des Export-Docs. Wenn `obsi-print-branding` gesetzt → resolve Wikilink zur Branding-`.md`.
+2. Lese Frontmatter der Branding-`.md`. Body ignorieren.
+3. Walk alle String-Values, suche `[[…]]`-Pattern, resolve via `metadataCache.getFirstLinkpathDest`, kopiere referenzierte Files nach `pipeline/build/<docname>/branding/<original-name>`.
+4. Schreibe `pipeline/build/<docname>/branding-override.yml` mit den ggf. ersetzten absoluten Container-Pfaden (`/build/<docname>/branding/<name>` aus Container-Sicht).
+5. Hänge `--metadata-file <build>/branding-override.yml` an Pandoc-Invocation.
+
+Pro Export frisch generiert — keine persistente Override-YAML, weil Docname pro Export wechselt.
+
+Plus: Command „Create branding template" — legt im Vault-Root eine `Branding-Template.md` an, Frontmatter vollständig ausgefüllt mit allen `_base.yml`-Keys (TOC-Settings, Titlepage-Settings, Header-Settings), darunter im Body deutscher Erklärungstext pro Key. User dupliziert/editiert die Datei pro Kunde.
+
+Späteres Feature (nicht im ersten Wurf): High-Level-Key wie `header-logo: "[[logo.png]]"` der Plugin-seitig zum vollen LaTeX-Snippet (`\raisebox{...}{\includegraphics{...}}`) expanded wird. Aktuell muss der User `header-left` direkt als LaTeX schreiben wenn er ein Logo will, was LaTeX-Kenntnis verlangt — UX-Falle. Aber: `header-left: "Draft"` als plain text funktioniert trivial, also kein Blocker für V1.
 
 ## Test-Dateien im Vault
 
 - `ExampleFiles/HelperFiles/Theorem-Pythagoras.md` — atomic Note mit `latex-env: theorem` Frontmatter.
 - `ExampleFiles/HelperFiles/Tabelle-Vergleich.md` — atomic Tabellen-Note mit `latex-env: table` + `caption:`.
-- `ExampleFiles/HelperFiles/Tabelle-Projektphasen.md` — zweite Tabellen-Note.
-- `ExampleFiles/HelperFiles/Tabelle-Mit-Eigener-Caption.md` — dritte Tabellen-Note (Filename veraltet, Inhalt = Risikomatrix; siehe „offen" Punkt 2).
+- `ExampleFiles/HelperFiles/Tabelle-Projektphasen.md` — zweite Tabellen-Note (Counter-Test).
 - `ExampleFiles/HelperFiles/Navier-Stokes.md` — atomic Equation-Note mit `latex-env: equation`, Multi-Line via `\begin{aligned}…\end{aligned}` im `$$…$$`-Block.
 - `ExampleFiles/HelperFiles/Eulersche-Identitaet.md` — atomic Equation-Note, einzeilige Gleichung (Counter-Test).
 - `ExampleFiles/HelperFiles/neuron.excalidraw.png`, `neuronales_netz.excalidraw.png` — Test-Bilder.
@@ -100,6 +143,4 @@ Häufiger Stolperstein: Pandoc-Lua-API-Konstruktor-Signaturen. `pandoc.Caption(l
 
 ## Empfohlene erste Schritte im nächsten Chat
 
-1. Theorem-Mehrfach-Embed-Bug fixen (offener Punkt 3) — kleine Erweiterung im env-Branch von `load_note`: `first_embed`-Check vor dem `\label`-Emit (Vorlage in Tabellen- und Equation-Pfad vorhanden).
-2. `Tabelle-Mit-Eigener-Caption.md` zu `Tabelle-Risiken.md` umbenennen und `tabellen-test.md` entsprechend nachziehen.
-3. Dead-Metadata in `_base.yml` entrümpeln (`figureTitle`, `tableTitle`, `figPrefix`, `tblPrefix`, `eqnPrefix` — Reste aus der crossref-Zeit).
+1. Architektur-Refactor (offener Punkt 1) — env-Family-Dispatch mit shared Helpers, bevor weitere Math-Envs (align, gather, multline) dazukommen.

@@ -374,18 +374,27 @@ local function load_note(src)
 
       -- ----------------------------------------------------------------
       -- Default-Env-Wrap (theorem, lemma, definition, …)
+      --
+      -- `first_embed`-Guard fürs Label: Counter wird bei jedem Embed
+      -- erhöht (jeder Wrap ist ein neues `\begin{theorem}…\end{theorem}`),
+      -- aber `\label` nur beim ersten Embed gesetzt — sonst "multiply
+      -- defined"-Warnungen. Analog zu Tabellen/Bildern/Equations.
       -- ----------------------------------------------------------------
       local env_short = doc.meta["latex-short"] and pandoc.utils.stringify(doc.meta["latex-short"]) or nil
       local note_label = "note:" .. sanitize_label_id(notename)
+      local first_embed = (available_targets[notename] == nil)
 
-      -- Annotate inner headings/block-IDs
+      -- Annotate inner headings/block-IDs (registriert intern available_targets[notename]
+      -- beim ersten Aufruf, deswegen muss first_embed VOR diesem Call gesnapshotted werden).
       local annotated_inner = annotate_with_labels(sliced, notename, true)
 
       local opener = "\\begin{" .. env_name .. "}"
       if env_short and env_short ~= "" then
         opener = opener .. "[" .. env_short .. "]"
       end
-      opener = opener .. "\\label{" .. note_label .. "}"
+      if first_embed then
+        opener = opener .. "\\label{" .. note_label .. "}"
+      end
 
       local wrapped = { pandoc.RawBlock("latex", opener) }
       for _, b in ipairs(annotated_inner) do table.insert(wrapped, b) end
