@@ -40,7 +40,6 @@ pandoc \
   --lua-filter=/app/filters/obsidian-transclude.lua \
   --lua-filter=/app/filters/obsidian-inline.lua \
   --lua-filter=/app/filters/callouts.lua \
-  --lua-filter=/app/filters/glossary.lua \
   --toc \
   -s \
   -t latex \

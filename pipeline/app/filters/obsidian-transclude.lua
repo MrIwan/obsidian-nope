@@ -380,6 +380,114 @@ local function wrap_block(notename, env_name, sliced, doc_meta)
   return wrapped
 end
 
+-- ============================================================================
+-- Glossary-Resolution
+--
+-- Atomic Glossary-Notes haben `gls-id` (plus optional `gls-short`, `gls-long`,
+-- `gls-description`, `gls-type`) im Frontmatter. Wikilinks `[[KI]]` werden im
+-- Resolver (Phase 2 von Pandoc(doc)) zu `\gls{<id>}` ersetzt, der Entry für
+-- `\newacronym`/`\newglossaryentry` wird gesammelt und am Ende in
+-- `header-includes` injiziert (Phase 3 von Pandoc(doc)).
+--
+-- Funktioniert für Top-Level-Wikilinks UND für Wikilinks in expandierten
+-- Embeds, weil der Walker in Phase 2 auf dem schon-expandierten AST läuft.
+--
+-- Frontmatter-Cache (`frontmatter_cache`) verhindert wiederholtes Datei-IO bei
+-- mehrfachen Wikilinks auf dasselbe Target. Sentinel `false` markiert „schon
+-- geprüft, kein gls-id" (vs. `nil` = „noch nicht geprüft").
+-- ============================================================================
+
+local glossary_entries = {}
+local frontmatter_cache = {}
+
+-- Liest YAML-Frontmatter via Regex (leichtgewichtig — kein Pandoc-Roundtrip
+-- für reine Key-Value-Lookups). Akzeptiert `key: value` mit optionalen
+-- Quotes. Reicht für die gls-*-Konvention.
+local function read_frontmatter(path)
+  local f = io.open(path, "rb")
+  if not f then return nil end
+  local content = f:read("*all"); f:close()
+  local fm = content:match("^%-%-%-\r?\n(.-)\r?\n%-%-%-")
+  if not fm then return nil end
+  local result = {}
+  for line in fm:gmatch("[^\r\n]+") do
+    local k, v = line:match("^([%w%-_]+)%s*:%s*(.+)$")
+    if k and v then
+      result[k] = v:gsub("^%s*[\"']?(.-)[\"']?%s*$", "%1")
+    end
+  end
+  return result
+end
+
+-- Escapt LaTeX-Sonderzeichen für sicheren Einsatz in \newacronym{}/\newglossaryentry{}.
+local function tex_escape(s)
+  return s:gsub("([&%%$#_{}])", "\\%1")
+end
+
+-- Versucht, einen Wikilink-Target als Glossary-Ref aufzulösen.
+-- Returns: RawInline `\gls{<id>}` bei Treffer, sonst nil.
+-- Seiteneffekt: registriert den Entry in `glossary_entries` beim ersten Treffer.
+local function try_resolve_glossary(target)
+  local cached = frontmatter_cache[target]
+  local fm
+  if cached == false then
+    return nil  -- bereits geprüft, kein gls-id
+  elseif cached then
+    fm = cached
+  else
+    local path = find_note_path(target)
+    if not path then
+      frontmatter_cache[target] = false
+      return nil
+    end
+    fm = read_frontmatter(path)
+    if not fm or not fm["gls-id"] then
+      frontmatter_cache[target] = false
+      return nil
+    end
+    frontmatter_cache[target] = fm
+  end
+
+  local id = fm["gls-id"]
+  if not glossary_entries[id] then
+    glossary_entries[id] = {
+      short = fm["gls-short"] or id,
+      long = fm["gls-long"] or id,
+      description = fm["gls-description"] or "",
+      type = fm["gls-type"] or "term",
+    }
+  end
+  return pandoc.RawInline("latex", "\\gls{" .. id .. "}")
+end
+
+-- Schreibt die gesammelten `\newacronym`/`\newglossaryentry`-Lines in
+-- `header-includes` und setzt `has-glossary` für die Template-Logik.
+-- No-Op wenn nichts gesammelt wurde.
+local function flush_glossary_entries(doc)
+  if next(glossary_entries) == nil then return end
+
+  local lines = {}
+  for id, e in pairs(glossary_entries) do
+    if e.type == "acronym" then
+      table.insert(lines, string.format(
+        "\\newacronym{%s}{%s}{%s}",
+        id, tex_escape(e.short), tex_escape(e.long)))
+    else
+      table.insert(lines, string.format(
+        "\\newglossaryentry{%s}{name={%s},description={%s}}",
+        id, tex_escape(e.short), tex_escape(e.description)))
+    end
+  end
+
+  local hi = doc.meta["header-includes"] or pandoc.MetaList({})
+  if hi.t ~= "MetaList" then hi = pandoc.MetaList({hi}) end
+  table.insert(hi, pandoc.MetaBlocks({
+    pandoc.RawBlock("latex", table.concat(lines, "\n"))
+  }))
+  doc.meta["header-includes"] = hi
+  doc.meta["has-glossary"] = pandoc.MetaBool(true)
+end
+
 local function load_note(src)
   local notename, anchor_type, anchor_value = parse_anchor(src)
   -- Canonical-Form ohne .md, damit Map-Keys konsistent zum Resolver bleiben
@@ -560,42 +668,54 @@ local function is_wikilink_like(target)
   return true
 end
 
+-- Resolver-Präzedenz für Wikilinks (drei sich gegenseitig ausschließende Fälle):
+--   1. Glossary-Entry (`gls-id` im Frontmatter)       → \gls{<id>}
+--   2. Embed-Target (in available_targets)            → \autoref oder \hyperref
+--   3. Sonst                                          → Plain-Text (Denk-Verweis)
+-- Glossary gewinnt bei Konflikt (Note mit gls-id UND latex-env: theorem) —
+-- glossary-Refs sind intentional, theorem-Embeds sind seltener im selben Kontext.
 local function resolve_wikilink(link)
   if not is_wikilink_like(link.target) then return nil end
 
-  -- Pandoc may keep ".md" in target; map keys are without extension.
-  -- Also strip a leading "./" if Pandoc prefixes relative-file targets.
+  -- Pandoc behält ggf. ".md" im Target; Map-Keys sind ohne Extension.
+  -- Auch führendes "./" strippen, falls Pandoc relative Pfade so präfixt.
   local target = link.target
   target = target:gsub("^%./", "")
   target = target:gsub("%.md$", "")
 
+  -- Case 1: Glossary-Entry
+  local gls = try_resolve_glossary(target)
+  if gls then return gls end
 
+  -- Case 2: Embed-Target
   local label = available_targets[target]
   if label then
-    -- If the target is wrapped in a labeled environment AND the user used the default display (no |Custom), switch to \autoref so the rendered text becomes "Theorem N" instead of the bare note name. Custom-display links
-    -- always stay on \hyperref to preserve the user's chosen text.
+    -- Default-Display (kein |Custom) auf autoref_target → \autoref ("Theorem N").
+    -- Custom-Display bleibt \hyperref mit User-Text.
     local content_str = pandoc.utils.stringify(link.content)
     local is_default_display = (content_str == link.target or content_str == target)
     if autoref_targets[target] and is_default_display then
       return pandoc.RawInline("latex", "\\autoref{" .. label .. "}")
     end
-    -- Wrap link.content in \hyperref[label]{...}, keeping Markdown inlines intact.
     local result = { pandoc.RawInline("latex", "\\hyperref[" .. label .. "]{") }
     for _, inline in ipairs(link.content) do table.insert(result, inline) end
     table.insert(result, pandoc.RawInline("latex", "}"))
     return result
   end
 
-  -- Fallback: target not embedded → render link content as plain inlines.
+  -- Case 3: Plain-Text-Fallback
   return link.content
 end
 
 function Pandoc(doc)
-  -- Phase 1: expand embeds and annotate targets
+  -- Phase 1: Embeds expandieren und Targets in available_targets registrieren.
   doc.blocks = process_blocks(doc.blocks)
-  -- Phase 2: resolve wikilinks against the targets that actually made it in pandoc.walk_block works on a single block tree; wrap in a Div to walk all top-level blocks at once. Compatible with older Pandoc 3.x that doesn't
-  -- expose the :walk method on Blocks lists.
+  -- Phase 2: Wikilinks auflösen (glossary + embed-targets) auf dem nun-expandierten
+  -- AST. walk_block braucht einen einzelnen Block-Baum — daher der Div-Wrap.
   local walked = pandoc.walk_block(pandoc.Div(doc.blocks), { Link = resolve_wikilink })
   doc.blocks = walked.content
+  -- Phase 3: Gesammelte Glossary-Entries als \newacronym/\newglossaryentry in
+  -- header-includes injizieren (Template kümmert sich um \makeglossaries + \printglossary).
+  flush_glossary_entries(doc)
   return doc
 end

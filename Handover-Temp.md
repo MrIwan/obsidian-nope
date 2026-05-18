@@ -1,6 +1,6 @@
 # Handover — Obsi Print Plugin
 
-Stand: Image-Figure-, Tabellen- und Equation-Numbering laufen. Image/Tabellen via RawInline-`\label{}`-Injektion in der Caption, Equations via `\begin{equation}\label{}…\end{equation}`-Wrap des DisplayMath-Blocks (alles Pandoc-Version-unabhängig). `pandoc-crossref` ist aus der Pipeline raus. Frontmatter-basierte Note-Konfiguration ist konsolidiert auf Single-Source.
+Plugin exportiert Obsidian-Notes via Docker-Pipeline (Pandoc + LaTeX) als PDF. Atomic-Note-Konzept mit Frontmatter-gesteuertem `latex-env` für strukturierte Inhalte (theorem, table, equation) und Wikilink-basierten Cross-References inkl. Glossar.
 
 ## Plugin-Architektur (Kurzfassung)
 
@@ -8,7 +8,7 @@ Zwei Hälften:
 
 **Obsidian-Plugin** (TypeScript, in `src/`) — registriert zwei Commands („Export active note to PDF", „Build docker image with cache"), eine Settings-UI (Output-Path, Auto-Open-PDF, Preflight-Checks, Setup-Section mit Build-Button + `noCache: true`). Spawnt Docker-Compose mit `VAULT_PATH` als ENV.
 
-**Docker-Pipeline** (in `pipeline/`) — `pandoc/extra:latest` als Base, plus `bash` und einige tlmgr-Pakete. Vier Lua-Filter laufen in Reihenfolge: `obsidian-transclude.lua` (Embeds + Wikilinks + Map-basiertes Autoref + Image-Figures + Table-Captions + Equation-Wrap), `obsidian-inline.lua` (Comments + Highlights), `callouts.lua` (Obsidian-Callouts → awesomebox), `glossary.lua` (Glossary-Refs). Kein `pandoc-crossref` mehr — wurde durch eigene RawInline-Label-Logik plus Babel-`ngerman`-Naming-Renames ersetzt. Auch kein `pdf.lua` mehr — war nur cosmetic Whitespace-Normalisierung um Math-Begin/End-Marker, plus ein nie-erreichtes Compat-Fallback aus dem ursprünglichen Enhancing-Export-Plugin. Pandoc 3.9.x (via Dockerfile festgepinnt) erledigt das ohnehin korrekt. Plus Eisvogel-Template, plus latexmk-Loop.
+**Docker-Pipeline** (in `pipeline/`) — `pandoc/extra:latest` als Base (Pandoc 3.9.x festgepinnt), plus `bash` und einige tlmgr-Pakete. Drei Lua-Filter laufen in Reihenfolge: `obsidian-transclude.lua` (Embeds + Wikilink-Resolver mit Präzedenz glossary → embed-target → plain, plus Image-Figures, Table-Captions, Equation-/Theorem-Wraps und Glossary-Entry-Sammlung), `obsidian-inline.lua` (Comments + Highlights), `callouts.lua` (Obsidian-Callouts → awesomebox). Plus Eisvogel-Template, plus latexmk-Loop.
 
 Bind-Mounts: `/vault` (read-only Vault), `/app` (read-only Plugin-Pipeline-Folder), `/build` (writable Intermediates + finale PDF, intentional persistent für Debugging — Plugin kopiert die finale PDF zum konfigurierten Output-Path).
 
@@ -31,6 +31,8 @@ Image-Figures: `![[bild.png|Caption]]` und `![[bild.png]]` (ohne Caption → Fil
 „Abbildung"/„Tabelle"/„Gleichung" statt „Figure"/„Table"/„Equation": durch zwei Mechanismen — Babel-`ngerman` setzt `\figurename`/`\tablename` (Caption-Prefix), plus Template-`\AtBeginDocument`-Block (Zeile ~980 in eisvogel.tex) mit `\IfPackageLoadedTF{babel}+\iflanguage{ngerman}` setzt `\figureautorefname`/`\tableautorefname`/`\equationautorefname` etc. (was `\autoref` rendert).
 
 Inline-Filter: `%%text%%` Comments (auch multi-block über Leerzeilen hinweg), `==text==` Highlights (paragraph-scoped, unbalanced wird literal reverted), in `obsidian-inline.lua`.
+
+Glossary: Atomic Glossary-Notes mit Frontmatter-Keys `gls-id`, `gls-short`, `gls-long`, `gls-description`, `gls-type` (`acronym` oder `term`). Wikilinks `[[KI]]` werden im Resolver (Case 1, vor Embed-Targets) zu `\gls{<id>}` ersetzt; die referenzierten Entries werden gesammelt und als `\newacronym`/`\newglossaryentry`-Lines in `header-includes` injiziert. Funktioniert auch in embedded Notes, weil der Wikilink-Resolver auf dem schon-expandierten AST läuft. Template lädt das `glossaries`-Paket mit `acronym, toc, nonumberlist` (eisvogel.tex Z. 502), ruft `\makeglossaries` auf, und gibt am Doc-Ende `\printglossary[type=\acronymtype, title={Abkürzungen}]` + `\printglossary[title={Glossar}]` aus. `latexmkrc` triggert `makeglossaries` auf `.glo→.gls`- und `.acn→.acr`-Deps automatisch.
 
 Mehrfach-Embed der gleichen Note: für alle Note-Embed-Wrap-Pfade (normal, table-env, equation-env, theorem-env + andere amsthm-Envs, image-figure) wird das `\label{}` nur beim ersten Embed gesetzt — vermeidet „multiply defined"-Warnungen. Counter (z.B. Theorem-Nummer, Tabellen-Nummer) inkrementieren bei jedem Embed, weil jeder Wrap eine eigene Environment-Instanz ist; Wikilinks zeigen über das eine Label weiterhin auf das erste Embed.
 
@@ -96,6 +98,8 @@ Späteres Feature (nicht im ersten Wurf): High-Level-Key wie `header-logo: "[[lo
 - `ExampleFiles/HelperFiles/env-test.md` — demonstriert Theorem-Embed, Default-Wikilink (autoref), Custom-Display-Wikilink (hyperref).
 - `ExampleFiles/HelperFiles/image-test.md` — Test-Cases für Image-Feature: Embed mit Caption, Embed ohne Caption (Filename-Default), Plain-Text-Fallback für non-embedded Refs.
 - `ExampleFiles/HelperFiles/gleichungen-test.md` — Test-Cases für Equation-Feature: Multi-Line via `aligned`, einzeilige Gleichung, Mehrfach-Embed (Counter-Test mit `\label` nur beim ersten), Plain-Text-Fallback.
+- `ExampleFiles/HelperFiles/glossar-test.md` — Test-Cases für Glossary-Feature: Wikilinks zu `[[KI]]`, `[[CNN]]`, `[[DNN]]` etc. die zu `\gls{}`-Refs werden.
+- `ExampleFiles/HelperFiles/KI.md`, `CNN.md`, `DNN.md`, `NLP.md`, `Transformer.md`, `Spracherkennung.md`, `Computer Vision.md` — atomic Glossary-Notes mit `gls-id`/`gls-short`/`gls-long`/`gls-description`/`gls-type`-Frontmatter.
 - `ExampleFiles/tabellen-test.md` — drei Tabellen-Embeds (Counter-Inkrement-Test), Default- und Custom-Display-Refs, Plain-Text-Fallback.
 - `ExampleFiles/Testdokument.md`, `ExampleFiles/Testdokument-minimal.md` — User-eigene Tests.
 
@@ -103,10 +107,21 @@ Späteres Feature (nicht im ersten Wurf): High-Level-Key wie `header-logo: "[[lo
 
 Datei: `pipeline/app/filters/obsidian-transclude.lua`.
 
-Wikilink-Map:
+Wikilink-Resolver-Präzedenz (`resolve_wikilink`) — drei Cases:
 
-- `available_targets[notename] = label` registriert jeden erreichbaren Anker. Keys sind canonical (ohne `.md`). Values sind LaTeX-Label-Strings mit Prefix nach Target-Typ: `note:X` (Standard-Embed, Theorem-Wrap), `tab:X` (latex-env: table), `eq:X` (latex-env: equation), `fig:bild.png` (Image-Embed), `note:X:sec-Heading`, `note:X:blk-id` (Slice-Anker).
-- `autoref_targets[notename] = true` markiert Targets, deren Default-Display-Wikilinks per `\autoref` aufgelöst werden (Theorem-Envs, Tables, Equations, Image-Figures). Andere Targets nutzen `\hyperref` mit Display-Text.
+1. **Glossary** — `try_resolve_glossary(target)` prüft Frontmatter der Target-Note auf `gls-id`. Treffer → `\gls{<id>}`-RawInline + Entry-Registrierung. Gewinnt bei Konflikt mit Embed-Target (Note mit `gls-id` UND `latex-env: theorem` → Glossary).
+2. **Embed-Target** — Lookup in `available_targets[target]`. Treffer → bei autoref-Target + Default-Display `\autoref{label}`, sonst `\hyperref[label]{content}`.
+3. **Fallback** — kein Treffer → Plain-Text aus `link.content`. Erlaubt Denk-Verweise auf nicht-embedded Notes ohne Crash.
+
+`available_targets[notename] = label` registriert jeden erreichbaren Embed-Anker. Keys sind canonical (ohne `.md`). Values mit Prefix nach Target-Typ: `note:X` (Standard-Embed, Theorem-Wrap), `tab:X` (latex-env: table), `eq:X` (latex-env: equation/align/gather/multline/alignat), `fig:bild.png` (Image-Embed), `note:X:sec-Heading`, `note:X:blk-id` (Slice-Anker). `autoref_targets[notename] = true` markiert Targets mit `\autoref`-Verhalten (Theorem-Envs, Tables, Equations, Image-Figures).
+
+Glossary-Block (eigene Sektion in `obsidian-transclude.lua`):
+
+- Modul-State: `glossary_entries` (id → entry) und `frontmatter_cache` (target → fm-table | false). Sentinel `false` bedeutet „schon geprüft, kein gls-id" — vermeidet wiederholtes Datei-IO.
+- `read_frontmatter(path)` — Regex-Parser für YAML-Frontmatter. Akzeptiert `key: value` mit optionalen Quotes. Leichtgewichtig, kein Pandoc-Roundtrip.
+- `tex_escape(s)` — escapt `& % $ # _ { }` für sicheren Einsatz in `\newacronym{}`/`\newglossaryentry{}`.
+- `try_resolve_glossary(target)` — Cache-Check, Frontmatter-Lookup, Entry-Registrierung. Returns `\gls{}`-RawInline oder nil.
+- `flush_glossary_entries(doc)` — emittiert gesammelte Entries als `\newacronym`/`\newglossaryentry`-Block in `header-includes`, setzt `has-glossary`. No-Op wenn nichts gesammelt.
 
 Frontmatter-gesteuerte Wraps (in `load_note`): Dispatch in drei Handler nach Env-Family, plus zwei shared Helpers.
 
@@ -123,7 +138,7 @@ Image-Figures (in `register_image_figure`):
 - Hängt `\label{fig:<sanitized-src>}` als RawInline ans Caption-Ende.
 - Registriert `available_targets[src]` und `autoref_targets[src]`.
 
-Pandoc-Loop (`Pandoc(doc)`): zwei Phasen. Erst `process_blocks(doc.blocks)` (befüllt Map und expandiert Embeds, labelt Image-Figures). Dann `pandoc.walk_block(pandoc.Div(...), {Link = resolve_wikilink})` für die Wikilink-Resolution.
+Pandoc-Loop (`Pandoc(doc)`): drei Phasen. (1) `process_blocks(doc.blocks)` expandiert Embeds, befüllt `available_targets`, labelt Image-Figures. (2) `pandoc.walk_block(pandoc.Div(...), {Link = resolve_wikilink})` löst Wikilinks auf dem expandierten AST — der Walker sieht damit auch Wikilinks aus expandiertem Embed-Content, weshalb Glossary-Refs in embedded Notes mit-gefunden werden. (3) `flush_glossary_entries(doc)` schreibt die in Phase 2 gesammelten Entries in `header-includes`.
 
 Helper-Hinweise:
 
