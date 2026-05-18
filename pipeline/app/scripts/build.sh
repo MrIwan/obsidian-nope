@@ -37,7 +37,6 @@ pandoc \
   --resource-path="$INPUT_DIR:$VAULT_PATHS/app/assets" \
   --extract-media="$WORK/media" \
   --template=/app/template/eisvogel.tex \
-  --lua-filter=/app/filters/pdf.lua \
   --lua-filter=/app/filters/obsidian-transclude.lua \
   --lua-filter=/app/filters/obsidian-inline.lua \
   --lua-filter=/app/filters/callouts.lua \
