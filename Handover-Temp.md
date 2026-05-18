@@ -1,6 +1,6 @@
 # Handover — Obsi Print Plugin
 
-Stand: Image-Figure-Feature und Tabellen-Numbering laufen. Beides via RawInline-`\label{}`-Injektion in der Caption (Pandoc-Version-unabhängig). `pandoc-crossref` ist aus der Pipeline raus. Frontmatter-basierte Note-Konfiguration ist konsolidiert auf Single-Source.
+Stand: Image-Figure-, Tabellen- und Equation-Numbering laufen. Image/Tabellen via RawInline-`\label{}`-Injektion in der Caption, Equations via `\begin{equation}\label{}…\end{equation}`-Wrap des DisplayMath-Blocks (alles Pandoc-Version-unabhängig). `pandoc-crossref` ist aus der Pipeline raus. Frontmatter-basierte Note-Konfiguration ist konsolidiert auf Single-Source.
 
 ## Plugin-Architektur (Kurzfassung)
 
@@ -26,32 +26,35 @@ Wikilink-Auflösung: `[[Note]]`, `[[Note|Display]]`, `[[Note#Heading]]`, `[[Note
 
 Image-Figures: `![[bild.png|Caption]]` und `![[bild.png]]` (ohne Caption → Filename als Caption) werden zu nummerierten Figures mit Label. `\label{fig:X}` wird als RawInline ans Caption-Ende gehängt (Pandoc 3.9.x emit kein `\label` aus `Figure.attr.identifier`, RawInline ist der portable Weg). Wikilinks `[[bild.png]]` → `\autoref{fig:X}` → „Abbildung N".
 
-„Abbildung"/„Tabelle" statt „Figure"/„Table": durch zwei Mechanismen — Babel-`ngerman` setzt `\figurename`/`\tablename` (Caption-Prefix), plus Template-`\AtBeginDocument`-Block (Zeile ~980 in eisvogel.tex) mit `\IfPackageLoadedTF{babel}+\iflanguage{ngerman}` setzt `\figureautorefname`/`\tableautorefname` etc. (was `\autoref` rendert).
+`latex-env: equation`: Voll-Embed mit genau einem `$$…$$`-Block im Body. Der DisplayMath-Para wird durch einen `RawBlock` mit `\begin{equation}\label{eq:X}…\end{equation}` ersetzt. Prosa drumherum bleibt erhalten (permissiv). Multi-Line-Gleichungen über `\begin{aligned}…\end{aligned}` im Math-Block — eine gemeinsame Nummer für den Block. Mehrfach-Embed: jedes Embed wird als eigene Equation gewrapt (Counter inkrementiert), aber `\label` nur beim ersten (analog Tabellen). Fehlender Math-Block → harter Filter-Error. `caption:`-Frontmatter ist optional und reine Doku, rendert nicht im PDF. Wikilinks darauf → `\autoref{eq:X}` → „Gleichung N".
+
+„Abbildung"/„Tabelle"/„Gleichung" statt „Figure"/„Table"/„Equation": durch zwei Mechanismen — Babel-`ngerman` setzt `\figurename`/`\tablename` (Caption-Prefix), plus Template-`\AtBeginDocument`-Block (Zeile ~980 in eisvogel.tex) mit `\IfPackageLoadedTF{babel}+\iflanguage{ngerman}` setzt `\figureautorefname`/`\tableautorefname`/`\equationautorefname` etc. (was `\autoref` rendert).
 
 Inline-Filter: `%%text%%` Comments (auch multi-block über Leerzeilen hinweg), `==text==` Highlights (paragraph-scoped, unbalanced wird literal reverted), in `obsidian-inline.lua`.
 
-Mehrfach-Embed der gleichen Note: für Note-Embeds (normal + table-env + image-figure) wird das `\label{}` nur beim ersten Embed gesetzt — vermeidet „multiply defined"-Warnungen. Für theorem-Env-Wraps wird das Label aktuell noch bei jedem Embed neu emitted (latenter Bug, falls jemand das gleiche Theorem zweimal voll-embedded; bisher nicht real getroffen).
+Mehrfach-Embed der gleichen Note: für Note-Embeds (normal + table-env + equation-env + image-figure) wird das `\label{}` nur beim ersten Embed gesetzt — vermeidet „multiply defined"-Warnungen. Für theorem-Env-Wraps wird das Label aktuell noch bei jedem Embed neu emitted (latenter Bug, falls jemand das gleiche Theorem zweimal voll-embedded; bisher nicht real getroffen).
 
 ## Was offen / nicht erledigt
 
 **1. Dead-Metadata in `branding/_base.yml` aufräumen.** Nach dem crossref-Schnitt sind `figureTitle`, `tableTitle`, `figPrefix`, `tblPrefix`, `eqnPrefix` reine No-Ops (Pandoc reicht sie weiter, niemand liest sie mehr). `lang: de` muss bleiben (treibt Babel-`ngerman`). Reines Cleanup, niedrige Priorität.
 
-**2. Equation-Numbering und Refs.** Pendant zum Image-/Table-Feature für Math-Blocks (`$$ … $$`). Mechanik analog: `\label{eq:X}` in eine equation-Environment injizieren, Wikilink-Resolver mit autoref-Target. Frontmatter-Konvention noch zu entscheiden — ggf. `latex-env: equation` mit `caption:`-Frontmatter analog zu tables (auch wenn Equations selten Captions haben, brauchen sie zumindest einen Label-Anker, der über die Note-Identity gebunden ist). Open question: soll man auf eine Equation in der Note oder eine bestimmte Math-Inline referenzieren können? Vermutlich Note-Level reicht.
+**2. Aufräumen: `Tabelle-Mit-Eigener-Caption.md`.** Beim Single-Source-Refactor wurde die Test-Note inhaltlich auf „Risikomatrix" umgestellt — der Filename passt semantisch nicht mehr. Beim nächsten Mal manuell zu `Tabelle-Risiken.md` umbenennen.
 
-**3. Aufräumen: `Tabelle-Mit-Eigener-Caption.md`.** Beim Single-Source-Refactor wurde die Test-Note inhaltlich auf „Risikomatrix" umgestellt — der Filename passt semantisch nicht mehr. Beim nächsten Mal manuell zu `Tabelle-Risiken.md` umbenennen.
-
-**4. Latenter Bug: Theorem-Mehrfach-Embed.** `latex-env: theorem`-Notes setzen das `\label` bei jedem Embed neu — würde bei tatsächlichem Doppel-Embed „multiply defined"-Warnungen geben. Fix wäre analog zu Tabellen/Bildern: `first_embed`-Check vor dem Label-Emit. Aktuell nicht-blockierend, weil Theoreme typisch einmal embedded werden.
+**3. Latenter Bug: Theorem-Mehrfach-Embed.** `latex-env: theorem`-Notes setzen das `\label` bei jedem Embed neu — würde bei tatsächlichem Doppel-Embed „multiply defined"-Warnungen geben. Fix wäre analog zu Tabellen/Bildern/Equations: `first_embed`-Check vor dem Label-Emit. Aktuell nicht-blockierend, weil Theoreme typisch einmal embedded werden.
 
 ## Test-Dateien im Vault
 
 - `ExampleFiles/HelperFiles/Theorem-Pythagoras.md` — atomic Note mit `latex-env: theorem` Frontmatter.
 - `ExampleFiles/HelperFiles/Tabelle-Vergleich.md` — atomic Tabellen-Note mit `latex-env: table` + `caption:`.
 - `ExampleFiles/HelperFiles/Tabelle-Projektphasen.md` — zweite Tabellen-Note.
-- `ExampleFiles/HelperFiles/Tabelle-Mit-Eigener-Caption.md` — dritte Tabellen-Note (Filename veraltet, Inhalt = Risikomatrix; siehe „offen" Punkt 3).
+- `ExampleFiles/HelperFiles/Tabelle-Mit-Eigener-Caption.md` — dritte Tabellen-Note (Filename veraltet, Inhalt = Risikomatrix; siehe „offen" Punkt 2).
+- `ExampleFiles/HelperFiles/Navier-Stokes.md` — atomic Equation-Note mit `latex-env: equation`, Multi-Line via `\begin{aligned}…\end{aligned}` im `$$…$$`-Block.
+- `ExampleFiles/HelperFiles/Eulersche-Identitaet.md` — atomic Equation-Note, einzeilige Gleichung (Counter-Test).
 - `ExampleFiles/HelperFiles/neuron.excalidraw.png`, `neuronales_netz.excalidraw.png` — Test-Bilder.
 - `ExampleFiles/HelperFiles/slice-source-1.md` bis `slice-source-3.md` — Quell-Notes für Slice-Tests.
 - `ExampleFiles/HelperFiles/env-test.md` — demonstriert Theorem-Embed, Default-Wikilink (autoref), Custom-Display-Wikilink (hyperref).
 - `ExampleFiles/HelperFiles/image-test.md` — Test-Cases für Image-Feature: Embed mit Caption, Embed ohne Caption (Filename-Default), Plain-Text-Fallback für non-embedded Refs.
+- `ExampleFiles/HelperFiles/gleichungen-test.md` — Test-Cases für Equation-Feature: Multi-Line via `aligned`, einzeilige Gleichung, Mehrfach-Embed (Counter-Test mit `\label` nur beim ersten), Plain-Text-Fallback.
 - `ExampleFiles/tabellen-test.md` — drei Tabellen-Embeds (Counter-Inkrement-Test), Default- und Custom-Display-Refs, Plain-Text-Fallback.
 - `ExampleFiles/Testdokument.md`, `ExampleFiles/Testdokument-minimal.md` — User-eigene Tests.
 
@@ -61,13 +64,14 @@ Datei: `pipeline/app/filters/obsidian-transclude.lua`.
 
 Wikilink-Map:
 
-- `available_targets[notename] = label` registriert jeden erreichbaren Anker. Keys sind canonical (ohne `.md`). Values sind LaTeX-Label-Strings mit Prefix nach Target-Typ: `note:X` (Standard-Embed, Theorem-Wrap), `tab:X` (latex-env: table), `fig:bild.png` (Image-Embed), `note:X:sec-Heading`, `note:X:blk-id` (Slice-Anker).
-- `autoref_targets[notename] = true` markiert Targets, deren Default-Display-Wikilinks per `\autoref` aufgelöst werden (Theorem-Envs, Tables, Image-Figures). Andere Targets nutzen `\hyperref` mit Display-Text.
+- `available_targets[notename] = label` registriert jeden erreichbaren Anker. Keys sind canonical (ohne `.md`). Values sind LaTeX-Label-Strings mit Prefix nach Target-Typ: `note:X` (Standard-Embed, Theorem-Wrap), `tab:X` (latex-env: table), `eq:X` (latex-env: equation), `fig:bild.png` (Image-Embed), `note:X:sec-Heading`, `note:X:blk-id` (Slice-Anker).
+- `autoref_targets[notename] = true` markiert Targets, deren Default-Display-Wikilinks per `\autoref` aufgelöst werden (Theorem-Envs, Tables, Equations, Image-Figures). Andere Targets nutzen `\hyperref` mit Display-Text.
 
 Frontmatter-gesteuerte Wraps (in `load_note`):
 
 - `latex-env: theorem` (oder andere amsthm-Env): RawBlock-Wrap mit `\begin{env}[latex-short]\label{note:X}…\end{env}`.
 - `latex-env: table`: Caption aus `caption:` ins Frontmatter (mandatory, sonst `error()`). Caption + `\label{tab:X}` als RawInline an der Pandoc-Table.
+- `latex-env: equation`: Erster `$$…$$`-Block (Para mit DisplayMath-Inline) wird durch `RawBlock` mit `\begin{equation}\label{eq:X}…\end{equation}` ersetzt. `first_embed`-Guard fürs Label (Counter inkrementiert aber Label nur beim ersten Embed). Fehlt der Math-Block → `error()`. `caption:`-Frontmatter optional, nicht renderbar.
 - Andere `latex-env`-Werte → generischer Theorem-Wrap (potentiell sinnvoll für custom amsthm-Envs).
 
 Image-Figures (in `register_image_figure`):
@@ -96,7 +100,6 @@ Häufiger Stolperstein: Pandoc-Lua-API-Konstruktor-Signaturen. `pandoc.Caption(l
 
 ## Empfohlene erste Schritte im nächsten Chat
 
-1. Equation-Numbering-Feature konzipieren und implementieren (offener Punkt 2).
-2. Theorem-Mehrfach-Embed-Bug fixen (offener Punkt 4) — kleine Erweiterung im env-Branch von `load_note`: `first_embed`-Check vor dem `\label`-Emit.
-3. `Tabelle-Mit-Eigener-Caption.md` zu `Tabelle-Risiken.md` umbenennen und `tabellen-test.md` entsprechend nachziehen.
-4. Dead-Metadata in `_base.yml` entrümpeln (`figureTitle`, `tableTitle`, `figPrefix`, `tblPrefix`, `eqnPrefix` — Reste aus der crossref-Zeit).
+1. Theorem-Mehrfach-Embed-Bug fixen (offener Punkt 3) — kleine Erweiterung im env-Branch von `load_note`: `first_embed`-Check vor dem `\label`-Emit (Vorlage in Tabellen- und Equation-Pfad vorhanden).
+2. `Tabelle-Mit-Eigener-Caption.md` zu `Tabelle-Risiken.md` umbenennen und `tabellen-test.md` entsprechend nachziehen.
+3. Dead-Metadata in `_base.yml` entrümpeln (`figureTitle`, `tableTitle`, `figPrefix`, `tblPrefix`, `eqnPrefix` — Reste aus der crossref-Zeit).

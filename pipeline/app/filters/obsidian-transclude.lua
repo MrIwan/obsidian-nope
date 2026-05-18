@@ -314,6 +314,65 @@ local function load_note(src)
       end
 
       -- ----------------------------------------------------------------
+      -- Sondersyntax: latex-env: equation
+      -- Note muss einen `$$…$$`-Block enthalten (Pandoc: Para mit einem
+      -- DisplayMath-Inline). Dieser wird durch ein labeled
+      -- `\begin{equation}\label{eq:X}…\end{equation}` ersetzt.
+      --
+      -- Permissiv: Prosa vor/nach dem Math-Block bleibt erhalten und wird
+      -- mit-embedded. Nur der erste DisplayMath-Block wird gewrapped; weitere
+      -- Math-Blöcke bleiben Plain-Display-Math (ohne Nummerierung/Label).
+      --
+      -- \label nur beim ersten Embed setzen (Mehrfach-Embed der gleichen
+      -- Note würde sonst "multiply defined"-Warnungen werfen — analog zur
+      -- Tabellen-Logik).
+      --
+      -- Fehlt der Math-Block → harter Filter-Error (analog table ohne
+      -- caption: oder fehlende Tabelle).
+      --
+      -- Caption-Frontmatter wird absichtlich NICHT gerendert. \autoref auf
+      -- das eq:-Label rendert "Gleichung N" (siehe \equationautorefname-
+      -- Override im eisvogel.tex).
+      -- ----------------------------------------------------------------
+      if env_name == "equation" then
+        local note_label = "eq:" .. sanitize_label_id(notename)
+        local first_embed = (available_targets[notename] == nil)
+        available_targets[notename] = note_label
+        autoref_targets[notename] = true
+
+        local annotated = annotate_with_labels(sliced, notename, true)
+
+        local math_found = false
+        for i, b in ipairs(annotated) do
+          if b.t == "Para"
+             and #b.content == 1
+             and b.content[1].t == "Math"
+             and b.content[1].mathtype == "DisplayMath" then
+            -- Wichtig: Whitespace (insb. Newlines) am Anfang/Ende des Math-Texts
+            -- entfernen. Pandoc liefert `$$\n…\n$$` als Text mit führendem +
+            -- trailing `\n`. Ohne Trim entstehen Leerzeilen innerhalb der
+            -- equation-Umgebung — und Leerzeilen sind Paragraph-Breaks, die
+            -- den Math-Mode terminieren. Symptom: "amsmath Error: \begin{aligned}
+            -- allowed only in math mode" + "Bad math environment delimiter".
+            local content = b.content[1].text:gsub("^%s+", ""):gsub("%s+$", "")
+            local label_part = first_embed and ("\\label{" .. note_label .. "}") or ""
+            annotated[i] = pandoc.RawBlock("latex",
+              "\\begin{equation}" .. label_part .. "\n"
+              .. content .. "\n\\end{equation}")
+            math_found = true
+            break
+          end
+        end
+
+        if not math_found then
+          error("[obsidian-transclude] Note '" .. notename
+            .. "' hat latex-env: equation, aber kein $$…$$-Block im Inhalt gefunden.")
+        end
+
+        return annotated
+      end
+
+      -- ----------------------------------------------------------------
       -- Default-Env-Wrap (theorem, lemma, definition, …)
       -- ----------------------------------------------------------------
       local env_short = doc.meta["latex-short"] and pandoc.utils.stringify(doc.meta["latex-short"]) or nil
