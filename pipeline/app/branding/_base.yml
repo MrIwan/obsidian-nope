@@ -9,6 +9,8 @@ toc: true
 toc-own-page: true
 toc-title: "Inhaltsverzeichnis"
 toc-depth: 3
+lof: true # List of Figures
+lot: true # List of Tables
 
 # Title page settings
 titlepage: true

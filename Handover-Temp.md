@@ -30,6 +30,8 @@ Image-Figures: `![[bild.png|Caption]]` und `![[bild.png]]` (ohne Caption → Fil
 
 „Abbildung"/„Tabelle"/„Gleichung" statt „Figure"/„Table"/„Equation": durch zwei Mechanismen — Babel-`ngerman` setzt `\figurename`/`\tablename` (Caption-Prefix), plus Template-`\AtBeginDocument`-Block (Zeile ~980 in eisvogel.tex) mit `\IfPackageLoadedTF{babel}+\iflanguage{ngerman}` setzt `\figureautorefname`/`\tableautorefname`/`\equationautorefname` etc. (was `\autoref` rendert).
 
+Abbildungs- und Tabellenverzeichnis: aktiviert per `lof: true` und `lot: true` in `_base.yml` (Default an, pro Doc per Frontmatter abschaltbar). Template emittiert `\listoffigures`/`\listoftables` direkt nach TOC, jedes mit eigenem `\newpage`. Titel kommen automatisch aus Babel-ngerman (`\listfigurename` → „Abbildungsverzeichnis", `\listtablename` → „Tabellenverzeichnis"). Einträge entstehen aus den `\caption{}`-Calls der Image-Figures bzw. Table-Captions.
+
 Inline-Filter: `%%text%%` Comments (auch multi-block über Leerzeilen hinweg), `==text==` Highlights (paragraph-scoped, unbalanced wird literal reverted), in `obsidian-inline.lua`.
 
 Glossary: Atomic Glossary-Notes mit Frontmatter-Keys `gls-id`, `gls-short`, `gls-long`, `gls-description`, `gls-type` (`acronym` oder `term`). Wikilinks `[[KI]]` werden im Resolver (Case 1, vor Embed-Targets) zu `\gls{<id>}` ersetzt; die referenzierten Entries werden gesammelt und als `\newacronym`/`\newglossaryentry`-Lines in `header-includes` injiziert. Funktioniert auch in embedded Notes, weil der Wikilink-Resolver auf dem schon-expandierten AST läuft. Template lädt das `glossaries`-Paket mit `acronym, toc, nonumberlist` (eisvogel.tex Z. 502), ruft `\makeglossaries` auf, und gibt am Doc-Ende `\printglossary[type=\acronymtype, title={Abkürzungen}]` + `\printglossary[title={Glossar}]` aus. `latexmkrc` triggert `makeglossaries` auf `.glo→.gls`- und `.acn→.acr`-Deps automatisch.
@@ -85,6 +87,27 @@ Pro Export frisch generiert — keine persistente Override-YAML, weil Docname pr
 Plus: Command „Create branding template" — legt im Vault-Root eine `Branding-Template.md` an, Frontmatter vollständig ausgefüllt mit allen `_base.yml`-Keys (TOC-Settings, Titlepage-Settings, Header-Settings), darunter im Body deutscher Erklärungstext pro Key. User dupliziert/editiert die Datei pro Kunde.
 
 Späteres Feature (nicht im ersten Wurf): High-Level-Key wie `header-logo: "[[logo.png]]"` der Plugin-seitig zum vollen LaTeX-Snippet (`\raisebox{...}{\includegraphics{...}}`) expanded wird. Aktuell muss der User `header-left` direkt als LaTeX schreiben wenn er ein Logo will, was LaTeX-Kenntnis verlangt — UX-Falle. Aber: `header-left: "Draft"` als plain text funktioniert trivial, also kein Blocker für V1.
+
+**5. AI-Conventions-Skill installieren.** Ein Button in den Plugin-Settings, der eine Skill-/Convention-Doku in den Vault schreibt — damit Claude/Cursor/etc. die obsi-print-Konventionen kennen, wenn ein Wissenschaftler im Vault mit AI-Unterstützung schreibt. Sinn: ohne das produziert ein AI confidently falschen Output (pandoc-crossref-Syntax, inline-Theoreme statt atomic Notes, Pipe-Captions am Embed-Tag etc.), der erst beim Export bricht.
+
+Wichtiger Punkt: die RO-Vault-Regel betrifft nur den Docker-Pipeline-Mount. Die TypeScript-Seite des Plugins läuft in Obsidians Renderer und hat über `app.vault.adapter.write(...)` vollen RW-Zugriff. Schreiben in den Vault per Button ist also idiomatisch, kein Regel-Bruch.
+
+Design:
+- **Single-Source-of-Truth: `pipeline/app/skill/SKILL.md`** im Plugin-Repo. Wird beim Feature-Add mit-aktualisiert (sonst Drift-Risiko, was schlimmer ist als kein Skill).
+- **Zwei Outputs aus derselben Quelle**: `<vault>/.claude/skills/obsi-print/SKILL.md` (Claude-Code-Konvention) plus `<vault>/AGENTS.md` (plattform-agnostische emerging Konvention, wird von Cursor + diversen CLI-Agents gelesen). Der User profitiert egal welches Tool er nutzt.
+- **Button: „Install AI conventions guide"** mit User-Confirm wenn Datei schon existiert (verhindert dass eigene Edits unbemerkt überschrieben werden).
+- **Version-Header im Skill** (`obsi-print-version: X.Y.Z`, `last-updated: <plugin-version>`). Damit ist Drift sichtbar — der AI kann checken, der User auch.
+- **Push-Strategie**: explizit per Button-Klick, NICHT automatisch bei jedem Plugin-Update. Klick = transparent re-install. Auto-Update würde eigene Anpassungen am Skill unbemerkt verlieren.
+
+Inhalt knapp halten (max 200-300 Zeilen, sonst zu kompliziert):
+- Was obsi-print ist + welche Pipeline dahinter steht (1-2 Sätze)
+- Atomic-Note-Prinzip + Wikilink-Semantik (`[[X]]` vs `![[X]]`, Slice-Embeds, Custom-Display)
+- Alle `latex-env`-Werte mit Mini-Beispiel je (theorem mit `latex-short`, table mit Pflicht-`caption`, equation/align/gather)
+- Glossary-Frontmatter (`gls-*`-Keys)
+- DO/DON'T-Liste: kein pandoc-crossref, keine Pipe-Caption, Theoreme als atomic Notes
+- Wann atomic Note, wann inline
+
+Trigger: erst angehen wenn die Features stabil und überzeugend sind. Bei jeder Filter-Convention-Änderung (neuer `latex-env`-Wert, neuer Frontmatter-Key) muss die SKILL.md mit aktualisiert werden — sonst entsteht die Drift, gegen die das Feature gerade schützen soll.
 
 ## Test-Dateien im Vault
 
