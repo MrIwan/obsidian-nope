@@ -26,7 +26,7 @@ Wikilink-Auflösung: `[[Note]]`, `[[Note|Display]]`, `[[Note#Heading]]`, `[[Note
 
 Image-Figures: `![[bild.png|Caption]]` und `![[bild.png]]` (ohne Caption → Filename als Caption) werden zu nummerierten Figures mit Label. `\label{fig:X}` wird als RawInline ans Caption-Ende gehängt (Pandoc 3.9.x emit kein `\label` aus `Figure.attr.identifier`, RawInline ist der portable Weg). Wikilinks `[[bild.png]]` → `\autoref{fig:X}` → „Abbildung N".
 
-`latex-env: equation`: Voll-Embed mit genau einem `$$…$$`-Block im Body. Der DisplayMath-Para wird durch einen `RawBlock` mit `\begin{equation}\label{eq:X}…\end{equation}` ersetzt. Prosa drumherum bleibt erhalten (permissiv). Multi-Line-Gleichungen über `\begin{aligned}…\end{aligned}` im Math-Block — eine gemeinsame Nummer für den Block. Mehrfach-Embed: jedes Embed wird als eigene Equation gewrapt (Counter inkrementiert), aber `\label` nur beim ersten (analog Tabellen). Fehlender Math-Block → harter Filter-Error. `caption:`-Frontmatter ist optional und reine Doku, rendert nicht im PDF. Wikilinks darauf → `\autoref{eq:X}` → „Gleichung N".
+`latex-env: equation` (sowie `align`, `gather`, `multline`, `alignat` und deren Stern-Varianten): Voll-Embed mit einem `$$…$$`-Block im Body. Der DisplayMath-Para wird durch einen `RawBlock` mit `\begin{<env>}\label{eq:X}…\end{<env>}` ersetzt. Für `align`/`gather` darf der `$$…$$`-Block direkt `&`/`\\` enthalten (jede Zeile bekommt eigenen Counter); für `equation` mit Multi-Line kann `\begin{aligned}…\end{aligned}` innen verwendet werden (eine gemeinsame Nummer). Prosa drumherum bleibt erhalten (permissiv). Mehrfach-Embed: jedes Embed wird als eigene Math-Env gewrapt (Counter inkrementiert), aber `\label` nur beim ersten (analog Tabellen). Fehlender Math-Block → harter Filter-Error. `caption:`-Frontmatter ist optional und reine Doku, rendert nicht im PDF. Wikilinks darauf → `\autoref{eq:X}` → „Gleichung N".
 
 „Abbildung"/„Tabelle"/„Gleichung" statt „Figure"/„Table"/„Equation": durch zwei Mechanismen — Babel-`ngerman` setzt `\figurename`/`\tablename` (Caption-Prefix), plus Template-`\AtBeginDocument`-Block (Zeile ~980 in eisvogel.tex) mit `\IfPackageLoadedTF{babel}+\iflanguage{ngerman}` setzt `\figureautorefname`/`\tableautorefname`/`\equationautorefname` etc. (was `\autoref` rendert).
 
@@ -36,18 +36,16 @@ Mehrfach-Embed der gleichen Note: für alle Note-Embed-Wrap-Pfade (normal, table
 
 ## Was offen / nicht erledigt
 
-**1. Architektur-Refactor: env-Dispatch generalisieren.** Aktuell ein eigener `if env_name == ... then ... end`-Branch pro env-Wert in `load_note`, ~30-40 Zeilen Boilerplate pro Branch (`first_embed`-Guard, Target-Registrierung, Block-Suche, Error-Pfad). Schon bei 3 Envs (table/equation/theorem) sichtbar repetitiv; bei 5-8 Envs unwartbar. Geplanter Refactor: drei Handler nach Env-Family — `wrap_math` (equation, align, gather, multline, alignat), `wrap_table` (nur table wegen Caption-Pflicht), `wrap_block` (alles andere — theorem, lemma, definition, proof + user-defined). Plus shared Helpers `register_target(notename, prefix)` und `find_block(blocks, predicate)`. Senkt Cost pro neuem Env auf ~1 Zeile Config. Vor dem nächsten Math-Env-Add (align o.ä.) angehen — dann ist die Code-Konvergenz auf saubere Helpers maximal.
+**1. Heading-Shifting bei Note-Embeds.** Aktuell werden Headings der embedded Note unverändert übernommen — eine Note mit „# Definition" als Top-Level-Heading wirkt im Host-Dokument wie ein neuer H1-Abschnitt, was die Hierarchie zerschießt. Mögliche Strategien: (a) Headings um N Level nach unten shiften (analog Pandoc's `--shift-heading-level-by`, auto-detect aus Host-Context), (b) Headings strippen wenn Note via `latex-env` gewrappt wird (typisch für atomic Theorem/Equation-Notes — die haben sowieso keine sinnvolle eigene Hierarchie), (c) Embed-Tag mit Level-Hint (`![[Note:h+1]]` o.ä., aber bricht Obsidian-Syntax-Kompat). Vermutlich (b) als Default + (a) für nicht-gewrappte Embeds. Konvention noch offen.
 
-**2. Heading-Shifting bei Note-Embeds.** Aktuell werden Headings der embedded Note unverändert übernommen — eine Note mit „# Definition" als Top-Level-Heading wirkt im Host-Dokument wie ein neuer H1-Abschnitt, was die Hierarchie zerschießt. Mögliche Strategien: (a) Headings um N Level nach unten shiften (analog Pandoc's `--shift-heading-level-by`, auto-detect aus Host-Context), (b) Headings strippen wenn Note via `latex-env` gewrappt wird (typisch für atomic Theorem/Equation-Notes — die haben sowieso keine sinnvolle eigene Hierarchie), (c) Embed-Tag mit Level-Hint (`![[Note:h+1]]` o.ä., aber bricht Obsidian-Syntax-Kompat). Vermutlich (b) als Default + (a) für nicht-gewrappte Embeds. Konvention noch offen.
+**2. Mermaid-Render-Engine.** Aktuell werden Mermaid-Codeblöcke einfach als Code-Fence im PDF gerendert (= Quelltext, nicht Diagramm). Für technische Doku mit Architektur-/Flow-Diagrammen sinnvoll. Standard-Lösung: Pandoc-Filter (`pandoc-mermaid`, `mermaid-filter`, `diagram-filter`) der die Code-Block-Inhalte über CLI an mermaid-cli übergibt und das resultierende SVG/PDF einbindet. Pipeline-Kosten: Node + `@mermaid-js/mermaid-cli` ins Docker-Image (zieht Headless-Chromium nach — Image wird deutlich größer). Alternative: vorgerenderte Mermaid-Bilder im Vault speichern und als normale `![[diagram.svg]]`-Embeds — kein Filter nötig, dafür manueller Render-Step. Entscheidung Pipeline-Integration vs. Pre-Render-Convention offen.
 
-**3. Mermaid-Render-Engine.** Aktuell werden Mermaid-Codeblöcke einfach als Code-Fence im PDF gerendert (= Quelltext, nicht Diagramm). Für technische Doku mit Architektur-/Flow-Diagrammen sinnvoll. Standard-Lösung: Pandoc-Filter (`pandoc-mermaid`, `mermaid-filter`, `diagram-filter`) der die Code-Block-Inhalte über CLI an mermaid-cli übergibt und das resultierende SVG/PDF einbindet. Pipeline-Kosten: Node + `@mermaid-js/mermaid-cli` ins Docker-Image (zieht Headless-Chromium nach — Image wird deutlich größer). Alternative: vorgerenderte Mermaid-Bilder im Vault speichern und als normale `![[diagram.svg]]`-Embeds — kein Filter nötig, dafür manueller Render-Step. Entscheidung Pipeline-Integration vs. Pre-Render-Convention offen.
-
-**4. Plugin-Settings-Erweiterungen (UX).** Quality-of-Life-Features die noch fehlen:
+**3. Plugin-Settings-Erweiterungen (UX).** Quality-of-Life-Features die noch fehlen:
 - „Remove docker image"-Button — Pendant zu „Build image", räumt das Plugin-Image weg (`docker image rm <image>` oder `docker compose down --rmi all`). Aktuell muss man manuell die Shell bemühen.
 - „Cleanup build folder"-Button — Löscht `pipeline/build/*` (Intermediates + alte PDFs). Wird mit der Zeit groß.
 - Toggle „Keep LaTeX intermediates after build" — Default `false` (Build-Folder wird nach erfolgreichem Export geleert), Debug-Mode `true` (Verhalten wie heute, alles bleibt persistent für Diagnose). Heute sind die Intermediates immer persistent; das ist gut beim Debuggen, beim normalen Nutzer aber unnötiger Müll.
 
-**5. Branding-Override per Vault-`.md`-File.** Aktuell sind alle Branding-Werte hardcoded in `_base.yml` (titlepage-background, titlepage-logo, header-left, titlepage-text-color etc.). Nutzer soll das pro Vault und pro Kunde überschreiben können, ohne bei Plugin-Updates Settings zu verlieren.
+**4. Branding-Override per Vault-`.md`-File.** Aktuell sind alle Branding-Werte hardcoded in `_base.yml` (titlepage-background, titlepage-logo, header-left, titlepage-text-color etc.). Nutzer soll das pro Vault und pro Kunde überschreiben können, ohne bei Plugin-Updates Settings zu verlieren.
 
 Konvention: Branding wird als normale Obsidian-`.md`-Datei mit Frontmatter angelegt (z.B. `Branding-Kunde1.md` irgendwo im Vault). Frontmatter enthält die YAML-Keys die `_base.yml` überschreiben sollen — z.B.:
 ```yaml
@@ -110,12 +108,14 @@ Wikilink-Map:
 - `available_targets[notename] = label` registriert jeden erreichbaren Anker. Keys sind canonical (ohne `.md`). Values sind LaTeX-Label-Strings mit Prefix nach Target-Typ: `note:X` (Standard-Embed, Theorem-Wrap), `tab:X` (latex-env: table), `eq:X` (latex-env: equation), `fig:bild.png` (Image-Embed), `note:X:sec-Heading`, `note:X:blk-id` (Slice-Anker).
 - `autoref_targets[notename] = true` markiert Targets, deren Default-Display-Wikilinks per `\autoref` aufgelöst werden (Theorem-Envs, Tables, Equations, Image-Figures). Andere Targets nutzen `\hyperref` mit Display-Text.
 
-Frontmatter-gesteuerte Wraps (in `load_note`):
+Frontmatter-gesteuerte Wraps (in `load_note`): Dispatch in drei Handler nach Env-Family, plus zwei shared Helpers.
 
-- `latex-env: theorem` (oder andere amsthm-Env): RawBlock-Wrap mit `\begin{env}[latex-short]\label{note:X}…\end{env}`.
-- `latex-env: table`: Caption aus `caption:` ins Frontmatter (mandatory, sonst `error()`). Caption + `\label{tab:X}` als RawInline an der Pandoc-Table.
-- `latex-env: equation`: Erster `$$…$$`-Block (Para mit DisplayMath-Inline) wird durch `RawBlock` mit `\begin{equation}\label{eq:X}…\end{equation}` ersetzt. `first_embed`-Guard fürs Label (Counter inkrementiert aber Label nur beim ersten Embed). Fehlt der Math-Block → `error()`. `caption:`-Frontmatter optional, nicht renderbar.
-- Andere `latex-env`-Werte → generischer Theorem-Wrap (potentiell sinnvoll für custom amsthm-Envs).
+- **Dispatch** (Top von `load_note`): Wenn `latex-env: <env>` gesetzt → `MATH_ENVS[env]` truthy → `wrap_math`. Sonst `env == "table"` → `wrap_table`. Sonst → `wrap_block`. Ohne `latex-env`-Frontmatter → kein Wrap, `annotate_with_labels` für normales Embed.
+- **`MATH_ENVS`-Tabelle** (Modul-Level): `equation`, `align`, `gather`, `multline`, `alignat` plus Stern-Varianten. Neuen Math-Env hinzuzufügen ist eine Zeile in der Tabelle.
+- **`wrap_math(notename, env_name, sliced, doc_meta)`**: Sucht ersten DisplayMath-Para via `find_block`, ersetzt durch `\begin{<env>}\label{eq:X}…\end{<env>}` mit getrimmtem Content. Label nur beim ersten Embed. Fehlt der Math-Block → `error()`.
+- **`wrap_table(notename, env_name, sliced, doc_meta)`**: Caption aus `doc_meta.caption` (mandatory, sonst `error()`). Sucht ersten Table-Block via `find_block`, setzt Caption, hängt `\label{tab:X}` als RawInline ans Caption-Ende beim ersten Embed. Kein `\begin{table}`-Wrap (longtable-Konflikt).
+- **`wrap_block(notename, env_name, sliced, doc_meta)`**: Default-Handler für theorem, lemma, definition, proof, custom amsthm-Envs. Wrappt mit `\begin{<env>}[latex-short]\label{note:X}…\end{<env>}`. `latex-short` aus Frontmatter ist optional, wird als amsthm-Optional-Arg eingesetzt.
+- **Shared Helpers** (Modul-Level): `register_target(notename, prefix)` setzt `available_targets` + `autoref_targets` + gibt first_embed-Status zurück. `find_block(blocks, predicate)` lokalisiert ersten matchenden Block. Plus zwei Prädikate `is_table` und `is_display_math`.
 
 Image-Figures (in `register_image_figure`):
 
@@ -143,4 +143,9 @@ Häufiger Stolperstein: Pandoc-Lua-API-Konstruktor-Signaturen. `pandoc.Caption(l
 
 ## Empfohlene erste Schritte im nächsten Chat
 
-1. Architektur-Refactor (offener Punkt 1) — env-Family-Dispatch mit shared Helpers, bevor weitere Math-Envs (align, gather, multline) dazukommen.
+Architektur ist konsolidiert, Math-Envs sind erweiterbar, alle Atomic-Note-Pfade verhalten sich konsistent (first_embed-Guard, autoref-Registrierung). Nächste sinnvolle Schritte sind alle Design-Entscheidungen ohne harten Trigger — Reihenfolge nach Wunsch:
+
+1. Branding-Override (offener Punkt 4) — größtes neues Feature, vollständig durchgeplant, kann direkt gebaut werden. Touched primär die TypeScript-Seite (`src/`) plus Pandoc-CLI-Args in `build.sh`.
+2. Plugin-Settings-UX (offener Punkt 3) — kleine Buttons + Toggle, niedrige Komplexität.
+3. Mermaid-Engine (offener Punkt 2) — Architektur-Entscheidung (Pipeline-Integration vs. Pre-Render) noch zu treffen.
+4. Heading-Shifting (offener Punkt 1) — Konvention noch zu entscheiden.

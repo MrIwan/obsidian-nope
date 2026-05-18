@@ -217,6 +217,169 @@ local function meta_to_inlines(meta_value)
   return out
 end
 
+-- ============================================================================
+-- LaTeX-Environment-Wraps für `latex-env: …`-Notes
+--
+-- Drei Handler nach Env-Family:
+--   wrap_math   für equation, align, gather, multline, alignat (+ Stern-Varianten)
+--   wrap_table  nur für `table` (Sonderfall wegen Caption-Pflicht + longtable-Konflikt)
+--   wrap_block  Default-Handler — theorem, lemma, definition, proof + jeder
+--               user-defined amsthm-Env (\newtheorem im Template)
+--
+-- Shared Pattern: `register_target` setzt Label + autoref-Flag + first_embed-Guard,
+-- `find_block` lokalisiert den zu labelnden Block. Beide Handler-übergreifend,
+-- damit ein neuer Env-Wert nur eine Zeile in `MATH_ENVS` bzw. einen zusätzlichen
+-- Handler kostet statt ~40 Zeilen Boilerplate.
+-- ============================================================================
+
+local MATH_ENVS = {
+  equation = true, ["equation*"] = true,
+  align = true,    ["align*"] = true,
+  gather = true,   ["gather*"] = true,
+  multline = true, ["multline*"] = true,
+  alignat = true,  ["alignat*"] = true,
+}
+
+-- Registriert die Note als verfügbares Wikilink-Target mit dem gegebenen
+-- LaTeX-Label-Prefix (z.B. "eq", "tab", "note"). Setzt zusätzlich `autoref_targets`,
+-- damit Default-Display-Wikilinks „Gleichung N" / „Tabelle N" / „Theorem N"
+-- rendern statt den nackten Note-Namen.
+-- Returns: full_label_string (z.B. "eq:Navier-Stokes"), is_first_embed (bool).
+-- WICHTIG: muss VOR `annotate_with_labels` aufgerufen werden, sonst registriert
+-- letzteres die Note intern mit "note:"-Prefix und der first_embed-Snapshot kippt.
+local function register_target(notename, label_prefix)
+  local label = label_prefix .. ":" .. sanitize_label_id(notename)
+  local first_embed = (available_targets[notename] == nil)
+  available_targets[notename] = label
+  autoref_targets[notename] = true
+  return label, first_embed
+end
+
+-- Findet den ersten Block in `blocks`, der `predicate(block)` zu true auswertet.
+-- Returns: (index, block) oder (nil, nil) wenn nichts passt.
+local function find_block(blocks, predicate)
+  for i, b in ipairs(blocks) do
+    if predicate(b) then return i, b end
+  end
+  return nil, nil
+end
+
+local function is_table(b) return b.t == "Table" end
+
+local function is_display_math(b)
+  return b.t == "Para"
+    and #b.content == 1
+    and b.content[1].t == "Math"
+    and b.content[1].mathtype == "DisplayMath"
+end
+
+-- ----------------------------------------------------------------------------
+-- wrap_math: Atomic-Math-Note (equation, align, gather, multline, alignat)
+--
+-- Erwartet einen `$$…$$`-Block (= Para mit einem DisplayMath-Inline) im Body.
+-- Ersetzt diesen Block durch `\begin{<env>}\label{eq:X}…\end{<env>}` als RawBlock.
+-- Permissiv: Prosa um den Math-Block bleibt erhalten und wird mit-embedded.
+-- Bei mehreren Math-Blöcken wird nur der erste gewrapped/gelabelt; weitere
+-- bleiben Plain-Display-Math (kein Counter, kein Label).
+--
+-- Caption-Frontmatter wird absichtlich NICHT gerendert (Equations haben in
+-- LaTeX keine native Caption). `caption:` ist optional und reine Obsidian-Doku.
+-- ----------------------------------------------------------------------------
+local function wrap_math(notename, env_name, sliced, doc_meta)
+  local label, first_embed = register_target(notename, "eq")
+  local annotated = annotate_with_labels(sliced, notename, true)
+
+  local idx = find_block(annotated, is_display_math)
+  if not idx then
+    error("[obsidian-transclude] Note '" .. notename
+      .. "' hat latex-env: " .. env_name
+      .. ", aber kein $$…$$-Block im Inhalt gefunden.")
+  end
+
+  -- Whitespace um den Math-Text trimmen, sonst entstehen Leerzeilen innerhalb
+  -- der Math-Umgebung — Leerzeile = Paragraph-Break = Math-Mode-Termination.
+  -- Symptom: "amsmath Error: \begin{aligned} allowed only in math mode" +
+  -- "Bad math environment delimiter".
+  local content = annotated[idx].content[1].text:gsub("^%s+", ""):gsub("%s+$", "")
+  local label_part = first_embed and ("\\label{" .. label .. "}") or ""
+  annotated[idx] = pandoc.RawBlock("latex",
+    "\\begin{" .. env_name .. "}" .. label_part .. "\n"
+    .. content .. "\n\\end{" .. env_name .. "}")
+
+  return annotated
+end
+
+-- ----------------------------------------------------------------------------
+-- wrap_table: Atomic-Tabellen-Note (nur env_name == "table")
+--
+-- Caption MUSS im Frontmatter als `caption: "…"` stehen (Single-Source-Garantie,
+-- keine Pipe-Caption, kein Pandoc-Native-Caption-Fallback). Caption + \label{tab:X}
+-- werden direkt an die Pandoc-Table gehängt — kein `\begin{table}`-Wrap, weil
+-- das mit longtable konfligieren würde.
+-- ----------------------------------------------------------------------------
+local function wrap_table(notename, env_name, sliced, doc_meta)
+  local caption_inlines = meta_to_inlines(doc_meta.caption)
+  if not caption_inlines or #caption_inlines == 0 then
+    error("[obsidian-transclude] Note '" .. notename
+      .. "' hat latex-env: table, aber kein 'caption:' im Frontmatter.")
+  end
+
+  local label, first_embed = register_target(notename, "tab")
+  local annotated = annotate_with_labels(sliced, notename, true)
+
+  local _, table_block = find_block(annotated, is_table)
+  if not table_block then
+    error("[obsidian-transclude] Note '" .. notename
+      .. "' hat latex-env: table, aber keine Tabelle im Inhalt gefunden.")
+  end
+
+  -- Caption immer aus Frontmatter setzen (überschreibt evtl. existierende
+  -- Pandoc-Caption — Single-Source).
+  table_block.caption = pandoc.Caption({ pandoc.Plain(caption_inlines) })
+
+  -- \label nur beim ersten Embed setzen (sonst "multiply defined"-Warnung).
+  if first_embed then
+    local last = table_block.caption.long[#table_block.caption.long]
+    table.insert(last.content,
+      pandoc.RawInline("latex", "\\label{" .. label .. "}"))
+  end
+
+  return annotated
+end
+
+-- ----------------------------------------------------------------------------
+-- wrap_block: Default-Env-Wrap (theorem, lemma, definition, proof, …)
+--
+-- Greift für jeden `latex-env`-Wert, der nicht in MATH_ENVS oder "table" ist.
+-- Wrappt die ganze Note in `\begin{<env>}[latex-short]\label{note:X}…\end{<env>}`.
+-- `latex-short` aus Frontmatter wird als optionales amsthm-Argument verwendet
+-- (z.B. [Pythagoras] → „Theorem 1 (Pythagoras)").
+--
+-- Counter inkrementiert bei jedem Embed (jeder Wrap ist eine eigene Env-Instanz),
+-- `\label` aber nur beim ersten — sonst "multiply defined".
+-- ----------------------------------------------------------------------------
+local function wrap_block(notename, env_name, sliced, doc_meta)
+  local env_short = doc_meta["latex-short"]
+    and pandoc.utils.stringify(doc_meta["latex-short"]) or nil
+  local label, first_embed = register_target(notename, "note")
+
+  local annotated_inner = annotate_with_labels(sliced, notename, true)
+
+  local opener = "\\begin{" .. env_name .. "}"
+  if env_short and env_short ~= "" then
+    opener = opener .. "[" .. env_short .. "]"
+  end
+  if first_embed then
+    opener = opener .. "\\label{" .. label .. "}"
+  end
+
+  local wrapped = { pandoc.RawBlock("latex", opener) }
+  for _, b in ipairs(annotated_inner) do table.insert(wrapped, b) end
+  table.insert(wrapped, pandoc.RawBlock("latex", "\\end{" .. env_name .. "}"))
+
+  return wrapped
+end
+
 local function load_note(src)
   local notename, anchor_type, anchor_value = parse_anchor(src)
   -- Canonical-Form ohne .md, damit Map-Keys konsistent zum Resolver bleiben
@@ -254,154 +417,19 @@ local function load_note(src)
     sliced = blocks
   end
 
-  -- LaTeX-environment wrap on full embeds
+  -- LaTeX-environment wrap on full embeds — Dispatch nach Env-Family.
+  -- Drei Handler-Funktionen (oben definiert): wrap_math, wrap_table, wrap_block.
   if anchor_type == "none" then
     local meta_env = doc.meta["latex-env"]
     if meta_env then
       local env_name = pandoc.utils.stringify(meta_env)
-
-      -- ----------------------------------------------------------------
-      -- Sondersyntax: latex-env: table
-      -- Pandoc rendert Markdown-Tabellen als (long)table — die dürfen
-      -- NICHT in einem `\begin{table}` floaten. Stattdessen labeln wir
-      -- die Pandoc-Table direkt an ihrer Caption.
-      --
-      -- Single-Source-Konfiguration: Caption MUSS im Frontmatter der Note
-      -- als `caption: "…"` stehen. Keine Pipe-Caption, kein Pandoc-Native-
-      -- `: …`-Fallback. Wenn die Caption fehlt → harter Filter-Error.
-      -- \autoref auf das tab:-Label rendert "Tabelle N" (siehe
-      -- \tableautorefname-Override im eisvogel.tex).
-      -- ----------------------------------------------------------------
-      if env_name == "table" then
-        local caption_inlines = meta_to_inlines(doc.meta.caption)
-        if not caption_inlines or #caption_inlines == 0 then
-          error("[obsidian-transclude] Note '" .. notename
-            .. "' hat latex-env: table, aber kein 'caption:' im Frontmatter.")
-        end
-
-        local note_label = "tab:" .. sanitize_label_id(notename)
-        local first_embed = (available_targets[notename] == nil)
-        available_targets[notename] = note_label
-        autoref_targets[notename] = true
-
-        local annotated = annotate_with_labels(sliced, notename, true)
-
-        local table_found = false
-        for _, b in ipairs(annotated) do
-          if b.t == "Table" then
-            -- Caption immer aus Frontmatter setzen (überschreibt evtl.
-            -- existierende Pandoc-Caption — Single-Source-Garantie).
-            b.caption = pandoc.Caption({ pandoc.Plain(caption_inlines) })
-
-            -- \label nur beim ersten Embed setzen (Mehrfach-Embed der
-            -- gleichen Note würde sonst zu "multiply defined"-Warnungen führen).
-            if first_embed then
-              local last = b.caption.long[#b.caption.long]
-              table.insert(last.content,
-                pandoc.RawInline("latex", "\\label{" .. note_label .. "}"))
-            end
-            table_found = true
-            break
-          end
-        end
-
-        if not table_found then
-          error("[obsidian-transclude] Note '" .. notename
-            .. "' hat latex-env: table, aber keine Tabelle im Inhalt gefunden.")
-        end
-
-        return annotated
+      if MATH_ENVS[env_name] then
+        return wrap_math(notename, env_name, sliced, doc.meta)
+      elseif env_name == "table" then
+        return wrap_table(notename, env_name, sliced, doc.meta)
+      else
+        return wrap_block(notename, env_name, sliced, doc.meta)
       end
-
-      -- ----------------------------------------------------------------
-      -- Sondersyntax: latex-env: equation
-      -- Note muss einen `$$…$$`-Block enthalten (Pandoc: Para mit einem
-      -- DisplayMath-Inline). Dieser wird durch ein labeled
-      -- `\begin{equation}\label{eq:X}…\end{equation}` ersetzt.
-      --
-      -- Permissiv: Prosa vor/nach dem Math-Block bleibt erhalten und wird
-      -- mit-embedded. Nur der erste DisplayMath-Block wird gewrapped; weitere
-      -- Math-Blöcke bleiben Plain-Display-Math (ohne Nummerierung/Label).
-      --
-      -- \label nur beim ersten Embed setzen (Mehrfach-Embed der gleichen
-      -- Note würde sonst "multiply defined"-Warnungen werfen — analog zur
-      -- Tabellen-Logik).
-      --
-      -- Fehlt der Math-Block → harter Filter-Error (analog table ohne
-      -- caption: oder fehlende Tabelle).
-      --
-      -- Caption-Frontmatter wird absichtlich NICHT gerendert. \autoref auf
-      -- das eq:-Label rendert "Gleichung N" (siehe \equationautorefname-
-      -- Override im eisvogel.tex).
-      -- ----------------------------------------------------------------
-      if env_name == "equation" then
-        local note_label = "eq:" .. sanitize_label_id(notename)
-        local first_embed = (available_targets[notename] == nil)
-        available_targets[notename] = note_label
-        autoref_targets[notename] = true
-
-        local annotated = annotate_with_labels(sliced, notename, true)
-
-        local math_found = false
-        for i, b in ipairs(annotated) do
-          if b.t == "Para"
-             and #b.content == 1
-             and b.content[1].t == "Math"
-             and b.content[1].mathtype == "DisplayMath" then
-            -- Wichtig: Whitespace (insb. Newlines) am Anfang/Ende des Math-Texts
-            -- entfernen. Pandoc liefert `$$\n…\n$$` als Text mit führendem +
-            -- trailing `\n`. Ohne Trim entstehen Leerzeilen innerhalb der
-            -- equation-Umgebung — und Leerzeilen sind Paragraph-Breaks, die
-            -- den Math-Mode terminieren. Symptom: "amsmath Error: \begin{aligned}
-            -- allowed only in math mode" + "Bad math environment delimiter".
-            local content = b.content[1].text:gsub("^%s+", ""):gsub("%s+$", "")
-            local label_part = first_embed and ("\\label{" .. note_label .. "}") or ""
-            annotated[i] = pandoc.RawBlock("latex",
-              "\\begin{equation}" .. label_part .. "\n"
-              .. content .. "\n\\end{equation}")
-            math_found = true
-            break
-          end
-        end
-
-        if not math_found then
-          error("[obsidian-transclude] Note '" .. notename
-            .. "' hat latex-env: equation, aber kein $$…$$-Block im Inhalt gefunden.")
-        end
-
-        return annotated
-      end
-
-      -- ----------------------------------------------------------------
-      -- Default-Env-Wrap (theorem, lemma, definition, …)
-      --
-      -- `first_embed`-Guard fürs Label: Counter wird bei jedem Embed
-      -- erhöht (jeder Wrap ist ein neues `\begin{theorem}…\end{theorem}`),
-      -- aber `\label` nur beim ersten Embed gesetzt — sonst "multiply
-      -- defined"-Warnungen. Analog zu Tabellen/Bildern/Equations.
-      -- ----------------------------------------------------------------
-      local env_short = doc.meta["latex-short"] and pandoc.utils.stringify(doc.meta["latex-short"]) or nil
-      local note_label = "note:" .. sanitize_label_id(notename)
-      local first_embed = (available_targets[notename] == nil)
-
-      -- Annotate inner headings/block-IDs (registriert intern available_targets[notename]
-      -- beim ersten Aufruf, deswegen muss first_embed VOR diesem Call gesnapshotted werden).
-      local annotated_inner = annotate_with_labels(sliced, notename, true)
-
-      local opener = "\\begin{" .. env_name .. "}"
-      if env_short and env_short ~= "" then
-        opener = opener .. "[" .. env_short .. "]"
-      end
-      if first_embed then
-        opener = opener .. "\\label{" .. note_label .. "}"
-      end
-
-      local wrapped = { pandoc.RawBlock("latex", opener) }
-      for _, b in ipairs(annotated_inner) do table.insert(wrapped, b) end
-      table.insert(wrapped, pandoc.RawBlock("latex", "\\end{" .. env_name .. "}"))
-
-      autoref_targets[notename] = true
-      return wrapped
     end
   end
 
