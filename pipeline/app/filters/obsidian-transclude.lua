@@ -565,7 +565,57 @@ end
 -- der Caption ist der portable Weg, der unabhängig von Pandoc-Version
 -- funktioniert (\label im \caption ist Standard-LaTeX und greift auf den
 -- bereits erhöhten figure-Counter zu).
+--
+-- Width-Hint: ein optionaler Suffix `|w=<value>` in der Caption setzt die
+-- Image-Width. `wikilinks_title_after_pipe` faltet alles hinter dem ersten
+-- Pipe in den Title, also kommt `![[bild.png|Caption|w=60%]]` als Caption
+-- `Caption|w=60%` rein. Wir scannen den letzten Caption-Block auf das
+-- Marker-Muster, strippen ihn aus der Caption und übergeben den Wert als
+-- Image-Attribut an Pandoc — Pandoc übersetzt z. B. `60%` zu
+-- `width=0.6\textwidth` im LaTeX-Output. Akzeptierte Formate: `60%`, `400px`,
+-- `8cm`, `0.5\textwidth` etc. — alles was Pandoc als Längenangabe versteht.
 -- ============================================================================
+
+-- Sucht das Width-Hint-Suffix `|w=<value>` am Ende der Caption-Inlines.
+-- Returns (cleaned_inlines, width_string | nil). Bei nil bleibt die Caption
+-- unverändert. Markierung muss am Ende stehen (nur Whitespace dahinter).
+local function extract_width_hint(inlines)
+  if not inlines or #inlines == 0 then return inlines, nil end
+
+  -- Rückwärts den letzten Str finden, der `|w=` enthält. Alles dahinter darf
+  -- nur Whitespace sein, sonst ist der Marker nicht am Caption-Ende und wir
+  -- behandeln ihn als Caption-Text.
+  for i = #inlines, 1, -1 do
+    local inline = inlines[i]
+    if inline.t == "Str" then
+      local prefix, width = inline.text:match("^(.-)|w%s*=%s*(.+)$")
+      if width and width ~= "" then
+        for j = i + 1, #inlines do
+          local later = inlines[j]
+          if later.t ~= "Space" and later.t ~= "SoftBreak" and later.t ~= "LineBreak" then
+            return inlines, nil
+          end
+        end
+        width = width:gsub("^%s+", ""):gsub("%s+$", "")
+        prefix = prefix:gsub("%s+$", "")
+        local cleaned = {}
+        for j = 1, i - 1 do table.insert(cleaned, inlines[j]) end
+        if prefix ~= "" then table.insert(cleaned, pandoc.Str(prefix)) end
+        while #cleaned > 0 do
+          local last = cleaned[#cleaned]
+          if last.t == "Space" or last.t == "SoftBreak" or last.t == "LineBreak" then
+            table.remove(cleaned)
+          else
+            break
+          end
+        end
+        return cleaned, width
+      end
+    end
+  end
+  return inlines, nil
+end
+
 local function register_image_figure(figure_block)
   if figure_block.t ~= "Figure" or #figure_block.content ~= 1 then return nil end
   local inner = figure_block.content[1]
@@ -574,24 +624,43 @@ local function register_image_figure(figure_block)
   if img.t ~= "Image" or not is_image_file(img.src) then return nil end
 
   local src = img.src
-  -- Mehrfach-Embed des gleichen Bildes: nur erstes registrieren/labeln.
-  if available_targets[src] then return figure_block end
-
-  local label = "fig:" .. sanitize_label_id(src)
-  available_targets[src] = label
-  autoref_targets[src] = true
 
   -- Pandoc legt für ![file.png|Caption] die Caption in figure.caption.long ab.
-  -- Falls leer (sollte nicht vorkommen, aber sicher ist sicher), fallback auf
-  -- den Dateinamen.
+  -- Falls leer (z. B. `![[bild.png]]` ohne Pipe), fallback auf den Dateinamen.
   local caption = figure_block.caption
   if not caption or not caption.long or #caption.long == 0 then
     caption = pandoc.Caption({ pandoc.Plain({ pandoc.Str(src) }) })
     figure_block.caption = caption
   end
 
-  -- \label ans Ende der letzten Caption-Block-Inlines hängen.
+  -- Width-Hint aus Caption herauslösen (pro Embed, vor dem Label-Anhang —
+  -- Mehrfach-Embeds desselben Bildes dürfen jeweils eigene Widths haben).
   local last_block = caption.long[#caption.long]
+  if last_block.content then
+    local cleaned, width = extract_width_hint(last_block.content)
+    if width then
+      last_block.content = cleaned
+      img.attributes = img.attributes or {}
+      img.attributes["width"] = width
+      -- Caption ist jetzt evtl. leer (z. B. `![[bild.png|w=60%]]`). Dann
+      -- ebenfalls auf Dateiname als Caption zurückfallen, damit LoF + Label
+      -- sinnvoll arbeiten.
+      if #last_block.content == 0 then
+        last_block.content = { pandoc.Str(src) }
+      end
+    end
+  end
+
+  -- Mehrfach-Embed: nur das erste Vorkommen kriegt das \label. Width-Hint
+  -- wurde oben bereits gesetzt — sie pro Embed individuell zu erlauben ist
+  -- intentional, label-Eindeutigkeit ist es auch.
+  if available_targets[src] then return figure_block end
+
+  local label = "fig:" .. sanitize_label_id(src)
+  available_targets[src] = label
+  autoref_targets[src] = true
+
+  -- \label ans Ende der letzten Caption-Block-Inlines hängen.
   if last_block.content then
     table.insert(last_block.content, pandoc.RawInline("latex", "\\label{" .. label .. "}"))
   end
