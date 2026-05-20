@@ -14,6 +14,8 @@ Bind-Mounts: `/vault` (read-only), `/app` (read-only Pipeline-Folder), `/build` 
 
 **Note-Embeds und -Slices.** `![[Note]]`, `![[Note#Heading]]`, `![[Note#^block-id]]`. Slice-Logik schneidet bis zum nächsten Heading gleicher oder höherer Ebene; Block-IDs werden beim Embed gestrippt und gelabelt. Die `.md`-Extension ist optional und wird von Embedder und Resolver gleichermaßen kanonisiert.
 
+**Auto-Heading-Shift.** Headings der embedded Note (bzw. ihres Slice) werden kontextbasiert verschoben: das niedrigste Header-Level der Note landet eine Ebene unter dem zuletzt aktiven Heading im umgebenden Scope, die relative Hierarchie innerhalb der Note bleibt erhalten. Formel: `shift = max(0, host_last_level + 1 − min_embed_level)`. Clamp ≥ 0 verhindert Auto-Promotion (eine H2-startende Note in einem header-losen Kontext bleibt H2). Nested Embeds rechnen rekursiv im Local-Scope ihrer Parent-Note. Header aus expandierten Embeds aktualisieren `current_level` im umgebenden Scope NICHT — zwei aufeinanderfolgende `![[…]]` shiften beide gegen dasselbe Host-Heading. Keine Konfiguration, kein Frontmatter-Key, kein Embed-Tag-Hint. Implementation: `process_blocks` trackt `current_level` lokal, `load_note(src, host_level)` wendet den Shift nach dem Slice an (`find_min_header_level` + `shift_headings`).
+
 **Wikilink-Resolver-Präzedenz.** (1) Glossary-Entry (`gls-id` im Target-Frontmatter) → `\gls{<id>}`. (2) Embed-Target in `available_targets` → `\autoref{label}` für Default-Display auf autoref-Targets, sonst `\hyperref[label]{content}`. (3) Plain-Text-Fallback für Refs auf nicht-embedded Notes (Denk-Verweise ohne Crash). Custom-Display unterdrückt `\autoref` und erzwingt `\hyperref`. Glossary gewinnt bei Konflikt mit Embed-Targets.
 
 **`latex-env: theorem` und amsthm-Verwandte** (lemma, definition, proof, custom). Voll-Embed wird in `\begin{<env>}[latex-short]\label{note:X}…\end{<env>}` gewrappt; das `latex-short:`-Frontmatter ist optional. Default-Display-Refs liefern „Theorem N" via `\autoref`.
@@ -59,15 +61,17 @@ Der Command „Create branding template" schreibt eine vorbefüllte `Branding-Te
 
 ## Was offen
 
-**1. Heading-Shifting bei Note-Embeds.** Headings der embedded Note werden unverändert übernommen — „# Definition" als Top-Level wirkt im Host als neuer H1 und zerschießt die Hierarchie. Optionen: (a) Headings um N Level shiften, (b) Headings strippen wenn via `latex-env` gewrappt, (c) Embed-Tag mit Level-Hint. Vermutlich (b) als Default plus (a) für ungewrappte Embeds. Konvention noch offen.
+**1. Mermaid-Render-Engine.** Mermaid-Codeblöcke werden derzeit als Code-Fence gerendert. Standard-Lösung wäre `mermaid-filter` via mermaid-cli — kostet Node und Headless-Chromium im Docker-Image. Alternative: vorgerenderte SVGs/PNGs im Vault, Embed wie bei normalen Images. Pipeline-Integration vs. Pre-Render-Konvention noch offen.
 
-**2. Mermaid-Render-Engine.** Mermaid-Codeblöcke werden derzeit als Code-Fence gerendert. Standard-Lösung wäre `mermaid-filter` via mermaid-cli — kostet Node und Headless-Chromium im Docker-Image. Alternative: vorgerenderte SVGs/PNGs im Vault, Embed wie bei normalen Images. Pipeline-Integration vs. Pre-Render-Konvention noch offen.
+**2. Plugin-Settings-UX.** „Remove docker image"-Button (`docker image rm`/`compose down --rmi all`), „Cleanup build folder"-Button (löscht `pipeline/build/*`), Toggle „Keep LaTeX intermediates after build" (Default `false`, Debug `true`). Niedrige Komplexität, hoher QoL-Gewinn.
 
-**3. Plugin-Settings-UX.** „Remove docker image"-Button (`docker image rm`/`compose down --rmi all`), „Cleanup build folder"-Button (löscht `pipeline/build/*`), Toggle „Keep LaTeX intermediates after build" (Default `false`, Debug `true`). Niedrige Komplexität, hoher QoL-Gewinn.
+**3. SVG-Support für Logos.** `LOGO_IMAGE_EXTS` akzeptiert `.svg`, aber pdflatex kann sie nicht direkt rendern. Pipeline-Erweiterung wäre Inkscape ins Image (~200 MB), `\usepackage{svg}` im Template und `--shell-escape` im latexmk. Bis dahin: PDF/PNG-Export aus Inkscape als Workaround.
 
-**4. SVG-Support für Logos.** `LOGO_IMAGE_EXTS` akzeptiert `.svg`, aber pdflatex kann sie nicht direkt rendern. Pipeline-Erweiterung wäre Inkscape ins Image (~200 MB), `\usepackage{svg}` im Template und `--shell-escape` im latexmk. Bis dahin: PDF/PNG-Export aus Inkscape als Workaround.
+**4. AI-Conventions-Skill installieren.** Button schreibt eine Convention-Doku in den Vault: `<vault>/.claude/skills/obsi-print/SKILL.md` plus `<vault>/AGENTS.md`, generiert aus der Single-Source-of-Truth `pipeline/app/skill/SKILL.md` im Plugin-Repo. Inhalt knapp halten (~200–300 Zeilen): Pipeline-Überblick, Atomic-Note-Prinzip, alle `latex-env`-Werte mit Mini-Beispielen, Glossary-Frontmatter, DO/DON'T-Liste. Version-Header (`obsi-print-version`, `last-updated`) macht Drift sichtbar. Push explizit per Button-Klick, nicht automatisch — Auto-Update würde eigene Anpassungen unbemerkt verlieren. Trigger: erst angehen, wenn die Feature-Liste stabil ist.
 
-**5. AI-Conventions-Skill installieren.** Button schreibt eine Convention-Doku in den Vault: `<vault>/.claude/skills/obsi-print/SKILL.md` plus `<vault>/AGENTS.md`, generiert aus der Single-Source-of-Truth `pipeline/app/skill/SKILL.md` im Plugin-Repo. Inhalt knapp halten (~200–300 Zeilen): Pipeline-Überblick, Atomic-Note-Prinzip, alle `latex-env`-Werte mit Mini-Beispielen, Glossary-Frontmatter, DO/DON'T-Liste. Version-Header (`obsi-print-version`, `last-updated`) macht Drift sichtbar. Push explizit per Button-Klick, nicht automatisch — Auto-Update würde eigene Anpassungen unbemerkt verlieren. Trigger: erst angehen, wenn die Feature-Liste stabil ist.
+**5. Zitationen** Irgendwie müssen noch Literatur-Verzeichnisse unterstützt werden. Der Übliche Weg scheint mir hierfür ein Zotero plugin mit einzubezeiehn. Der genaue Workflow muss noch geklärt werden. 
+
+**6. Auto Rerender PDF** Ein Feature für viel viel Später! Mit einem Command soll ein extra Fenster oder Leaf ( Also Tab ) geöffnet werden. Dieser Tab sieht aus wie der rechte Teil auf overleaf und macht auch das. Oben links kann man das Auto Rerender an und aus stellen. Ein Button sagt auch einfach "Neu rendern". Auto Automatische Mode braucht irgendwie einen Life Cykle der halt immer wieder ausgelöst wird, wenn änderungen in einer der betroffenen Notes festgestellt wird und den neu rendern auslöst, wenn sich etwas geändert hat. 
 
 ## Test-Dateien
 
@@ -83,10 +87,9 @@ Lua-Syntax-Check außerhalb der Pipeline via Python und `lupa`: `lua.execute('lo
 
 ## Roadmap
 
-Architektur ist konsolidiert, Math-Envs sind erweiterbar, Atomic-Note-Pfade verhalten sich konsistent (first_embed-Guard, autoref-Registrierung), Branding-Override läuft stabil inklusive Logo-Auto-Expansion. Sinnvolle nächste Schritte:
+Architektur ist konsolidiert, Math-Envs sind erweiterbar, Atomic-Note-Pfade verhalten sich konsistent (first_embed-Guard, autoref-Registrierung), Auto-Heading-Shift greift kontextbasiert ohne Konfiguration, Branding-Override läuft stabil inklusive Logo-Auto-Expansion. Sinnvolle nächste Schritte:
 
-1. Plugin-Settings-UX (Punkt 3) — niedrige Komplexität, hoher Nutzen.
-2. AI-Conventions-Skill (Punkt 5) — sobald die Feature-Liste stabil ist.
-3. Mermaid-Engine (Punkt 2) — Architektur-Entscheidung noch offen.
-4. Heading-Shifting (Punkt 1) — Konvention noch offen.
-5. SVG-Logo-Support (Punkt 4) — nur bei konkretem Bedarf.
+1. Plugin-Settings-UX (Punkt 2) — niedrige Komplexität, hoher Nutzen.
+2. AI-Conventions-Skill (Punkt 4) — sobald die Feature-Liste stabil ist.
+3. Mermaid-Engine (Punkt 1) — Architektur-Entscheidung noch offen.
+4. SVG-Logo-Support (Punkt 3) — nur bei konkretem Bedarf.
