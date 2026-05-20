@@ -1,0 +1,172 @@
+---
+name: obsi-print
+description: Use when authoring or editing Obsidian notes that will be exported to PDF via the obsi-print plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, obsi-print-branding), wikilink embed/ref semantics, image figures, inline filters, glossary, and branding.
+obsi-print-version: 0.x
+last-updated: 2026-05-20
+---
+
+# obsi-print — Schreibkonvention
+
+obsi-print exportiert Obsidian-Notes über eine Pandoc/LaTeX-Pipeline zu PDF. Die Konvention ist atomic: jedes Konzept (Theorem, Tabelle, Glossar-Eintrag, größere Definition) bekommt eine eigene `.md`-Datei und wird per Wikilink-Embed in Hauptdokumente eingebunden. Hauptdokumente sind kurz und bestehen primär aus Frontmatter, Headings und `![[Embeds]]`. Cross-Refs zeigen automatisch auf die richtige Nummer („Theorem 3", „Tabelle 5", „Abbildung 2", „Gleichung 1").
+
+## Frontmatter-Keys
+
+### `latex-env` — strukturierte Blöcke
+
+Setzt eine embedded Note in eine LaTeX-Environment.
+
+`theorem`, `lemma`, `definition`, `proof`, plus eigene amsthm-Environments → Voll-Embed wird zu `\begin{<env>}[<latex-short>]…\end{<env>}` gewrapt. `\autoref` liefert „Theorem N" etc.
+
+`table` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau eine Pandoc-Tabelle. Refs liefern „Tabelle N".
+
+`equation`, `align`, `gather`, `multline`, `alignat` und deren Stern-Varianten → Voll-Embed mit genau einem `$$…$$`-Block im Body. `align`/`gather` dürfen `&` und `\\` enthalten (eine Nummer pro Zeile). `equation` kann via inneres `aligned` mehrzeilig sein (eine Nummer für den ganzen Block). Fehlender Math-Block → harter Filter-Error. Refs liefern „Gleichung N".
+
+### `caption`
+
+Mandatory bei `latex-env: table`. Wird als Tabellen-Caption gerendert und im Tabellenverzeichnis aufgeführt.
+
+### `latex-short`
+
+Optional bei Theorem-Family-Envs. Wird als optionales Argument an die Environment übergeben (`\begin{theorem}[<latex-short>]…`). Praktisch für Kurz-Bezeichner im Theorem-Header.
+
+### Glossary-Atoms
+
+Eine Glossar-Note ist eine `.md` mit folgenden Frontmatter-Keys:
+
+```yaml
+---
+gls-id: ki                          # eindeutige LaTeX-ID
+gls-short: KI                       # Kurzform
+gls-long: Künstliche Intelligenz    # Langform
+gls-description: ""                 # optional
+gls-type: acronym                   # acronym | term
+---
+```
+
+`acronym` landet im Abkürzungsverzeichnis, `term` im Glossar. Wikilinks auf die Note (`[[KI]]`) werden zu `\gls{ki}`.
+
+### `obsi-print-branding`
+
+Optional. Wikilink (quoted!) auf eine Branding-Note. Ohne den Key gelten die Plugin-Defaults aus `_base.yml`.
+
+```yaml
+obsi-print-branding: "[[Branding-Kunde1]]"
+```
+
+### Pandoc-/Eisvogel-Keys
+
+Übliche Pandoc- und Eisvogel-Keys (`lang`, `toc`, `toc-depth`, `lof`, `lot`, `titlepage`, `titlepage-logo`, `header-left`, …) funktionieren wie gewohnt im Doc-Frontmatter, in der Branding-Datei oder als Plugin-Default. Doc-Frontmatter > Branding > `_base.yml`.
+
+## Wikilink-Embeds (`![[…]]`)
+
+`![[Note]]` — vollständige Note embedden. `.md`-Extension ist optional.
+
+`![[Note#Heading]]` — Slice ab Heading bis zum nächsten Heading gleicher oder höherer Ebene.
+
+`![[Note#^block-id]]` — Slice ab Block-ID.
+
+Headings in der embedded Note werden automatisch ans umgebende Heading-Level angepasst (Auto-Heading-Shift). Du musst Header in Embeds nicht von Hand anpassen. Im Host-Dokument den Embed unter dem gewünschten Heading platzieren — der Rest passiert automatisch.
+
+### Image-Embeds
+
+```markdown
+![[bild.png|Caption]]              # nummerierte Figure mit Caption
+![[bild.png]]                      # Filename als Caption-Fallback
+![[bild.png|Mein Diagramm|w=60%]]  # mit Width-Hint
+![[bild.png|w=8cm]]                # Width-Hint ohne explizite Caption
+```
+
+`|w=<wert>` akzeptiert Prozent, `px`, `cm`, `mm`, oder LaTeX-Längen wie `0.5\textwidth`. Width gilt pro Embed — dasselbe Bild kann mehrfach in verschiedenen Größen embedded werden. Der Width-Marker muss am Caption-Ende stehen.
+
+## Wikilink-Refs (`[[…]]`)
+
+`[[Note]]` (Default-Display) → `\autoref{label}`, ergibt „Theorem N" / „Tabelle N" / „Abbildung N" / „Gleichung N".
+
+`[[Note|Mein Text]]` (Custom-Display) → `\hyperref[label]{Mein Text}`.
+
+`[[GlossaryNote]]` → `\gls{<gls-id>}`, wenn die Target-Note ein `gls-id`-Frontmatter hat. Glossary gewinnt bei Konflikt mit Embed-Targets.
+
+Refs auf Notes, die im Dokument nicht embedded sind, fallen auf Plain-Text zurück — der Linktext erscheint normal, kein Crash. Praktisch für Denk-Verweise während des Schreibens.
+
+Bei Mehrfach-Embed derselben Note zeigt der Ref auf das erste Vorkommen (Label wird nur beim ersten Embed gesetzt; Counter zählen aber durch).
+
+## Inline-Syntax
+
+`%%text%%` → Kommentar. Im PDF unsichtbar. Funktioniert über Leerzeilen hinweg (multi-block).
+
+`==text==` → Highlight. Paragraph-scoped. Unbalanciertes `==` wird literal beibehalten.
+
+## Branding-Notes
+
+Pro Kunde/Projekt eine `.md` mit Frontmatter-Overrides. Body wird beim Export ignoriert (reine Editor-Doku). Aktivierung im Doc-Frontmatter über `obsi-print-branding`. Eine Vorlage erzeugt der Command „Create branding template".
+
+Wikilinks im YAML **müssen quoted sein** — sonst parst YAML das als Flow-Sequence:
+
+```yaml
+titlepage-logo: "[[logo.png]]"     # richtig
+titlepage-logo: [[logo.png]]       # FALSCH — YAML-Parse-Error
+```
+
+Logo-Wikilinks in Header-/Footer-Slots (`header-left`, `header-center`, `header-right`, `footer-left`, `footer-center`, `footer-right`) werden automatisch zu `\raisebox{}{\includegraphics{…}}` expandiert. Default-Höhe `0.7cm`, übersteuerbar:
+
+```yaml
+header-left: "[[logo.png|h=1.2cm]]"
+```
+
+Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfade — nur Pfad-Substitution, kein `\includegraphics`-Wrap. Mixed-Mode (Text und Logo in einer Header-Zelle) bleibt manuell: User schreibt LaTeX, `[[…]]` dient als Pfad-Platzhalter.
+
+`pdflatex` kann SVGs nicht direkt einbinden — Logos als PDF oder PNG ablegen.
+
+## Commands (Command-Palette)
+
+- `Export active note to PDF` — Hauptkommando.
+- `Build docker image (with cache)` — manueller inkrementeller Image-Build. Initial-Build oder `--no-cache` über Settings.
+- `Create branding template` — schreibt `Branding-Template.md` ins Vault-Root.
+- `Remove docker image` — löscht das Pipeline-Image. Nächster Export baut neu.
+- `Cleanup build folder` — leert `pipeline/build/`.
+
+## DO / DON'T
+
+**DO** atomic schreiben: ein Konzept = eine Note. Theoreme, Tabellen, Glossar-Einträge, größere Definitionen — jeweils eigene Datei, im Hauptdokument embedden.
+
+**DO** Wikilinks im YAML quoten: `"[[logo.png]]"`.
+
+**DO** Caption an Tabellen-Notes setzen (mandatory).
+
+**DO** für Math-Notes genau einen `$$…$$`-Block im Body verwenden.
+
+**DON'T** Headings im Hauptdokument manuell ans Embed anpassen — der Auto-Heading-Shift erledigt das.
+
+**DON'T** Labels manuell setzen (`\label{}`) — das Plugin labelt Embeds automatisch.
+
+**DON'T** SVG für Logos benutzen — pdflatex kann sie nicht. PDF/PNG.
+
+**DON'T** Caption an Tabellen-Notes weglassen — harter Filter-Error.
+
+## Typisches Hauptdokument
+
+```markdown
+---
+title: "Mein Bericht"
+obsi-print-branding: "[[Branding-Kunde1]]"
+toc: true
+---
+
+# Einleitung
+
+Text mit Glossar-Ref [[KI]] und Tabellen-Ref siehe [[Tabelle-Vergleich]].
+
+# Theorie
+
+![[Theorem-Pythagoras]]
+
+Aus [[Theorem-Pythagoras]] folgt …
+
+# Daten
+
+![[Tabelle-Vergleich]]
+
+![[diagramm.png|Übersicht der Phasen|w=80%]]
+```
+
+Inhalte selbst (Theorem-Wortlaut, Tabellenzellen) leben in den embedded Atomic-Notes, nicht hier.

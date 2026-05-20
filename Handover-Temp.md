@@ -2,6 +2,24 @@
 
 Obsidian-Note → PDF via Docker-Pipeline (Pandoc + LaTeX). Atomic-Note-Konzept mit Frontmatter-gesteuertem `latex-env` für strukturierte Inhalte, Wikilink-basierte Cross-References, Glossar.
 
+## Agent-Workflow
+
+Zwei Docs, getrennte Zielgruppen, keine Duplikation:
+
+- `Handover-Temp.md` (diese Datei) → Plugin-Internals (Architektur, Code-Pfade, Algorithmen, was offen). Für Dev-Chats.
+- `skill/SKILL.md` → User-Schreibkonvention (Frontmatter-Keys, Wikilink-Syntax, Beispiele, DO/DON'T). Für Authoring-Chats. Wird per Settings-Button in den Vault gepusht.
+
+**Regel bei jedem Feature-Change:**
+
+1. User-visible? (neue/geänderte Frontmatter-Keys, Commands, Wikilink-/Embed-Syntax, Filter-Verhalten das der User direkt sieht) → Skill UND Handover patchen.
+2. Reiner Impl-Refactor (Renaming, Code-Move, Performance, interne Filter-Phase) → nur Handover.
+
+**Trennlinie:** Skill beschreibt was der User schreibt und beobachtet; Handover wie das Plugin das verarbeitet. Beispiel: dass `latex-env: theorem` einen Theorem-Block produziert → Skill. Dass `wrap_block` in `obsidian-transclude.lua` das mit `\label{note:X}` als RawInline macht → Handover.
+
+Bei Unsicherheit: knappe Erwähnung in beiden ist besser als ein Detail an zwei Stellen pflegen — aber Cross-Reference statt Copy/Paste. Wenn Implementation-Section auf User-Verhalten verweisen muss, mit „siehe Skill" abkürzen.
+
+Beim Bumpen von Features: `obsi-print-version` und `last-updated` im Skill-Frontmatter mit ziehen, damit Drift zwischen geladener und aktueller Version sichtbar wird.
+
 ## Architektur
 
 **TypeScript-Plugin** (`src/`) registriert die Commands „Export active note to PDF", „Build docker image (with cache)", „Create branding template", „Remove docker image" und „Cleanup build folder", stellt eine Settings-UI mit Preflight-Checks, Build-Button (`noCache: true`) und Maintenance-Sektion (Remove-Image, Cleanup-Build, Keep-Intermediates-Toggle) bereit und spawnt Docker-Compose mit `VAULT_PATH` als ENV.
@@ -10,39 +28,39 @@ Obsidian-Note → PDF via Docker-Pipeline (Pandoc + LaTeX). Atomic-Note-Konzept 
 
 Bind-Mounts: `/vault` (read-only), `/app` (read-only Pipeline-Folder), `/build` (writable Intermediates und finale PDF, persistent für Debugging). Das Plugin kopiert die finale PDF an den konfigurierten Output-Path.
 
-## Features
+## Features (Implementation-Sicht)
 
-**Note-Embeds und -Slices.** `![[Note]]`, `![[Note#Heading]]`, `![[Note#^block-id]]`. Slice-Logik schneidet bis zum nächsten Heading gleicher oder höherer Ebene; Block-IDs werden beim Embed gestrippt und gelabelt. Die `.md`-Extension ist optional und wird von Embedder und Resolver gleichermaßen kanonisiert.
+User-Syntax und Frontmatter-Keys siehe Skill (`skill/SKILL.md`). Hier nur Implementation-Details und plugin-interne Semantik.
 
-**Auto-Heading-Shift.** Headings der embedded Note (bzw. ihres Slice) werden kontextbasiert verschoben: das niedrigste Header-Level der Note landet eine Ebene unter dem zuletzt aktiven Heading im umgebenden Scope, die relative Hierarchie innerhalb der Note bleibt erhalten. Formel: `shift = max(0, host_last_level + 1 − min_embed_level)`. Clamp ≥ 0 verhindert Auto-Promotion (eine H2-startende Note in einem header-losen Kontext bleibt H2). Nested Embeds rechnen rekursiv im Local-Scope ihrer Parent-Note. Header aus expandierten Embeds aktualisieren `current_level` im umgebenden Scope NICHT — zwei aufeinanderfolgende `![[…]]` shiften beide gegen dasselbe Host-Heading. Keine Konfiguration, kein Frontmatter-Key, kein Embed-Tag-Hint. Implementation: `process_blocks` trackt `current_level` lokal, `load_note(src, host_level)` wendet den Shift nach dem Slice an (`find_min_header_level` + `shift_headings`).
+**Embeds und Slices.** Slice-Logik schneidet bis zum nächsten Heading gleicher oder höherer Ebene; Block-IDs werden beim Embed gestrippt und gelabelt. Embedder und Resolver kanonisieren die optionale `.md`-Extension gemeinsam.
 
-**Wikilink-Resolver-Präzedenz.** (1) Glossary-Entry (`gls-id` im Target-Frontmatter) → `\gls{<id>}`. (2) Embed-Target in `available_targets` → `\autoref{label}` für Default-Display auf autoref-Targets, sonst `\hyperref[label]{content}`. (3) Plain-Text-Fallback für Refs auf nicht-embedded Notes (Denk-Verweise ohne Crash). Custom-Display unterdrückt `\autoref` und erzwingt `\hyperref`. Glossary gewinnt bei Konflikt mit Embed-Targets.
+**Auto-Heading-Shift.** Formel: `shift = max(0, host_last_level + 1 − min_embed_level)`. Clamp ≥ 0 verhindert Auto-Promotion (H2-startende Note im header-losen Kontext bleibt H2). Nested Embeds rechnen rekursiv im Local-Scope ihrer Parent-Note. Header aus expandierten Embeds aktualisieren `current_level` im umgebenden Scope NICHT — zwei aufeinanderfolgende `![[…]]` shiften beide gegen dasselbe Host-Heading. Implementation: `process_blocks` trackt `current_level` lokal, `load_note(src, host_level)` wendet den Shift nach dem Slice an (`find_min_header_level` + `shift_headings`).
 
-**`latex-env: theorem` und amsthm-Verwandte** (lemma, definition, proof, custom). Voll-Embed wird in `\begin{<env>}[latex-short]\label{note:X}…\end{<env>}` gewrappt; das `latex-short:`-Frontmatter ist optional. Default-Display-Refs liefern „Theorem N" via `\autoref`.
+**Wikilink-Resolver-Präzedenz.** (1) Glossary-Entry (`gls-id` im Target-Frontmatter) → `\gls{<id>}`. (2) Embed-Target in `available_targets` → `\autoref{label}` für Default-Display auf autoref-Targets, sonst `\hyperref[label]{content}`. (3) Plain-Text-Fallback für Refs auf nicht-embedded Notes. Custom-Display unterdrückt `\autoref` und erzwingt `\hyperref`. Glossary gewinnt bei Konflikt mit Embed-Targets.
 
-**`latex-env: table`.** Tabellen-Note erfordert `caption:` im Frontmatter (mandatory, sonst harter Filter-Error). Pandoc-Table erhält Caption plus `\label{tab:X}` als RawInline am Caption-Ende; kein `\begin{table}`-Wrap, da dieser mit longtable konfligiert. Refs liefern „Tabelle N".
+**Theorem-Family-Wrap.** Voll-Embed wird in `\begin{<env>}[latex-short]\label{note:X}…\end{<env>}` gewrappt; `latex-short` ist optional. `\autoref` liefert „Theorem N" via Babel-Lokalisierung.
 
-**`latex-env: equation`** (sowie `align`, `gather`, `multline`, `alignat` und deren Stern-Varianten). Voll-Embed mit einem `$$…$$`-Block im Body; der DisplayMath-Para wird durch `\begin{<env>}\label{eq:X}…\end{<env>}` ersetzt. `align`/`gather` dürfen direkt `&`/`\\` enthalten (Counter pro Zeile); `equation` kann via inneres `aligned` mehrzeilig sein (eine Nummer). Fehlender Math-Block → harter Filter-Error. Refs liefern „Gleichung N".
+**Table-Wrap.** Pandoc-Table erhält Caption plus `\label{tab:X}` als RawInline am Caption-Ende; kein `\begin{table}`-Wrap, weil das mit longtable konfligiert. Fehlende `caption:` im Frontmatter → harter Filter-Error.
 
-**Image-Figures.** `![[bild.png|Caption]]` und `![[bild.png]]` (Filename als Caption-Fallback) werden zu nummerierten Figures; `\label{fig:X}` wird als RawInline ans Caption-Ende gehängt, da Pandoc 3.9.x kein Label aus `Figure.attr.identifier` emittiert. Optionaler Width-Hint per Suffix `|w=<value>` (`60%`, `400px`, `8cm`, `0.5\textwidth`); der Marker muss am Caption-Ende stehen, wird vom Filter (`extract_width_hint`) gestrippt und nach `img.attributes.width` geschrieben. Width gilt pro Embed, das Label nur beim ersten — Mehrfach-Embeds können unterschiedliche Größen tragen.
+**Math-Wrap.** DisplayMath-Para im Body wird durch `\begin{<env>}\label{eq:X}…\end{<env>}` ersetzt. `MATH_ENVS` enthält `equation`, `align`, `gather`, `multline`, `alignat` plus Stern-Varianten. Fehlender Math-Block → harter Filter-Error.
 
-**Inline-Filter** (`obsidian-inline.lua`). `%%text%%` Comments (auch multi-block über Leerzeilen hinweg); `==text==` Highlights (paragraph-scoped, unbalanced wird literal reverted).
+**Image-Figures.** Pandoc 3.9.x emittiert kein Label aus `Figure.attr.identifier`, daher hängt der Filter `\label{fig:X}` als RawInline ans Caption-Ende. `extract_width_hint` strippt `|w=…` aus dem Caption-Ende und schreibt es nach `img.attributes.width`. Width gilt pro Embed, Label nur beim ersten Embed.
 
-**Lokalisierung und Listen.** Babel-`ngerman` setzt `\figurename`/`\tablename`; ein `\AtBeginDocument`-Block (eisvogel.tex Z. ~980) setzt zusätzlich `\figureautorefname`/`\tableautorefname`/`\equationautorefname`. Ergebnis: „Abbildung"/„Tabelle"/„Gleichung" in Captions wie in `\autoref`. Abbildungs- und Tabellenverzeichnis sind per `lof: true`/`lot: true` aktiviert (Default an, pro Doc abschaltbar) und erscheinen mit eigenem `\newpage` direkt nach dem TOC; Titel kommen aus Babel-ngerman.
+**Inline-Filter** (`obsidian-inline.lua`). `%%`-Comments arbeiten multi-block über Leerzeilen hinweg; `==`-Highlights sind paragraph-scoped, unbalanced wird literal reverted.
 
-**Glossary.** Atomic Glossary-Notes mit Frontmatter-Keys `gls-id`, `gls-short`, `gls-long`, `gls-description`, `gls-type` (`acronym` oder `term`). Wikilink `[[KI]]` → `\gls{ki}`. Referenzierte Entries werden gesammelt und als `\newacronym`/`\newglossaryentry` in `header-includes` injiziert. Template lädt `glossaries` mit `acronym, toc, nonumberlist` (eisvogel.tex Z. 502), ruft `\makeglossaries` und gibt am Doc-Ende `\printglossary[type=\acronymtype, title={Abkürzungen}]` plus `\printglossary[title={Glossar}]` aus. `latexmkrc` triggert `makeglossaries` automatisch über `.glo→.gls` und `.acn→.acr`.
+**Lokalisierung und Listen.** Babel-`ngerman` setzt `\figurename`/`\tablename`; ein `\AtBeginDocument`-Block (eisvogel.tex Z. ~980) setzt zusätzlich `\figureautorefname`/`\tableautorefname`/`\equationautorefname`. Abbildungs- und Tabellenverzeichnis sind per `lof`/`lot` aktiviert (Default an) und erscheinen mit eigenem `\newpage` direkt nach dem TOC.
 
-**Mehrfach-Embed-Konsistenz.** Über alle Wrap-Pfade (normal, table, math, theorem/amsthm, image) wird `\label{}` nur beim ersten Embed gesetzt — vermeidet „multiply defined"-Warnings. Counter inkrementieren bei jedem Embed; Wikilinks zeigen über das eine Label weiterhin auf das erste Vorkommen.
+**Glossary.** Referenzierte Entries werden gesammelt und als `\newacronym`/`\newglossaryentry` in `header-includes` injiziert. Template lädt `glossaries` mit `acronym, toc, nonumberlist` (eisvogel.tex Z. 502), ruft `\makeglossaries` und gibt am Doc-Ende `\printglossary[type=\acronymtype, title={Abkürzungen}]` plus `\printglossary[title={Glossar}]` aus. `latexmkrc` triggert `makeglossaries` automatisch über `.glo→.gls` und `.acn→.acr`.
 
-**Branding-Override.** Selektion per `obsi-print-branding: "[[Branding-Kunde1]]"` im Doc-Frontmatter; ohne Key gelten reine `_base.yml`-Defaults. Die Branding-Datei ist eine normale `.md` mit Frontmatter (überschriebene Keys) und Body (Editor-Doku, beim Export ignoriert). Wikilinks im YAML müssen quoted sein (sonst Flow-Sequence-Parse-Fehler). Resolution per `metadataCache.getFirstLinkpathDest(linkpath, sourcePath)` mit der Branding-Datei als `sourcePath`; führender Slash erzwingt einen Root-Pfad.
+**Mehrfach-Embed-Konsistenz.** Über alle Wrap-Pfade (normal, table, math, theorem/amsthm, image) wird `\label{}` nur beim ersten Embed gesetzt — vermeidet „multiply defined"-Warnings. Counter inkrementieren bei jedem Embed; Refs zeigen über das eine Label weiterhin auf das erste Vorkommen.
 
-Zwei Resolutions-Pfade: (i) **Key-agnostische Pfad-Substitution** ersetzt jedes `[[…]]` in einem String-Value durch den Container-Pfad `/build/<docname>/branding/<original-name>` — funktioniert auch innerhalb von LaTeX-Snippets. (ii) **Logo-Auto-Expansion** für `header-left`, `header-center`, `header-right`, `footer-left`, `footer-center`, `footer-right`: Ist der Value ein Solo-Wikilink auf eine Bild-Datei, wird er zu `\raisebox{-0.3\height}{\includegraphics[height=<h>]{<container-path>}}` expandiert. Default-Höhe `0.7cm`, Override per `|h=<wert>`-Suffix (`"[[logo.png|h=1.2cm]]"`). Andere Image-Keys (`titlepage-logo`, `titlepage-background`) bleiben bei reiner Pfad-Substitution, da Eisvogel dort einen Pfad erwartet. Mixed-Mode (Text plus Logo in einer Header-Zelle) bleibt manuell: der User schreibt LaTeX, `[[…]]` dient als Pfad-Platzhalter. pdflatex kann SVGs nicht direkt einbinden — Logos als PDF oder PNG ablegen.
+**Branding-Override.** Resolution per `metadataCache.getFirstLinkpathDest(linkpath, sourcePath)` mit der Branding-Datei als `sourcePath`; führender Slash erzwingt einen Root-Pfad. Zwei Resolutions-Pfade: (i) **Key-agnostische Pfad-Substitution** ersetzt jedes `[[…]]` in einem String-Value durch den Container-Pfad `/build/<docname>/branding/<original-name>` — funktioniert auch innerhalb von LaTeX-Snippets. (ii) **Logo-Auto-Expansion** für `header-*`/`footer-*`-Slots: Solo-Wikilink auf eine Bild-Datei wird zu `\raisebox{-0.3\height}{\includegraphics[height=<h>]{<path>}}` expandiert. Andere Image-Keys (`titlepage-logo`, `titlepage-background`) bleiben bei reiner Pfad-Substitution, da Eisvogel dort einen Pfad erwartet.
 
 Keine Rekursion: ein `obsi-print-branding` in der Branding-Datei wird ignoriert. Merge-Reihenfolge: `_base.yml` → `branding-override.yml` → Doc-Frontmatter. `build.sh` erkennt `$WORK/branding-override.yml` und hängt das `--metadata-file` an die Pandoc-Invocation; nach erfolgreichem Run räumt das Skript Override-YAML und `branding/`-Folder weg, sodass zwischen Exports kein stale State zurückbleibt.
 
-Der Command „Create branding template" schreibt eine vorbefüllte `Branding-Template.md` ins Vault-Root, mit allen `_base.yml`-Keys im Frontmatter und einer deutschen Erklärung im Body (inkl. Logo-Wikilink-Syntax und `|h=`-Override). Overwrite-Confirm verhindert, dass eigene Anpassungen unbemerkt verloren gehen.
+Der Command „Create branding template" schreibt eine vorbefüllte `Branding-Template.md` ins Vault-Root, mit allen `_base.yml`-Keys im Frontmatter. Overwrite-Confirm vermeidet, dass eigene Anpassungen unbemerkt verloren gehen.
 
-**Maintenance-UX.** Settings-Sektion „Maintenance" plus zwei Commands: „Remove docker image" (`docker image rm -f obsidian2pdf`, anschließend zeigt der Setup-Status wieder „nicht gebaut") und „Cleanup build folder" (löscht alles unterhalb `pipeline/build/`, inkl. Logs und Per-Doc-Folder). Toggle „Keep LaTeX intermediates after build" (Default `false`) steuert das Verhalten direkt nach jedem erfolgreichen Export: ist er aus, wird `pipeline/build/<base>/` komplett gelöscht, sobald die PDF in den Vault kopiert ist — die PDF im Vault ist die Single-Source-of-Truth, der Build-Folder hat nichts mehr Erhaltenswertes. Zum Debugging Toggle anschalten, dann bleibt `.tex`/`.log`/`.aux`/… stehen. Settings-Button-Handler und Command-Callbacks teilen sich dieselben Util-Funktionen (`removeImage`, `cleanupBuildFolder`, `cleanupIntermediates` in `src/utils/docker.ts`), keine Logik-Duplikation.
+**Maintenance-UX.** Settings-Sektion „Maintenance" plus zwei Commands („Remove docker image", „Cleanup build folder"). Toggle „Keep LaTeX intermediates after build" (Default `false`) löscht `pipeline/build/<base>/` komplett nach erfolgreichem Export (PDF ist da schon im Vault); Toggle an → Folder bleibt für Debugging. Settings-Button-Handler und Command-Callbacks teilen sich `removeImage`, `cleanupBuildFolder`, `cleanupIntermediates` in `src/utils/docker.ts` — keine Logik-Duplikation.
 
 ## Implementierungs-Referenz
 
@@ -67,7 +85,7 @@ Der Command „Create branding template" schreibt eine vorbefüllte `Branding-Te
 
 **2. SVG-Support für Logos.** `LOGO_IMAGE_EXTS` akzeptiert `.svg`, aber pdflatex kann sie nicht direkt rendern. Pipeline-Erweiterung wäre Inkscape ins Image (~200 MB), `\usepackage{svg}` im Template und `--shell-escape` im latexmk. Bis dahin: PDF/PNG-Export aus Inkscape als Workaround.
 
-**3. AI-Conventions-Skill installieren.** Button schreibt eine Convention-Doku in den Vault: `<vault>/.claude/skills/obsi-print/SKILL.md` plus `<vault>/AGENTS.md`, generiert aus der Single-Source-of-Truth `pipeline/app/skill/SKILL.md` im Plugin-Repo. Inhalt knapp halten (~200–300 Zeilen): Pipeline-Überblick, Atomic-Note-Prinzip, alle `latex-env`-Werte mit Mini-Beispielen, Glossary-Frontmatter, DO/DON'T-Liste. Version-Header (`obsi-print-version`, `last-updated`) macht Drift sichtbar. Push explizit per Button-Klick, nicht automatisch — Auto-Update würde eigene Anpassungen unbemerkt verlieren. Trigger: erst angehen, wenn die Feature-Liste stabil ist.
+**3. AI-Conventions-Skill installieren.** Skill-SSoT existiert als `skill/SKILL.md` im Plugin-Repo (Frontmatter mit `obsi-print-version`/`last-updated`). Offen: Settings-Button, der `skill/` nach `<vault>/.claude/skills/obsi-print/` kopiert und ein `<vault>/AGENTS.md` schreibt (Pointer auf den Skill plus optional auf kepanos Obsidian-Skills). Push explizit per Button-Klick, nicht automatisch — Auto-Update würde eigene Anpassungen unbemerkt verlieren. Overwrite-Confirm wie bei „Create branding template".
 
 **4. Zitationen** Irgendwie müssen noch Literatur-Verzeichnisse unterstützt werden. Der Übliche Weg scheint mir hierfür ein Zotero plugin mit einzubezeiehn. Der genaue Workflow muss noch geklärt werden. 
 
