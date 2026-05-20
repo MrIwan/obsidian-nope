@@ -3,7 +3,7 @@ import { shell } from 'electron';
 import { copyFileSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 import type ObsiPrintPlugin from '../main';
-import { buildImage, imageExists, runPipeline } from '../utils/docker';
+import { buildImage, cleanupIntermediates, imageExists, runPipeline } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '../utils/paths';
 import { prepareBrandingOverride } from '../utils/branding';
 
@@ -85,6 +85,11 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 	// Copy the produced PDF to the user's destination.
 	mkdirSync(dirname(destPath), { recursive: true });
 	copyFileSync(producedPdf, destPath);
+
+	// Drop the whole build/<doc>/ folder unless the user wants intermediates for debugging.
+	if (!plugin.settings.keepLatexIntermediates) {
+		cleanupIntermediates(workDir);
+	}
 
 	new Notice(`Exported to ${destPath}`);
 

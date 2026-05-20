@@ -1,7 +1,7 @@
 // Docker-compose invocation wrapper and shared docker constants.
 
 import { execFile, spawn } from 'child_process';
-import { mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 export const DOCKER_BIN = '/usr/local/bin/docker';
@@ -33,6 +33,38 @@ export async function imageExists(): Promise<boolean> {
 		);
 		if (!proc) resolve(false);
 	});
+}
+
+// Remove the Docker image
+// command: docker image rm -f DOCKER_IMAGE_NAME
+export async function removeImage(): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		execFile(
+			DOCKER_BIN,
+			['image', 'rm', '-f', DOCKER_IMAGE_NAME],
+			{ timeout: 30000, windowsHide: true, env: getDockerEnv() },
+			(err: Error | null) => (err ? reject(err) : resolve()),
+		);
+	});
+}
+
+// Delete every entry inside pipeline/build/ (logs, per-doc folders, …) but
+// keep the build/ folder itself so subsequent runs don't have to recreate it.
+export function cleanupBuildFolder(pluginDir: string): number {
+	const buildDir = join(pluginDir, 'pipeline', 'build');
+	if (!existsSync(buildDir)) return 0;
+	const entries = readdirSync(buildDir);
+	for (const name of entries) {
+		rmSync(join(buildDir, name), { recursive: true, force: true });
+	}
+	return entries.length;
+}
+
+// Drop the per-doc build dir entirely. Called after a successful export when
+// "Keep LaTeX intermediates" is off — the PDF is already copied to the user's
+// destination, so the work dir has nothing worth keeping.
+export function cleanupIntermediates(workDir: string): void {
+	rmSync(workDir, { recursive: true, force: true });
 }
 
 // building the image, can take a while

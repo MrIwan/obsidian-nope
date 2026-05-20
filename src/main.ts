@@ -4,6 +4,7 @@ import type { ObsiPrintSettings } from './types';
 import { registerExportCommand } from './commands/export';
 import { registerBuildCommand } from './commands/build';
 import { registerBrandingTemplateCommand } from './commands/branding-template';
+import { registerMaintenanceCommands } from './commands/maintenance';
 
 export default class ObsiPrintPlugin extends Plugin {
 	settings!: ObsiPrintSettings;
@@ -14,6 +15,7 @@ export default class ObsiPrintPlugin extends Plugin {
 		registerExportCommand(this);
 		registerBuildCommand(this);
 		registerBrandingTemplateCommand(this);
+		registerMaintenanceCommands(this);
 	}
 
 	onunload() {

@@ -4,7 +4,7 @@ Obsidian-Note → PDF via Docker-Pipeline (Pandoc + LaTeX). Atomic-Note-Konzept 
 
 ## Architektur
 
-**TypeScript-Plugin** (`src/`) registriert die Commands „Export active note to PDF", „Build docker image (with cache)" und „Create branding template", stellt eine Settings-UI mit Preflight-Checks und Build-Button (`noCache: true`) bereit und spawnt Docker-Compose mit `VAULT_PATH` als ENV.
+**TypeScript-Plugin** (`src/`) registriert die Commands „Export active note to PDF", „Build docker image (with cache)", „Create branding template", „Remove docker image" und „Cleanup build folder", stellt eine Settings-UI mit Preflight-Checks, Build-Button (`noCache: true`) und Maintenance-Sektion (Remove-Image, Cleanup-Build, Keep-Intermediates-Toggle) bereit und spawnt Docker-Compose mit `VAULT_PATH` als ENV.
 
 **Docker-Pipeline** (`pipeline/`) basiert auf `pandoc/extra:latest` (Pandoc 3.9.x festgepinnt) plus `bash` und ausgewählten tlmgr-Paketen. Drei Lua-Filter laufen in Reihenfolge: `obsidian-transclude.lua` (Embeds, Wikilink-Resolver, Image-Figures, Glossary), `obsidian-inline.lua` (Comments, Highlights), `callouts.lua` (Obsidian-Callouts → awesomebox). Eisvogel-Template und latexmk schließen ab.
 
@@ -42,6 +42,8 @@ Keine Rekursion: ein `obsi-print-branding` in der Branding-Datei wird ignoriert.
 
 Der Command „Create branding template" schreibt eine vorbefüllte `Branding-Template.md` ins Vault-Root, mit allen `_base.yml`-Keys im Frontmatter und einer deutschen Erklärung im Body (inkl. Logo-Wikilink-Syntax und `|h=`-Override). Overwrite-Confirm verhindert, dass eigene Anpassungen unbemerkt verloren gehen.
 
+**Maintenance-UX.** Settings-Sektion „Maintenance" plus zwei Commands: „Remove docker image" (`docker image rm -f obsidian2pdf`, anschließend zeigt der Setup-Status wieder „nicht gebaut") und „Cleanup build folder" (löscht alles unterhalb `pipeline/build/`, inkl. Logs und Per-Doc-Folder). Toggle „Keep LaTeX intermediates after build" (Default `false`) steuert das Verhalten direkt nach jedem erfolgreichen Export: ist er aus, wird `pipeline/build/<base>/` komplett gelöscht, sobald die PDF in den Vault kopiert ist — die PDF im Vault ist die Single-Source-of-Truth, der Build-Folder hat nichts mehr Erhaltenswertes. Zum Debugging Toggle anschalten, dann bleibt `.tex`/`.log`/`.aux`/… stehen. Settings-Button-Handler und Command-Callbacks teilen sich dieselben Util-Funktionen (`removeImage`, `cleanupBuildFolder`, `cleanupIntermediates` in `src/utils/docker.ts`), keine Logik-Duplikation.
+
 ## Implementierungs-Referenz
 
 **Lua-Filter** `pipeline/app/filters/obsidian-transclude.lua`:
@@ -63,15 +65,13 @@ Der Command „Create branding template" schreibt eine vorbefüllte `Branding-Te
 
 **1. Mermaid-Render-Engine.** Mermaid-Codeblöcke werden derzeit als Code-Fence gerendert. Standard-Lösung wäre `mermaid-filter` via mermaid-cli — kostet Node und Headless-Chromium im Docker-Image. Alternative: vorgerenderte SVGs/PNGs im Vault, Embed wie bei normalen Images. Pipeline-Integration vs. Pre-Render-Konvention noch offen.
 
-**2. Plugin-Settings-UX.** „Remove docker image"-Button (`docker image rm`/`compose down --rmi all`), „Cleanup build folder"-Button (löscht `pipeline/build/*`), Toggle „Keep LaTeX intermediates after build" (Default `false`, Debug `true`). Niedrige Komplexität, hoher QoL-Gewinn.
+**2. SVG-Support für Logos.** `LOGO_IMAGE_EXTS` akzeptiert `.svg`, aber pdflatex kann sie nicht direkt rendern. Pipeline-Erweiterung wäre Inkscape ins Image (~200 MB), `\usepackage{svg}` im Template und `--shell-escape` im latexmk. Bis dahin: PDF/PNG-Export aus Inkscape als Workaround.
 
-**3. SVG-Support für Logos.** `LOGO_IMAGE_EXTS` akzeptiert `.svg`, aber pdflatex kann sie nicht direkt rendern. Pipeline-Erweiterung wäre Inkscape ins Image (~200 MB), `\usepackage{svg}` im Template und `--shell-escape` im latexmk. Bis dahin: PDF/PNG-Export aus Inkscape als Workaround.
+**3. AI-Conventions-Skill installieren.** Button schreibt eine Convention-Doku in den Vault: `<vault>/.claude/skills/obsi-print/SKILL.md` plus `<vault>/AGENTS.md`, generiert aus der Single-Source-of-Truth `pipeline/app/skill/SKILL.md` im Plugin-Repo. Inhalt knapp halten (~200–300 Zeilen): Pipeline-Überblick, Atomic-Note-Prinzip, alle `latex-env`-Werte mit Mini-Beispielen, Glossary-Frontmatter, DO/DON'T-Liste. Version-Header (`obsi-print-version`, `last-updated`) macht Drift sichtbar. Push explizit per Button-Klick, nicht automatisch — Auto-Update würde eigene Anpassungen unbemerkt verlieren. Trigger: erst angehen, wenn die Feature-Liste stabil ist.
 
-**4. AI-Conventions-Skill installieren.** Button schreibt eine Convention-Doku in den Vault: `<vault>/.claude/skills/obsi-print/SKILL.md` plus `<vault>/AGENTS.md`, generiert aus der Single-Source-of-Truth `pipeline/app/skill/SKILL.md` im Plugin-Repo. Inhalt knapp halten (~200–300 Zeilen): Pipeline-Überblick, Atomic-Note-Prinzip, alle `latex-env`-Werte mit Mini-Beispielen, Glossary-Frontmatter, DO/DON'T-Liste. Version-Header (`obsi-print-version`, `last-updated`) macht Drift sichtbar. Push explizit per Button-Klick, nicht automatisch — Auto-Update würde eigene Anpassungen unbemerkt verlieren. Trigger: erst angehen, wenn die Feature-Liste stabil ist.
+**4. Zitationen** Irgendwie müssen noch Literatur-Verzeichnisse unterstützt werden. Der Übliche Weg scheint mir hierfür ein Zotero plugin mit einzubezeiehn. Der genaue Workflow muss noch geklärt werden. 
 
-**5. Zitationen** Irgendwie müssen noch Literatur-Verzeichnisse unterstützt werden. Der Übliche Weg scheint mir hierfür ein Zotero plugin mit einzubezeiehn. Der genaue Workflow muss noch geklärt werden. 
-
-**6. Auto Rerender PDF** Ein Feature für viel viel Später! Mit einem Command soll ein extra Fenster oder Leaf ( Also Tab ) geöffnet werden. Dieser Tab sieht aus wie der rechte Teil auf overleaf und macht auch das. Oben links kann man das Auto Rerender an und aus stellen. Ein Button sagt auch einfach "Neu rendern". Auto Automatische Mode braucht irgendwie einen Life Cykle der halt immer wieder ausgelöst wird, wenn änderungen in einer der betroffenen Notes festgestellt wird und den neu rendern auslöst, wenn sich etwas geändert hat. 
+**5. Auto Rerender PDF** Ein Feature für viel viel Später! Mit einem Command soll ein extra Fenster oder Leaf ( Also Tab ) geöffnet werden. Dieser Tab sieht aus wie der rechte Teil auf overleaf und macht auch das. Oben links kann man das Auto Rerender an und aus stellen. Ein Button sagt auch einfach "Neu rendern". Auto Automatische Mode braucht irgendwie einen Life Cykle der halt immer wieder ausgelöst wird, wenn änderungen in einer der betroffenen Notes festgestellt wird und den neu rendern auslöst, wenn sich etwas geändert hat. 
 
 ## Test-Dateien
 
@@ -81,15 +81,15 @@ Der Command „Create branding template" schreibt eine vorbefüllte `Branding-Te
 
 Lua-Filter, Eisvogel-Template und `_base.yml` sind Bind-Mounts; Änderungen wirken bei jedem Export, kein Image-Rebuild nötig. Image-Rebuild ist nur bei Dockerfile-Änderung, neuen tlmgr-Paketen oder Pandoc-Version-Wechseln erforderlich (Settings → „Build image" mit `--no-cache`, oder Command „Build docker image (with cache)" für inkrementell).
 
-`pipeline/build/<docname>/` enthält Intermediates (`.tex`, `.log`, `.aux`, …) und ist persistent. Bei Pipeline-Bugs ist das `.tex` der schnellste Diagnoseweg. `pipeline/build/last_latex_run.log` enthält den vollen stderr von Pandoc und latexmk, `last-build.log` den Docker-Build-stderr. `io.stderr:write(...)` aus Lua-Filtern landet in `last_latex_run.log` — der Standard-Debug-Mechanismus.
+`pipeline/build/<docname>/` enthält Intermediates (`.tex`, `.log`, `.aux`, …). Per Default wird der Folder nach jedem erfolgreichen Export gelöscht (PDF ist da schon im Vault) — für Debugging Settings → „Keep LaTeX intermediates after build" anschalten, dann bleibt der Folder stehen. `pipeline/build/last_latex_run.log` enthält den vollen stderr von Pandoc und latexmk, `last-build.log` den Docker-Build-stderr (beide auf `pipeline/build/`-Root, also vom Per-Doc-Cleanup unberührt). `io.stderr:write(...)` aus Lua-Filtern landet in `last_latex_run.log` — der Standard-Debug-Mechanismus.
 
 Lua-Syntax-Check außerhalb der Pipeline via Python und `lupa`: `lua.execute('load(code)')` parst den Filter ohne Docker-Run.
 
 ## Roadmap
 
-Architektur ist konsolidiert, Math-Envs sind erweiterbar, Atomic-Note-Pfade verhalten sich konsistent (first_embed-Guard, autoref-Registrierung), Auto-Heading-Shift greift kontextbasiert ohne Konfiguration, Branding-Override läuft stabil inklusive Logo-Auto-Expansion. Sinnvolle nächste Schritte:
+Architektur ist konsolidiert, Math-Envs sind erweiterbar, Atomic-Note-Pfade verhalten sich konsistent (first_embed-Guard, autoref-Registrierung), Auto-Heading-Shift greift kontextbasiert ohne Konfiguration, Branding-Override läuft stabil inklusive Logo-Auto-Expansion, Maintenance-UX deckt Image-Remove und Build-Cleanup ab. Sinnvolle nächste Schritte:
 
-1. Plugin-Settings-UX (Punkt 2) — niedrige Komplexität, hoher Nutzen.
-2. AI-Conventions-Skill (Punkt 4) — sobald die Feature-Liste stabil ist.
-3. Mermaid-Engine (Punkt 1) — Architektur-Entscheidung noch offen.
-4. SVG-Logo-Support (Punkt 3) — nur bei konkretem Bedarf.
+1. AI-Conventions-Skill (Punkt 3) — sobald die Feature-Liste stabil ist.
+2. Mermaid-Engine (Punkt 1) — Architektur-Entscheidung noch offen.
+3. Zitationen via Zotero (Punkt 4) — Workflow noch offen.
+4. SVG-Logo-Support (Punkt 2) — nur bei konkretem Bedarf.

@@ -4,10 +4,12 @@ import type { ObsiPrintSettings, PreflightResults } from './types';
 import { runPreflightChecks } from './utils/preflight';
 import { DOCKER_IMAGE_NAME, buildImage, imageExists } from './utils/docker';
 import { getPluginAbsoluteDir } from './utils/paths';
+import { cleanupBuild, removeDockerImage } from './commands/maintenance';
 
 export const DEFAULT_SETTINGS: ObsiPrintSettings = {
 	outputPath: '',
 	autoOpenPdf: false,
+	keepLatexIntermediates: false,
 };
 
 export class ObsiPrintSettingTab extends PluginSettingTab {
@@ -50,6 +52,21 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 					this.plugin.settings.autoOpenPdf = value;
 					await this.plugin.saveSettings();
 				});
+			});
+
+		new Setting(containerEl)
+			.setName('Keep LaTeX intermediates after build')
+			.setDesc(
+				'Off (default): delete pipeline/build/<doc>/ after a successful export — the PDF is already in the vault. ' +
+					'On: keep .tex/.log/.aux/… for debugging.',
+			)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.keepLatexIntermediates)
+					.onChange(async (value) => {
+						this.plugin.settings.keepLatexIntermediates = value;
+						await this.plugin.saveSettings();
+					});
 			});
 
 		// ===== Preflight section =====
@@ -137,5 +154,41 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 			});
 
 		void refreshImageStatus();
+
+		// ===== Maintenance section =====
+		new Setting(containerEl).setName('Maintenance').setHeading();
+
+		new Setting(containerEl)
+			.setName('Remove docker image')
+			.setDesc(`Delete the "${DOCKER_IMAGE_NAME}" image. A subsequent export will rebuild it.`)
+			.addButton((btn) => {
+				btn.setButtonText('Remove').onClick(async () => {
+					btn.setDisabled(true);
+					btn.setButtonText('Removing…');
+					try {
+						await removeDockerImage();
+					} finally {
+						btn.setDisabled(false);
+						btn.setButtonText('Remove');
+						await refreshImageStatus();
+					}
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Cleanup build folder')
+			.setDesc('Delete everything inside pipeline/build/ (logs and per-doc intermediates).')
+			.addButton((btn) => {
+				btn.setButtonText('Cleanup').onClick(() => {
+					btn.setDisabled(true);
+					btn.setButtonText('Cleaning…');
+					try {
+						cleanupBuild(this.plugin);
+					} finally {
+						btn.setDisabled(false);
+						btn.setButtonText('Cleanup');
+					}
+				});
+			});
 	}
 }
