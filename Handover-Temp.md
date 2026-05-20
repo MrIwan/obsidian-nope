@@ -40,6 +40,22 @@ Glossary: Atomic Glossary-Notes mit Frontmatter-Keys `gls-id`, `gls-short`, `gls
 
 Mehrfach-Embed der gleichen Note: für alle Note-Embed-Wrap-Pfade (normal, table-env, equation-env, theorem-env + andere amsthm-Envs, image-figure) wird das `\label{}` nur beim ersten Embed gesetzt — vermeidet „multiply defined"-Warnungen. Counter (z.B. Theorem-Nummer, Tabellen-Nummer) inkrementieren bei jedem Embed, weil jeder Wrap eine eigene Environment-Instanz ist; Wikilinks zeigen über das eine Label weiterhin auf das erste Embed.
 
+Branding-Override per Vault-`.md`-File: Pro Export überschreibt eine Obsidian-`.md`-Datei mit YAML-Frontmatter ausgewählte Werte aus `_base.yml`. Selektion über `obsi-print-branding: "[[Branding-Kunde1]]"` im Doc-Frontmatter; ohne Key keine Übersteuerung (reine `_base.yml`-Defaults, Verhalten vor Feature-Einführung). Die Branding-Datei enthält im Frontmatter die zu überschreibenden Keys (z. B. `header-left`, `titlepage-text-color`, `titlepage-logo`, `titlepage-background`), der Body bleibt unangetastet und dient nur der Doku im Obsidian-Editor.
+
+Wikilink-Pflicht in YAML: `"[[foo.png]]"` mit doppelten Anführungszeichen — sonst interpretiert YAML das als Flow-Sequence (Liste-in-Liste) und der Wert wird falsch geparst. Im Template-Body steht der Hinweis prominent. Resolution läuft über `metadataCache.getFirstLinkpathDest(linkpath, sourcePath)` mit `sourcePath` = Branding-File, daher gilt Obsidians Standard-Disambiguierung (gleicher Folder zuerst, dann nearest, dann alphabetisch); ein erzwungener Root-Pfad ist via führendem Slash möglich: `"[[/kunde_1/branding/logo.png]]"`.
+
+Resolution-Strategie ist key-agnostisch für die Standardfälle: Plugin scannt alle String-Values der Branding-Frontmatter auf `[[…]]`-Pattern und ersetzt jeden Treffer durch den resolvten Container-Pfad (`/build/<docname>/branding/<original-name>`). Funktioniert auch wenn ein `[[…]]` mitten in einem LaTeX-Snippet steht (z. B. `header-left: "Vorab – \\includegraphics{[[logo.png]]}"`). Neue, vom User erfundene Override-Keys funktionieren damit ohne Code-Change.
+
+Logo-Auto-Expansion in Header/Footer-Keys (`header-left`, `header-center`, `header-right`, `footer-left`, `footer-center`, `footer-right`): Ist der Value ein **Solo-Wikilink** auf eine Bild-Datei (matched `^\s*\[\[…\]\]\s*$`, Extension in `LOGO_IMAGE_EXTS` = `png/jpg/jpeg/gif/svg/webp/bmp/pdf`), wird er Plugin-seitig zu `\raisebox{-0.3\height}{\includegraphics[height=<h>]{<container-path>}}` expandiert statt nur den Pfad zu substituieren. Default-Höhe `0.7cm`, Override per `|h=<wert>`-Suffix im Wikilink: `"[[logo.png|h=1.2cm]]"` ergibt `height=1.2cm`. Andere Keys wie `titlepage-logo` und `titlepage-background` bleiben bei reiner Pfad-Substitution — Eisvogel erwartet dort einen Pfad, kein LaTeX-Snippet. Mixed-Mode (Text + Logo in einer Header-Zelle) bleibt explizit: der User schreibt das LaTeX-Snippet selbst und nutzt `[[…]]` als Pfad-Platzhalter. Achtung: pdflatex kann SVGs nicht direkt einbinden — Logos als PDF oder PNG ablegen, sonst bricht der Build.
+
+Keine Rekursion: ein `obsi-print-branding`-Key innerhalb der Branding-Datei wird ignoriert. Plugin liest genau eine Branding-Ebene und materialisiert daraus die `branding-override.yml`. Merge-Reihenfolge: `_base.yml` → `branding-override.yml` → Doc-Frontmatter. Doc-Frontmatter-Keys schlagen also lokal das Branding, Branding schlägt die Base-Defaults. Realisiert über `--metadata-file _base.yml --metadata-file <build>/branding-override.yml` plus Pandoc-Default-Pfad für die Doc-Frontmatter.
+
+Asset-Pipeline beim Export (TypeScript in `src/utils/branding.ts`): (1) Doc-Frontmatter lesen, `obsi-print-branding`-Wikilink auf die Branding-`.md` resolven. (2) Branding-Frontmatter lesen, Body ignorieren. (3) Frontmatter walken — bei Header/Footer-Solo-Image-Links: `expandLogoWikilink` (kopiert Asset, baut `\raisebox{}{\includegraphics{}}`-Snippet); sonst bei beliebigen `[[…]]` im String: `copyAssetByLinkpath` + Pfad-Substitution. Beide Pfade landen über denselben Asset-Copy-Helper in `pipeline/build/<docname>/branding/`. (4) `branding-override.yml` ins gleiche Build-Dir schreiben. (5) `build.sh` erkennt die Datei (`if [[ -f "$WORK/branding-override.yml" ]]`) und hängt das `--metadata-file` an die Pandoc-Invocation; nach erfolgreichem Run räumt `build.sh` Override-YAML und `branding/`-Asset-Folder am Ende wieder weg, sodass kein stale State zwischen Exports liegen bleibt (entfernt der User den Branding-Key, ist beim nächsten Export auch nichts mehr vom alten Branding aktiv).
+
+Helper-Übersicht in `branding.ts`: `parseLogoLinkInner` (extrahiert canonical linkpath + optional `|h=…`-Height aus dem Inner eines Wikilinks), `isLogoImage` (Extension-Check gegen `LOGO_IMAGE_EXTS`), `expandLogoWikilink` (Asset-Copy + LaTeX-Snippet-Build mit Default-Height-Fallback), `copyAssetByLinkpath` (gemeinsamer Resolve+Copy-Pfad für Logo- und reguläre Wikilink-Route). YAML-Serialisierung erfolgt in einem minimalistischen handgeschriebenen Serializer (`serializeYaml` + Helper) — double-quoted strings mit `\\`/`\"`/`\n`-Escapes, weil Pandoc YAML parsed nicht LaTeX, und damit eingebettete LaTeX-Backslashes sauber round-trippen.
+
+Plus: Command „Create branding template" — schreibt eine vollständig vorbefüllte `Branding-Template.md` ins Vault-Root, Frontmatter mit allen `_base.yml`-Keys (TOC, Titlepage, Header), Body mit deutscher Erklärung pro Key inklusive Logo-Wikilink-Syntax und `|h=`-Override. Overwrite-Confirm wenn die Datei schon existiert — verhindert, dass eigene Edits unbemerkt verloren gehen.
+
 ## Was offen / nicht erledigt
 
 **1. Heading-Shifting bei Note-Embeds.** Aktuell werden Headings der embedded Note unverändert übernommen — eine Note mit „# Definition" als Top-Level-Heading wirkt im Host-Dokument wie ein neuer H1-Abschnitt, was die Hierarchie zerschießt. Mögliche Strategien: (a) Headings um N Level nach unten shiften (analog Pandoc's `--shift-heading-level-by`, auto-detect aus Host-Context), (b) Headings strippen wenn Note via `latex-env` gewrappt wird (typisch für atomic Theorem/Equation-Notes — die haben sowieso keine sinnvolle eigene Hierarchie), (c) Embed-Tag mit Level-Hint (`![[Note:h+1]]` o.ä., aber bricht Obsidian-Syntax-Kompat). Vermutlich (b) als Default + (a) für nicht-gewrappte Embeds. Konvention noch offen.
@@ -51,44 +67,7 @@ Mehrfach-Embed der gleichen Note: für alle Note-Embed-Wrap-Pfade (normal, table
 - „Cleanup build folder"-Button — Löscht `pipeline/build/*` (Intermediates + alte PDFs). Wird mit der Zeit groß.
 - Toggle „Keep LaTeX intermediates after build" — Default `false` (Build-Folder wird nach erfolgreichem Export geleert), Debug-Mode `true` (Verhalten wie heute, alles bleibt persistent für Diagnose). Heute sind die Intermediates immer persistent; das ist gut beim Debuggen, beim normalen Nutzer aber unnötiger Müll.
 
-**4. Branding-Override per Vault-`.md`-File.** Aktuell sind alle Branding-Werte hardcoded in `_base.yml` (titlepage-background, titlepage-logo, header-left, titlepage-text-color etc.). Nutzer soll das pro Vault und pro Kunde überschreiben können, ohne bei Plugin-Updates Settings zu verlieren.
-
-Konvention: Branding wird als normale Obsidian-`.md`-Datei mit Frontmatter angelegt (z.B. `Branding-Kunde1.md` irgendwo im Vault). Frontmatter enthält die YAML-Keys die `_base.yml` überschreiben sollen — z.B.:
-```yaml
----
-toc-own-page: true
-header-left: "Draft"
-titlepage-text-color: "1A1A1A"
-titlepage-logo: "[[logo_kunde.png]]"
-titlepage-background: "[[kunde_1/branding/bg.png]]"
----
-```
-Unter dem Frontmatter folgt Markdown-Body, der für Endnutzer dokumentiert was die Keys bedeuten (TOC = „Table of Contents", was `titlepage-text-color` macht, etc.). Body wird beim Export ignoriert — er ist nur Doku für den Editor in Obsidian.
-
-Doc-Selection: Im Frontmatter des zu exportierenden Dokuments ein Key `obsi-print-branding: "[[Branding-Kunde1]]"`. Default: kein Key gesetzt → kein Override → reine `_base.yml`-Defaults (heutiges Verhalten).
-
-Wikilink-Pflicht: Wikilinks in YAML MÜSSEN quoted sein — `"[[foo.png]]"`, nicht `[[foo.png]]`. Sonst interpretiert YAML das als Flow-Sequence (Liste-in-Liste) und parsed falsch. Im Template-Body als auffälligen Hinweis dokumentieren.
-
-Wikilink-Resolution: über Obsidians `metadataCache.getFirstLinkpathDest(linkpath, sourcePath)` mit `sourcePath` = Branding-File. Standard-Disambiguierung von Obsidian (gleicher Folder zuerst, dann nearest, dann alphabetisch) wird damit übernommen. Forced-Root-Path bei Bedarf via führendem Slash: `"[[/kunde_1/branding/logo.png]]"`.
-
-Resolution-Strategie KEY-AGNOSTIC: Plugin scannt alle String-Values der Branding-Frontmatter auf `[[…]]`-Pattern (general purpose) und ersetzt jeden Treffer durch den resolved absoluten Build-Pfad. Funktioniert auch wenn `[[…]]` innerhalb von LaTeX-Snippets steht (Beispiel: `header-left` enthält `\includegraphics{[[logo.png]]}`). Keine hardcoded Key-Liste — neue Override-Keys funktionieren ohne Code-Change.
-
-Keine Rekursion: Wenn das Branding-File selbst einen `obsi-print-branding`-Key hat, wird der ignoriert. Plugin liest genau einmal und materialisiert daraus eine `branding-override.yml`.
-
-Merge-Reihenfolge: `_base.yml` → `branding-override.yml` → `<doc-frontmatter>`. Pandoc-CLI: `--metadata-file _base.yml --metadata-file branding-override.yml --metadata-file <generierte-doc-frontmatter.yml>` (oder die Doc-Frontmatter wandert via Pandoc-Default-Pfad rein). Bedeutet: doc-eigene Frontmatter-Keys schlagen Branding (Spezialfall im Doc kann Branding lokal kippen), Branding schlägt Base-Defaults.
-
-Asset-Pipeline beim Export (TypeScript-Seite):
-1. Lese Frontmatter des Export-Docs. Wenn `obsi-print-branding` gesetzt → resolve Wikilink zur Branding-`.md`.
-2. Lese Frontmatter der Branding-`.md`. Body ignorieren.
-3. Walk alle String-Values, suche `[[…]]`-Pattern, resolve via `metadataCache.getFirstLinkpathDest`, kopiere referenzierte Files nach `pipeline/build/<docname>/branding/<original-name>`.
-4. Schreibe `pipeline/build/<docname>/branding-override.yml` mit den ggf. ersetzten absoluten Container-Pfaden (`/build/<docname>/branding/<name>` aus Container-Sicht).
-5. Hänge `--metadata-file <build>/branding-override.yml` an Pandoc-Invocation.
-
-Pro Export frisch generiert — keine persistente Override-YAML, weil Docname pro Export wechselt.
-
-Plus: Command „Create branding template" — legt im Vault-Root eine `Branding-Template.md` an, Frontmatter vollständig ausgefüllt mit allen `_base.yml`-Keys (TOC-Settings, Titlepage-Settings, Header-Settings), darunter im Body deutscher Erklärungstext pro Key. User dupliziert/editiert die Datei pro Kunde.
-
-Logo-Auto-Expansion in Header/Footer: für die Keys `header-left`, `header-center`, `header-right`, `footer-left`, `footer-center`, `footer-right` gilt eine Spezial-Regel — ist der Value ein **Solo-Wikilink** auf eine Bild-Datei (`^\s*\[\[…\]\]\s*$`, Extension in `LOGO_IMAGE_EXTS`), wird er Plugin-seitig zu `\raisebox{-0.3\height}{\includegraphics[height=<h>]{<container-path>}}` expandiert statt nur den Pfad zu substituieren. Default-Höhe `0.7cm`, override über `|h=<wert>`-Suffix im Wikilink: `"[[logo.png|h=1.2cm]]"` ergibt `height=1.2cm`. Andere Keys (`titlepage-logo`, `titlepage-background`) bleiben bei der reinen Pfad-Substitution — Eisvogel erwartet dort einen Pfad, kein LaTeX-Snippet. Mixed-Mode (Text + Logo in einer Header-Zelle) bleibt manuell: der User schreibt das LaTeX-Snippet selbst und nutzt `[[…]]` als Pfad-Platzhalter, wie zuvor. Helper-Funktionen in `branding.ts`: `parseLogoLinkInner` (extrahiert linkpath + optional height), `isLogoImage` (Extension-Check), `expandLogoWikilink` (LaTeX-Snippet-Builder). `copyAssetByLinkpath` ist der gemeinsame Asset-Copy-Path für beide Routen (Solo-Logo und embedded Wikilink).
+**4. SVG-Support für Logos.** `LOGO_IMAGE_EXTS` akzeptiert `.svg`, aber pdflatex kann SVGs nicht direkt rendern. Workarounds heute: User speichert das Logo als PDF oder PNG. Pipeline-Erweiterung wäre Inkscape ins Docker-Image plus `\usepackage{svg}` plus `--shell-escape` in der latexmk-Invocation — bläht das Image um ~200 MB auf. Entscheidung offen, ob das den Aufwand wert ist; bis dahin ist PDF-Export aus Inkscape o.ä. der saubere Weg.
 
 **5. AI-Conventions-Skill installieren.** Ein Button in den Plugin-Settings, der eine Skill-/Convention-Doku in den Vault schreibt — damit Claude/Cursor/etc. die obsi-print-Konventionen kennen, wenn ein Wissenschaftler im Vault mit AI-Unterstützung schreibt. Sinn: ohne das produziert ein AI confidently falschen Output (pandoc-crossref-Syntax, inline-Theoreme statt atomic Notes, Pipe-Captions am Embed-Tag etc.), der erst beim Export bricht.
 
@@ -183,9 +162,10 @@ Häufiger Stolperstein: Pandoc-Lua-API-Konstruktor-Signaturen. `pandoc.Caption(l
 
 ## Empfohlene erste Schritte im nächsten Chat
 
-Architektur ist konsolidiert, Math-Envs sind erweiterbar, alle Atomic-Note-Pfade verhalten sich konsistent (first_embed-Guard, autoref-Registrierung). Nächste sinnvolle Schritte sind alle Design-Entscheidungen ohne harten Trigger — Reihenfolge nach Wunsch:
+Architektur ist konsolidiert, Math-Envs sind erweiterbar, alle Atomic-Note-Pfade verhalten sich konsistent (first_embed-Guard, autoref-Registrierung), Branding-Override läuft stabil inkl. Logo-Auto-Expansion. Nächste sinnvolle Schritte sind alle Design-Entscheidungen ohne harten Trigger — Reihenfolge nach Wunsch:
 
-1. Branding-Override (offener Punkt 4) — größtes neues Feature, vollständig durchgeplant, kann direkt gebaut werden. Touched primär die TypeScript-Seite (`src/`) plus Pandoc-CLI-Args in `build.sh`.
-2. Plugin-Settings-UX (offener Punkt 3) — kleine Buttons + Toggle, niedrige Komplexität.
+1. Plugin-Settings-UX (offener Punkt 3) — kleine Buttons + Toggle, niedrige Komplexität.
+2. AI-Conventions-Skill (offener Punkt 5) — sobald die Feature-Liste stabil genug ist, dass die SKILL.md nicht jede Woche driftet.
 3. Mermaid-Engine (offener Punkt 2) — Architektur-Entscheidung (Pipeline-Integration vs. Pre-Render) noch zu treffen.
 4. Heading-Shifting (offener Punkt 1) — Konvention noch zu entscheiden.
+5. SVG-Logo-Support (offener Punkt 4) — nur wenn der Wunsch nach SVG-Logos konkret wird; bis dahin ist PDF/PNG-Export der Workaround.
