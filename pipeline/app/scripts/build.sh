@@ -29,29 +29,41 @@ VAULT_PATHS=$(find /vault -type d \
     -not -path '*/node_modules*' \
     2>/dev/null | tr '\n' ':')
 
+# Branding override: TS side writes branding-override.yml + branding/ assets
+# into $WORK before docker runs. Append --metadata-file when present so it
+# overrides _base.yml; the doc's own frontmatter still wins over both.
+EXTRA_METADATA_FILES=()
+if [[ -f "$WORK/branding-override.yml" ]]; then
+  echo ">>> Branding override detected: $WORK/branding-override.yml"
+  EXTRA_METADATA_FILES+=(--metadata-file="$WORK/branding-override.yml")
+fi
+
 # Pandoc: Markdown -> LaTeX
 echo ">>> Pandoc: $BASE.md → $BASE.tex"
 pandoc \
   -f markdown+wikilinks_title_after_pipe \
   --metadata-file=/app/branding/_base.yml \
+  "${EXTRA_METADATA_FILES[@]}" \
   --resource-path="$INPUT_DIR:$VAULT_PATHS/app/assets" \
   --extract-media="$WORK/media" \
   --template=/app/template/eisvogel.tex \
-  --lua-filter=/app/filters/pdf.lua \
   --lua-filter=/app/filters/obsidian-transclude.lua \
   --lua-filter=/app/filters/obsidian-inline.lua \
   --lua-filter=/app/filters/callouts.lua \
-  --lua-filter=/app/filters/glossary.lua \
-  --filter=pandoc-crossref \
   --toc \
   -s \
   -t latex \
   -o "$WORK/$BASE.tex" \
   "$INPUT_ABS"
+#   --filter=pandoc-crossref \
 
 cd "$WORK"
 echo ">>> latexmk (pdflatex + makeglossaries, so oft bis stabil)"
 latexmk -pdf -interaction=nonstopmode -r /app/scripts/latexmkrc "$BASE.tex"
+
+# Branding-Override-Cleanup
+rm -f "$WORK/branding-override.yml"
+rm -rf "$WORK/branding"
 
 echo ""
 echo ">>> Done: build/$BASE.pdf"

@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, ObsiPrintSettingTab } from './settings';
 import type { ObsiPrintSettings } from './types';
 import { registerExportCommand } from './commands/export';
 import { registerBuildCommand } from './commands/build';
+import { registerBrandingTemplateCommand } from './commands/branding-template';
 
 export default class ObsiPrintPlugin extends Plugin {
 	settings!: ObsiPrintSettings;
@@ -12,6 +13,7 @@ export default class ObsiPrintPlugin extends Plugin {
 		this.addSettingTab(new ObsiPrintSettingTab(this.app, this));
 		registerExportCommand(this);
 		registerBuildCommand(this);
+		registerBrandingTemplateCommand(this);
 	}
 
 	onunload() {
