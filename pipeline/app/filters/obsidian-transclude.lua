@@ -14,17 +14,8 @@
 --       caption: "…"   ← MANDATORY, sonst Filter-Fehler
 --       → Pandoc-Table mit Caption aus Frontmatter, injiziertes \label{tab:X}.
 --
--- Auto-Heading-Shift (kontextbasiert, keine Konfiguration nötig):
---   Beim Embed werden alle Header der eingebetteten Note (bzw. ihres
---   Slice) so verschoben, dass das niedrigste Header-Level eine Ebene
---   unter dem zuletzt aktiven Heading im umgebenden Scope landet.
---   Relative Hierarchie innerhalb der Note bleibt erhalten.
---     shift = max(0, host_last_level + 1 − min_embed_level)
---   Clamp ≥ 0: ohne Host-Header (oder bei tieferem Embed-Min) wird nie
---   nach oben promotet. Nested Embeds bekommen ihren Shift rekursiv aus
---   dem Local-Scope ihrer Parent-Note. Header aus expandierten Embeds
---   updaten `current_level` im umgebenden Scope NICHT — zwei aufeinander
---   folgende Embeds shiften beide gegen dasselbe Host-Heading.
+-- Auto-Heading-Shift: shift = max(0, host_last_level + 1 − min_embed_level).
+-- Details siehe Handover.
 --
 -- After embedding, the filter also resolves wikilinks ([[Note]], [[Note#H]],
 -- [[Note#^id]], [[Bild.png]]) against the targets that ended up in the PDF.
@@ -75,21 +66,8 @@ local function sanitize_label_id(s)
   return (s:gsub("[^%w%-_:]", "_"))
 end
 
--- ============================================================================
--- Phase 1 helpers — heading shift
---
--- `find_min_header_level(blocks)` liefert das niedrigste Header-Level im
--- übergebenen Block-Slice (oder nil, falls keine Header). Wird in `load_note`
--- gebraucht, um den Embed-Shift relativ zum niedrigsten enthaltenen Header
--- zu berechnen — Voll-Embed nimmt das gesamte Note-Min, Slice nimmt das
--- Slice-Min, beides automatisch korrekt.
---
--- `shift_headings(blocks, shift)` verschiebt alle Header-Level in-place,
--- clamp auf [1, 6] (Markdown/LaTeX-Grenze). No-op bei shift <= 0.
--- Wird in `load_note` nach dem Slice aufgerufen, damit der Slice mit
--- seinen originalen Levels gegen `slice_by_heading`s Break-Bedingung
--- („nächstes Heading gleicher oder höherer Ebene") arbeiten konnte.
--- ============================================================================
+-- Heading-Shift-Helpers — siehe Handover für den Algorithmus.
+-- shift_headings: in-place, no-op bei shift <= 0, clamp max 6.
 
 local function find_min_header_level(blocks)
   local min_level = nil
@@ -540,8 +518,6 @@ local function flush_glossary_entries(doc)
 end
 
 local function load_note(src, host_level)
-  -- host_level = letztes im umgebenden Scope gesehenes Header-Level (Default 0,
-  -- d.h. „noch kein Heading"). Steuert den Auto-Heading-Shift weiter unten.
   host_level = host_level or 0
   local notename, anchor_type, anchor_value = parse_anchor(src)
   -- Canonical-Form ohne .md, damit Map-Keys konsistent zum Resolver bleiben
@@ -559,9 +535,6 @@ local function load_note(src, host_level)
   local f = io.open(path, "rb")
   local content = f:read("*all"); f:close()
   local doc = pandoc.read(content, "markdown+wikilinks_title_after_pipe")
-  -- Nested Embeds zuerst expandieren — process_blocks trackt das Local-Level
-  -- innerhalb DIESER Note und shiftet nested Embeds relativ dazu. So tragen
-  -- die Blocks danach bereits den korrekt rekursiv-aufgelösten Shift.
   local blocks = process_blocks(doc.blocks)
   visiting[path] = nil
 
@@ -582,11 +555,7 @@ local function load_note(src, host_level)
     sliced = blocks
   end
 
-  -- Auto-Heading-Shift: das niedrigste Header-Level im Slice (oder Voll-Embed)
-  -- bestimmt den Anker, der Host-Kontext + 1 die Ziel-Position. Clamp ≥ 0
-  -- garantiert: ohne Host-Header oder bei tieferem Embed-Min bleibt der Slice
-  -- unverändert (keine Auto-Promotion). Slice-Break-Logik hat zuvor mit den
-  -- Originallevels gearbeitet, daher hier nach dem Slice angewendet.
+  -- Auto-Shift NACH dem Slice (Slice-Break-Bedingung braucht Original-Levels).
   local min_level = find_min_header_level(sliced)
   if min_level then
     local shift = host_level + 1 - min_level
@@ -737,8 +706,6 @@ local function register_image_figure(figure_block)
 end
 
 local function process_para(el, host_level)
-  -- host_level vom umgebenden process_blocks-Scope durchgereicht; bestimmt
-  -- den Auto-Heading-Shift für inline-Embeds innerhalb dieses Paragraphs.
   host_level = host_level or 0
   local has = false
   for _, inline in ipairs(el.content) do
@@ -773,12 +740,8 @@ local function process_para(el, host_level)
 end
 
 process_blocks = function(blocks)
-  -- current_level trackt das letzte Header-Level NUR im aktuellen Scope.
-  -- Header aus expandierten Embeds werden zwar ins Result-Array gehängt,
-  -- aktualisieren current_level aber NICHT (Embed-Hierarchie propagiert
-  -- nicht in den umgebenden Scope — sonst würden zwei aufeinanderfolgende
-  -- Embeds gegen unterschiedliche Levels shiften, was das mentale Modell
-  -- „beide Embeds sind Subsections desselben Hosts-Headings" brechen würde).
+  -- current_level trackt nur Header DIESES Scopes; Embed-Header propagieren
+  -- nicht (sonst shiften zwei Embeds in Folge gegen unterschiedliche Levels).
   local result = {}
   local current_level = 0
   for _, block in ipairs(blocks) do
@@ -786,11 +749,9 @@ process_blocks = function(blocks)
     if src then
       for _, b in ipairs(load_note(src, current_level)) do table.insert(result, b) end
     elseif block.t == "Figure" then
-      -- Image-Embed: caption + \label{fig:...} setzen, in Wikilink-Map eintragen.
       local labeled = register_image_figure(block)
       table.insert(result, labeled or block)
     elseif block.t == "Header" then
-      -- Eigenes Heading dieses Scopes — current_level aktualisieren UND einfügen.
       current_level = block.level
       table.insert(result, block)
     elseif block.t == "Para" or block.t == "Plain" then
