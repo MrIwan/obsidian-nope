@@ -67,9 +67,10 @@ export function prepareBrandingOverride(
 	vaultBasePath: string,
 	baseName: string,
 ): PreparedBranding | null {
-	// 1. Read doc frontmatter.
+	// 1. Read doc frontmatter. Obsidian types frontmatter as `Record<string, any>`,
+	// so we cast through `unknown` and narrow with typeof checks below.
 	const docCache = app.metadataCache.getFileCache(exportFile);
-	const rawRef = docCache?.frontmatter?.[BRANDING_DOC_KEY];
+	const rawRef: unknown = docCache?.frontmatter?.[BRANDING_DOC_KEY];
 	if (rawRef === undefined || rawRef === null || rawRef === '') {
 		return null;
 	}

@@ -21,25 +21,27 @@ export function registerBrandingTemplateCommand(plugin: ObsiPrintPlugin): void {
 	});
 }
 
-async function createBrandingTemplate(plugin: ObsiPrintPlugin): Promise<void> {
-	const path = normalizePath(TEMPLATE_FILENAME);
-	const existing = plugin.app.vault.getAbstractFileByPath(path);
-
-	if (existing instanceof TFile) {
-		// Confirm before overwriting — user may have customized the existing one.
-		const ok = window.confirm(
-			`"${path}" already exists. Overwrite with a fresh template?`,
-		);
-		if (!ok) {
-			new Notice('Branding template not changed.');
-			return;
-		}
-		await plugin.app.vault.modify(existing, TEMPLATE_CONTENT);
-		new Notice(`Branding template overwritten: ${path}`);
-		// Open the file so the user lands inside it.
-		await plugin.app.workspace.openLinkText(path, '', false);
-		return;
+/** Returns the first vault-relative path in the `name`, `name-2`, `name-3`, …
+ * sequence that doesn't yet exist. Suffix is inserted before the extension. */
+function pickAvailablePath(plugin: ObsiPrintPlugin, filename: string): string {
+	const dotIdx = filename.lastIndexOf('.');
+	const stem = dotIdx >= 0 ? filename.slice(0, dotIdx) : filename;
+	const ext = dotIdx >= 0 ? filename.slice(dotIdx) : '';
+	let candidate = normalizePath(filename);
+	let n = 2;
+	while (plugin.app.vault.getAbstractFileByPath(candidate) !== null) {
+		candidate = normalizePath(`${stem}-${n}${ext}`);
+		n += 1;
 	}
+	return candidate;
+}
+
+async function createBrandingTemplate(plugin: ObsiPrintPlugin): Promise<void> {
+	// If `Branding-Template.md` already exists, fall back to a numbered
+	// variant (`Branding-Template-2.md`, `-3.md`, …) so we never silently
+	// clobber a customized template. The user sees the new file appear
+	// next to the original and decides what to keep.
+	const path = pickAvailablePath(plugin, TEMPLATE_FILENAME);
 
 	try {
 		const file = await plugin.app.vault.create(path, TEMPLATE_CONTENT);
