@@ -22,6 +22,28 @@ export const BRANDING_DOC_KEY = 'obsi-print-branding';
 const WIKILINK_REGEX = /\[\[([^\]]+)\]\]/g;
 const SINGLE_WIKILINK_REGEX = /^\s*\[\[([^\]]+)\]\]\s*$/;
 
+// Keys in the branding frontmatter whose value, when set to a solo image
+// wikilink, gets auto-expanded into a LaTeX \raisebox{}{\includegraphics{}}
+// snippet so the user does not have to write LaTeX by hand for the common
+// "logo in the header/footer" case. All other keys keep the existing
+// path-substitution behavior (raw container path).
+const HEADER_FOOTER_KEYS = new Set([
+	'header-left',
+	'header-center',
+	'header-right',
+	'footer-left',
+	'footer-center',
+	'footer-right',
+]);
+
+// Image extensions accepted for logo auto-expansion. Mirrors the Lua side's
+// is_image_file list, minus the video/audio formats (no sense in a header).
+const LOGO_IMAGE_EXTS = new Set([
+	'.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.pdf',
+]);
+
+const DEFAULT_LOGO_HEIGHT = '0.7cm';
+
 export interface PreparedBranding {
 	/** Absolute host path of the generated override file. */
 	hostPath: string;
@@ -95,9 +117,10 @@ export function prepareBrandingOverride(
 	const containerBrandingDir = `/build/${baseName}/branding`;
 	const copiedAssets: string[] = [];
 
-	const resolveAndCopy = (linkInner: string, sourceContext: string): string => {
-		const linkpath = stripLinkExtras(linkInner);
-		const asset = app.metadataCache.getFirstLinkpathDest(linkpath, sourceContext);
+	// Lower-level: resolve a (possibly anchored / aliased) linkpath against the
+	// branding file's directory, copy the asset, return its container path.
+	const copyAssetByLinkpath = (linkpath: string): string => {
+		const asset = app.metadataCache.getFirstLinkpathDest(linkpath, brandingFile.path);
 		if (!asset) {
 			throw new Error(
 				`Branding asset not found: "${linkpath}" ` +
@@ -114,10 +137,26 @@ export function prepareBrandingOverride(
 		return `${containerBrandingDir}/${destName}`;
 	};
 
+	const resolveAndCopy = (linkInner: string): string => {
+		return copyAssetByLinkpath(stripLinkExtras(linkInner));
+	};
+
+	// Auto-expand a solo image wikilink in a header/footer key into the LaTeX
+	// snippet \raisebox{-0.3\height}{\includegraphics[height=…]{…}}. The user
+	// can optionally control the height via the `|h=<value>` suffix:
+	//   [[logo.png]]          → height = 0.7cm (default)
+	//   [[logo.png|h=1.2cm]]  → height = 1.2cm
+	const expandLogoWikilink = (linkInner: string): string => {
+		const { linkpath, height } = parseLogoLinkInner(linkInner);
+		const containerPath = copyAssetByLinkpath(linkpath);
+		const h = height ?? DEFAULT_LOGO_HEIGHT;
+		return `\\raisebox{-0.3\\height}{\\includegraphics[height=${h}]{${containerPath}}}`;
+	};
+
 	const processValue = (val: unknown): unknown => {
 		if (typeof val === 'string') {
 			return val.replace(WIKILINK_REGEX, (_full, inner: string) =>
-				resolveAndCopy(inner, brandingFile.path),
+				resolveAndCopy(inner),
 			);
 		}
 		if (Array.isArray(val)) {
@@ -140,6 +179,22 @@ export function prepareBrandingOverride(
 		// Obsidian writes its internal position/tags caches into the same object —
 		// metadataCache adds `position` for some plugins; defensively strip it.
 		if (k === 'position') continue;
+
+		// Header/Footer + solo image wikilink → \raisebox{}{\includegraphics{}}.
+		// Mixed strings (e.g. "Draft – [[logo.png]]") and non-image targets
+		// fall through to plain path-substitution.
+		if (HEADER_FOOTER_KEYS.has(k) && typeof v === 'string') {
+			const soloMatch = SINGLE_WIKILINK_REGEX.exec(v);
+			const inner = soloMatch?.[1];
+			if (inner) {
+				const probe = parseLogoLinkInner(inner);
+				if (isLogoImage(probe.linkpath)) {
+					resolved[k] = expandLogoWikilink(inner);
+					continue;
+				}
+			}
+		}
+
 		resolved[k] = processValue(v);
 	}
 
@@ -167,6 +222,40 @@ function stripLinkExtras(inner: string): string {
 	const hash = target.indexOf('#');
 	if (hash >= 0) target = target.slice(0, hash);
 	return target.trim();
+}
+
+/**
+ * Parse the inner of a wikilink to extract:
+ *   - the canonical linkpath (alias/anchor stripped)
+ *   - an optional height hint from a trailing `|h=<value>` segment
+ *
+ * Examples:
+ *   "logo.png"               → { linkpath: "logo.png",        height: null  }
+ *   "logo.png|h=1.2cm"       → { linkpath: "logo.png",        height: "1.2cm" }
+ *   "logo.png|Alt|h=1.2cm"   → { linkpath: "logo.png",        height: "1.2cm" }
+ *   "sub/logo.png#anchor"    → { linkpath: "sub/logo.png",    height: null  }
+ */
+function parseLogoLinkInner(inner: string): { linkpath: string; height: string | null } {
+	let remainder = inner.trim();
+	let height: string | null = null;
+
+	// Trailing |h=<value> — only at the end (no further pipes after it).
+	const m = /^(.*)\|\s*h\s*=\s*([^|]+?)\s*$/.exec(remainder);
+	if (m && m[1] !== undefined && m[2]) {
+		remainder = m[1];
+		height = m[2].trim();
+	}
+
+	return { linkpath: stripLinkExtras(remainder), height };
+}
+
+/** True if the path ends with an extension we accept for header/footer logos. */
+function isLogoImage(linkpath: string): boolean {
+	const lower = linkpath.toLowerCase();
+	for (const ext of LOGO_IMAGE_EXTS) {
+		if (lower.endsWith(ext)) return true;
+	}
+	return false;
 }
 
 // ----- YAML serialization ---------------------------------------------------

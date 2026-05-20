@@ -77,7 +77,11 @@ titlepage-background: "[[bg.png]]"
 titlepage-logo: "[[logo.png]]"
 
 # === Kopfzeile ============================================================
-header-left: "Draft"
+# Plain Text: header-left: "Draft"
+# Logo (Wikilink wird zu \\raisebox{}{\\includegraphics{}} expandiert):
+#   header-left: "[[logo-horizontal.png]]"            → Default-Höhe 0.7cm
+#   header-left: "[[logo-horizontal.png|h=1cm]]"      → eigene Höhe
+header-left: "[[logo-horizontal.png]]"
 ---
 
 # Branding-Template
@@ -132,16 +136,27 @@ setzt. Ist der Key nicht gesetzt, gelten die Plugin-Defaults aus \`_base.yml\`.
 - \`titlepage-logo\`: Logo, das oben auf der Titelseite eingefügt wird.
   Ebenfalls als Wikilink.
 
-### Kopfzeile
+### Kopf- und Fußzeile
 
-- \`header-left\`: Inhalt der Kopfzeile links auf jeder Seite. Plain Text
-  funktioniert direkt (z. B. \`"Draft"\`). Für komplexere Inhalte (Logo,
-  formatierter Text) kann der Wert auch LaTeX enthalten, z. B.:
-  \`\`\`yaml
-  header-left: "\\\\raisebox{-0.3\\\\height}{\\\\includegraphics[height=0.7cm]{[[logo-horizontal.png]]}}"
+Für \`header-left\`, \`header-center\`, \`header-right\`, \`footer-left\`,
+\`footer-center\` und \`footer-right\` gilt:
+
+- **Plain Text:** \`header-left: "Draft"\` rendert den Text direkt.
+- **Logo per Wikilink:** \`header-left: "[[logo-horizontal.png]]"\` wird vom
+  Plugin automatisch zu
+  \`\`\`tex
+  \\raisebox{-0.3\\height}{\\includegraphics[height=0.7cm]{<path>}}
   \`\`\`
-  Eingebettete \`[[…]]\`-Wikilinks werden vor dem Export resolved und durch
-  den Container-Pfad ersetzt, auch innerhalb von LaTeX-Snippets.
+  expandiert. Default-Höhe ist \`0.7cm\`; mit dem optionalen Suffix
+  \`|h=<wert>\` kannst du das übersteuern: \`"[[logo.png|h=1.2cm]]"\`.
+  Akzeptierte Einheiten: \`cm\`, \`mm\`, \`pt\`, \`em\` und LaTeX-Längen wie
+  \`0.5\\textheight\`.
+- **Mixed-Mode (Text + Logo zusammen):** wer Text und Logo in derselben
+  Header-Zelle mischen will, schreibt das LaTeX-Snippet selbst — eingebettete
+  \`[[…]]\` werden weiterhin zu Container-Pfaden resolved, also z. B.
+  \`\`\`yaml
+  header-left: "Draft – \\\\includegraphics[height=0.5cm]{[[logo.png]]}"
+  \`\`\`
 
 ## Tipps
 
