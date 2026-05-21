@@ -2,12 +2,14 @@
 name: obsi-print
 description: Use when authoring or editing Obsidian notes that will be exported to PDF via the obsi-print plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, obsi-print-branding), wikilink embed/ref semantics, image figures, inline filters, glossary, and branding.
 obsi-print-version: 0.x
-last-updated: 2026-05-20
+last-updated: 2026-05-21
 ---
 
 # obsi-print — Schreibkonvention
 
-obsi-print exportiert Obsidian-Notes über eine Pandoc/LaTeX-Pipeline zu PDF. Die Konvention ist atomic: jedes Konzept (Theorem, Tabelle, Glossar-Eintrag, größere Definition) bekommt eine eigene `.md`-Datei und wird per Wikilink-Embed in Hauptdokumente eingebunden. Hauptdokumente sind kurz und bestehen primär aus Frontmatter, Headings und `![[Embeds]]`. Cross-Refs zeigen automatisch auf die richtige Nummer („Theorem 3", „Tabelle 5", „Abbildung 2", „Gleichung 1").
+obsi-print exportiert Obsidian-Notes über eine Pandoc/LaTeX-Pipeline zu PDF. Die Konvention ist atomic: jedes Konzept (Theorem, Tabelle, Glossar-Eintrag, größere Definition) **und jedes Kapitel** bekommt eine eigene `.md`-Datei und wird per Wikilink-Embed in Hauptdokumente eingebunden. Hauptdokumente sind kurz und bestehen primär aus Frontmatter und `![[Embeds]]`. Cross-Refs zeigen automatisch auf die richtige Nummer („Theorem 3", „Tabelle 5", „Abbildung 2", „Gleichung 1").
+
+**Atomic Notes starten immer mit H1** (`# Titel`). Der Auto-Heading-Shift verschiebt H1 beim Embed automatisch auf die passende Tiefe relativ zum Host-Heading. Du musst Header in Embeds nie von Hand anpassen.
 
 ## Frontmatter-Keys
 
@@ -65,15 +67,15 @@ obsi-print-branding: "[[Branding-Kunde1]]"
 
 `![[Note#^block-id]]` — Slice ab Block-ID.
 
-Headings in der embedded Note werden automatisch ans umgebende Heading-Level angepasst (Auto-Heading-Shift). Du musst Header in Embeds nicht von Hand anpassen. Im Host-Dokument den Embed unter dem gewünschten Heading platzieren — der Rest passiert automatisch.
+Im Host-Dokument den Embed unter dem gewünschten Heading platzieren — der Auto-Heading-Shift macht den Rest.
 
 ### Image-Embeds
 
+Bilder werden **immer mit Caption** embedded. Ohne Caption keine Figure-Nummerierung und kein Eintrag im Abbildungsverzeichnis.
+
 ```markdown
-![[bild.png|Caption]]              # nummerierte Figure mit Caption
-![[bild.png]]                      # Filename als Caption-Fallback
-![[bild.png|Mein Diagramm|w=60%]]  # mit Width-Hint
-![[bild.png|w=8cm]]                # Width-Hint ohne explizite Caption
+![[bild.png|Caption]]                    # Standard: nummerierte Figure mit Caption
+![[bild.png|Mein Diagramm|w=60%]]        # mit Width-Hint
 ```
 
 `|w=<wert>` akzeptiert Prozent, `px`, `cm`, `mm`, oder LaTeX-Längen wie `0.5\textwidth`. Width gilt pro Embed — dasselbe Bild kann mehrfach in verschiedenen Größen embedded werden. Der Width-Marker muss am Caption-Ende stehen.
@@ -129,6 +131,12 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 
 **DO** atomic schreiben: ein Konzept = eine Note. Theoreme, Tabellen, Glossar-Einträge, größere Definitionen — jeweils eigene Datei, im Hauptdokument embedden.
 
+**DO** jedes Kapitel in einer eigenen Note ablegen und im Hauptdokument nur per `![[…]]` einbinden.
+
+**DO** jede atomic Note mit `# Titel` (H1) starten — der Auto-Heading-Shift verschiebt das beim Embed automatisch.
+
+**DO** Bilder immer mit Caption embedden (`![[bild.png|Caption]]`).
+
 **DO** Wikilinks im YAML quoten: `"[[logo.png]]"`.
 
 **DO** Caption an Tabellen-Notes setzen (mandatory).
@@ -143,6 +151,8 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 
 **DON'T** Caption an Tabellen-Notes weglassen — harter Filter-Error.
 
+**DON'T** Bilder ohne Caption embedden — keine Nummerierung, kein Eintrag im Abbildungsverzeichnis.
+
 ## Typisches Hauptdokument
 
 ```markdown
@@ -152,21 +162,11 @@ obsi-print-branding: "[[Branding-Kunde1]]"
 toc: true
 ---
 
-# Einleitung
+![[Kapitel-Einleitung]]
 
-Text mit Glossar-Ref [[KI]] und Tabellen-Ref siehe [[Tabelle-Vergleich]].
+![[Kapitel-Theorie]]
 
-# Theorie
-
-![[Theorem-Pythagoras]]
-
-Aus [[Theorem-Pythagoras]] folgt …
-
-# Daten
-
-![[Tabelle-Vergleich]]
-
-![[diagramm.png|Übersicht der Phasen|w=80%]]
+![[Kapitel-Daten]]
 ```
 
-Inhalte selbst (Theorem-Wortlaut, Tabellenzellen) leben in den embedded Atomic-Notes, nicht hier.
+Jedes Kapitel-Atom (`Kapitel-Einleitung.md`, …) startet mit `# Titel` (H1) und enthält seinen eigenen Fließtext, weitere Embeds (`![[Theorem-Pythagoras]]`, `![[Tabelle-Vergleich]]`, `![[diagramm.png|Caption]]`) und Refs (`[[KI]]`, `[[Tabelle-Vergleich]]`). Der Auto-Heading-Shift verschiebt das H1 im Embed-Kontext auf das passende Level — am Hauptdokument musst du nichts manuell anpassen.

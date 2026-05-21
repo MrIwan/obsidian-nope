@@ -4,7 +4,8 @@
 import { Notice } from 'obsidian';
 import type ObsiPrintPlugin from '../main';
 import { cleanupBuildFolder, removeImage } from '../utils/docker';
-import { getPluginAbsoluteDir } from '../utils/paths';
+import { getPluginAbsoluteDir, getVaultAbsolutePath } from '../utils/paths';
+import { installSkill } from '../utils/skill';
 
 export function registerMaintenanceCommands(plugin: ObsiPrintPlugin): void {
 	plugin.addCommand({
@@ -17,6 +18,12 @@ export function registerMaintenanceCommands(plugin: ObsiPrintPlugin): void {
 		id: 'cleanup-build-folder',
 		name: 'Cleanup build folder',
 		callback: () => cleanupBuild(plugin),
+	});
+
+	plugin.addCommand({
+		id: 'install-ai-conventions-skill',
+		name: 'Install AI conventions skill',
+		callback: () => installAiSkill(plugin),
 	});
 }
 
@@ -37,5 +44,15 @@ export function cleanupBuild(plugin: ObsiPrintPlugin): void {
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
 		new Notice(`Cleanup failed: ${msg}`, 10000);
+	}
+}
+
+export function installAiSkill(plugin: ObsiPrintPlugin): void {
+	try {
+		installSkill(getPluginAbsoluteDir(plugin), getVaultAbsolutePath(plugin.app));
+		new Notice('AI conventions skill installed.');
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		new Notice(`Skill install failed: ${msg}`, 10000);
 	}
 }

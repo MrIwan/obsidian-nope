@@ -3,8 +3,9 @@ import type ObsiPrintPlugin from './main';
 import type { ObsiPrintSettings, PreflightResults } from './types';
 import { runPreflightChecks } from './utils/preflight';
 import { DOCKER_IMAGE_NAME, buildImage, imageExists } from './utils/docker';
-import { getPluginAbsoluteDir } from './utils/paths';
-import { cleanupBuild, removeDockerImage } from './commands/maintenance';
+import { getPluginAbsoluteDir, getVaultAbsolutePath } from './utils/paths';
+import { cleanupBuild, installAiSkill, removeDockerImage } from './commands/maintenance';
+import { getSkillStatus, type SkillStatus } from './utils/skill';
 
 export const DEFAULT_SETTINGS: ObsiPrintSettings = {
 	outputPath: '',
@@ -190,5 +191,54 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 					}
 				});
 			});
+
+		// ===== AI conventions skill section =====
+		new Setting(containerEl).setName('AI conventions skill').setHeading();
+
+		const skillStatusDiv = containerEl.createEl('div');
+		let skillBtnRef: ButtonComponent | null = null;
+
+		const refreshSkillStatus = () => {
+			const status = getSkillStatus(
+				getPluginAbsoluteDir(this.plugin),
+				getVaultAbsolutePath(this.app),
+			);
+			skillStatusDiv.setText(SKILL_STATUS_LABEL[status]);
+			skillBtnRef?.setButtonText(SKILL_BUTTON_LABEL[status]);
+		};
+
+		new Setting(containerEl)
+			.setName('Install / update')
+			.setDesc(
+				'Copy skill/SKILL.md → <vault>/.claude/skills/obsi-print/SKILL.md. ' +
+					'Overwrites any existing file at the target.',
+			)
+			.addButton((btn) => {
+				skillBtnRef = btn;
+				btn.onClick(() => {
+					btn.setDisabled(true);
+					btn.setButtonText('Installing…');
+					try {
+						installAiSkill(this.plugin);
+					} finally {
+						btn.setDisabled(false);
+						refreshSkillStatus();
+					}
+				});
+			});
+
+		refreshSkillStatus();
 	}
 }
+
+const SKILL_STATUS_LABEL: Record<SkillStatus, string> = {
+	missing: '✗ Skill nicht angelegt.',
+	outdated: '⚠ Skill nicht mehr aktuell.',
+	current: '✓ Skill aktuell.',
+};
+
+const SKILL_BUTTON_LABEL: Record<SkillStatus, string> = {
+	missing: 'Install',
+	outdated: 'Update',
+	current: 'Reinstall',
+};
