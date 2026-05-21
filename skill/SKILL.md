@@ -1,6 +1,6 @@
 ---
 name: obsi-print
-description: Use when authoring or editing Obsidian notes that will be exported to PDF via the obsi-print plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, obsi-print-branding), wikilink embed/ref semantics, image figures, inline filters, glossary, and branding.
+description: Use when authoring or editing Obsidian notes that will be exported to PDF via the obsi-print plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, obsi-print-branding), wikilink embed/ref semantics, image figures, inline filters, glossary, mermaid diagrams, and branding.
 obsi-print-version: 0.x
 last-updated: 2026-05-21
 ---
@@ -21,11 +21,13 @@ Setzt eine embedded Note in eine LaTeX-Environment.
 
 `table` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau eine Pandoc-Tabelle. Refs liefern „Tabelle N".
 
+`mermaid` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau einen ```mermaid-Codeblock — Obsidian rendert die Note im Live-Preview als Diagramm, der Export ruft `mmdc` (mermaid-cli) im Container auf und ersetzt den Block durch ein nummeriertes Image mit Caption. Refs liefern „Abbildung N". Optional `width:` im Frontmatter (Prozent, px, cm, mm oder LaTeX-Längen wie `0.6\textwidth`). Identische Diagramm-Sources werden gecacht — dasselbe Diagramm in mehreren Docs kostet nur einen Render.
+
 `equation`, `align`, `gather`, `multline`, `alignat` und deren Stern-Varianten → Voll-Embed mit genau einem `$$…$$`-Block im Body. `align`/`gather` dürfen `&` und `\\` enthalten (eine Nummer pro Zeile). `equation` kann via inneres `aligned` mehrzeilig sein (eine Nummer für den ganzen Block). Fehlender Math-Block → harter Filter-Error. Refs liefern „Gleichung N".
 
 ### `caption`
 
-Mandatory bei `latex-env: table`. Wird als Tabellen-Caption gerendert und im Tabellenverzeichnis aufgeführt.
+Mandatory bei `latex-env: table` und `latex-env: mermaid`. Wird als Caption gerendert und im Tabellen- bzw. Abbildungsverzeichnis aufgeführt.
 
 ### `latex-short`
 
@@ -92,6 +94,51 @@ Refs auf Notes, die im Dokument nicht embedded sind, fallen auf Plain-Text zurü
 
 Bei Mehrfach-Embed derselben Note zeigt der Ref auf das erste Vorkommen (Label wird nur beim ersten Embed gesetzt; Counter zählen aber durch).
 
+## Mermaid-Diagramme
+
+Mermaid-Diagramme sind atomic Notes mit `latex-env: mermaid` — eine `.md` pro Diagramm. Caption ist Pflicht. Beispiel `Diagramm-Datenfluss.md`:
+
+````markdown
+---
+latex-env: mermaid
+caption: "Datenfluss von Vault zu PDF"
+---
+
+# Datenfluss
+
+```mermaid
+graph TD
+  A[Vault] --> B[Pandoc]
+  B --> C[PDF]
+```
+````
+
+Im Hauptdokument einbinden wie jedes andere Atomic-Diagramm:
+
+```markdown
+![[Diagramm-Datenfluss]]
+```
+
+Refs ergeben „Abbildung N":
+
+```markdown
+Wie in [[Diagramm-Datenfluss]] gezeigt …
+```
+
+Optional `width:` im Frontmatter (Prozent, px, cm, mm, oder LaTeX-Längen wie `0.6\textwidth`):
+
+```yaml
+---
+latex-env: mermaid
+caption: "Architektur-Übersicht"
+width: "60%"
+---
+```
+
+Identische Diagramm-Sources werden gecacht (Hash-basiert) — ein Diagramm in mehreren Docs verwenden kostet nur einen Render. Vorteil gegenüber Inline-`mermaid`-Blöcken: Obsidian zeigt das Diagramm beim Editieren der Atomic Note live in der Preview, Caption und Cross-Ref kommen aus dem Frontmatter wie bei Tabellen, und das Diagramm ist im Vault wiederverwendbar.
+
+Inline-`mermaid`-Blöcke direkt im Hauptdokument oder in einer beliebigen Note ohne `latex-env: mermaid`-Frontmatter werden NICHT gerendert — sie bleiben als Code-Fence im PDF. Wenn das Diagramm im PDF erscheinen soll, gehört es in eine eigene atomic Note.
+
 ## Inline-Syntax
 
 `%%text%%` → Kommentar. Im PDF unsichtbar. Funktioniert über Leerzeilen hinweg (multi-block).
@@ -137,6 +184,8 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 
 **DO** Bilder immer mit Caption embedden (`![[bild.png|Caption]]`).
 
+**DO** Mermaid-Diagramme als atomic Note mit `latex-env: mermaid` + `caption:` ablegen — eine Note pro Diagramm, im Hauptdokument per `![[…]]` embedden.
+
 **DO** Wikilinks im YAML quoten: `"[[logo.png]]"`.
 
 **DO** Caption an Tabellen-Notes setzen (mandatory).
@@ -150,6 +199,8 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 **DON'T** SVG für Logos benutzen — pdflatex kann sie nicht. PDF/PNG.
 
 **DON'T** Caption an Tabellen-Notes weglassen — harter Filter-Error.
+
+**DON'T** Mermaid-Diagramme inline in eine Note kippen, die kein `latex-env: mermaid` hat — der Block bleibt dann als Code-Fence im PDF, statt gerendert zu werden.
 
 **DON'T** Bilder ohne Caption embedden — keine Nummerierung, kein Eintrag im Abbildungsverzeichnis.
 

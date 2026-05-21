@@ -6,6 +6,7 @@ import type ObsiPrintPlugin from '../main';
 import { buildImage, cleanupIntermediates, imageExists, runPipeline } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '../utils/paths';
 import { prepareBrandingOverride } from '../utils/branding';
+import { getSkillStatus } from '../utils/skill';
 
 export function registerExportCommand(plugin: ObsiPrintPlugin): void {
 	plugin.addCommand({
@@ -25,8 +26,22 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 		return;
 	}
 
-	// Image must be built.
 	const pluginDir = getPluginAbsoluteDir(plugin);
+	const vaultPath = getVaultAbsolutePath(plugin.app);
+
+	// Hinweis (kein Block): wenn das AI-Conventions-Skill nicht im Vault liegt,
+	// bekommen AI-Agents im Vault die Schreibkonvention nicht mit. Pipeline ist
+	// davon unabhängig, also nur Notice → User-Settings statt Abbruch.
+	if (getSkillStatus(pluginDir, vaultPath) === 'missing') {
+		new Notice(
+			'obsi-print: AI conventions skill nicht installiert. ' +
+				'In den Plugin-Settings unter „AI conventions skill" auf „Install" klicken, ' +
+				'damit AI-Agents die Schreibkonvention kennen.',
+			10000,
+		);
+	}
+
+	// Image must be built.
 	if (!(await imageExists())) {
 		new Notice('Docker image not found. Building it now. This may take a while…');
 		try {
@@ -39,7 +54,6 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 	}
 
 	// Resolve paths.
-	const vaultPath = getVaultAbsolutePath(plugin.app);
 	const sourceAbs = join(vaultPath, file.path);
 	const destPath = resolveOutputPath(plugin.settings.outputPath, sourceAbs, vaultPath);
 

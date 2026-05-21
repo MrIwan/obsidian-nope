@@ -13,6 +13,11 @@
 --   latex-env: table
 --       caption: "…"   ← MANDATORY, sonst Filter-Fehler
 --       → Pandoc-Table mit Caption aus Frontmatter, injiziertes \label{tab:X}.
+--   latex-env: mermaid
+--       caption: "…"   ← MANDATORY
+--       Body enthält genau einen ```mermaid-Block. mmdc rendert das Diagramm
+--       zu PNG in $MERMAID_WORK_DIR/mermaid/<sha1>.png, Filter ersetzt den
+--       Block durch eine Pandoc-Figure mit Caption + \label{fig:X}.
 --
 -- Auto-Heading-Shift: shift = max(0, host_last_level + 1 − min_embed_level).
 -- Details siehe Handover.
@@ -220,6 +225,75 @@ local function annotate_with_labels(blocks, notename, skip_outer_anchor)
 end
 
 -- ============================================================================
+-- Mermaid-Render (für `latex-env: mermaid`-Notes; ruft mmdc im Container auf)
+--
+-- PNG landet in $MERMAID_WORK_DIR/mermaid/<sha1>.png. WICHTIG: Der Image-src
+-- im AST muss ein ABSOLUTER Pfad sein. Pandoc löst relative Image-Pfade über
+-- `--resource-path` auf, und $MERMAID_WORK_DIR ist da nicht enthalten — bei
+-- einem relativen Pfad droppt der LaTeX-Writer den Image-Inline komplett und
+-- gibt nur leere `{}` in der Figure aus (verifizierter Stolperstein). Mit
+-- absolutem Pfad umgehen wir die Pandoc-Pfad-Resolution gänzlich.
+-- Sha1-Hash über den Diagramm-Source dient als Cache-Key: identische
+-- Diagramme rendern nur einmal pro Build (auch über mehrere Notes).
+-- ============================================================================
+
+local mermaid_outdir = nil
+
+local function ensure_mermaid_outdir()
+  if mermaid_outdir then return mermaid_outdir end
+  local work = os.getenv("MERMAID_WORK_DIR") or "."
+  mermaid_outdir = work .. "/mermaid"
+  pandoc.system.make_directory(mermaid_outdir, true)
+  return mermaid_outdir
+end
+
+local function mermaid_file_exists(path)
+  local f = io.open(path, "rb")
+  if f then f:close(); return true end
+  return false
+end
+
+local function mermaid_shell_escape(s)
+  return "'" .. s:gsub("'", "'\\''") .. "'"
+end
+
+-- Rendert Diagramm-Source zu PNG, gibt den ABSOLUTEN Pfad fürs .tex zurück.
+-- Bei Render-Fehler: nil + Log-Eintrag in stderr (→ last_latex_run.log).
+local function render_mermaid_to_png(source_text)
+  local outdir = ensure_mermaid_outdir()
+  local hash = pandoc.utils.sha1(source_text)
+  local mmd_path = outdir .. "/" .. hash .. ".mmd"
+  local png_abs = outdir .. "/" .. hash .. ".png"
+
+  if mermaid_file_exists(png_abs) then return png_abs end
+
+  local fh, err = io.open(mmd_path, "w")
+  if not fh then
+    io.stderr:write("mermaid: cannot write source " .. mmd_path
+      .. ": " .. tostring(err) .. "\n")
+    return nil
+  end
+  fh:write(source_text)
+  fh:close()
+
+  local cmd = table.concat({
+    "mmdc",
+    "-i", mermaid_shell_escape(mmd_path),
+    "-o", mermaid_shell_escape(png_abs),
+    "-b", "transparent",
+    "-p", "/etc/mmdc/puppeteer-config.json",
+    "2>&1",
+  }, " ")
+  local ok, _, code = os.execute(cmd)
+  if not ok or not mermaid_file_exists(png_abs) then
+    io.stderr:write("mermaid: mmdc failed for " .. mmd_path
+      .. " (exit " .. tostring(code) .. ", cmd: " .. cmd .. ")\n")
+    return nil
+  end
+  return png_abs
+end
+
+-- ============================================================================
 -- Embedding (recursive)
 -- ============================================================================
 
@@ -302,6 +376,17 @@ local function is_display_math(b)
     and b.content[1].mathtype == "DisplayMath"
 end
 
+-- Mermaid-CodeBlock-Predicate. Greift sowohl bei der Standard-Fence
+-- ```mermaid (Pandoc setzt class "mermaid") als auch bei expliziter
+-- Attribut-Form `{.mermaid}`.
+local function is_mermaid_code(b)
+  if b.t ~= "CodeBlock" then return false end
+  for _, cls in ipairs(b.classes or {}) do
+    if cls == "mermaid" then return true end
+  end
+  return false
+end
+
 -- ----------------------------------------------------------------------------
 -- wrap_math: Atomic-Math-Note (equation, align, gather, multline, alignat)
 --
@@ -374,6 +459,81 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
   end
 
   return annotated
+end
+
+-- ----------------------------------------------------------------------------
+-- wrap_mermaid: Atomic-Mermaid-Note (nur env_name == "mermaid")
+--
+-- Body MUSS einen ```mermaid-Block enthalten (Pandoc parst die Standard-Fence
+-- als CodeBlock mit class "mermaid"). Caption MUSS im Frontmatter stehen —
+-- Single-Source, kein Inline-Caption-Fallback, kein Default auf Dateinamen.
+--
+-- Reihenfolge im Wrap (verifizierte Stolpersteine):
+--   1. Render mmdc → ABSOLUTER PNG-Pfad. Relativer Pfad scheitert weiter unten
+--      im Pandoc-LaTeX-Writer, weil $MERMAID_WORK_DIR nicht im resource-path
+--      ist — der Image-Inline würde dann auf `{}` reduziert.
+--   2. Image-Inline mit NON-EMPTY Alt-Text (notename als Accessibility-
+--      Metadata analog zu Pandoc's eigenen Image-Figures, die per
+--      --extract-media generiert werden). Leerer Alt führt im LaTeX-Writer
+--      ebenfalls zu fehlendem \includegraphics.
+--   3. Pandoc.Figure mit Caption aus Frontmatter, \label{fig:X} als
+--      RawInline am Caption-Ende. Beim ersten Embed wird Label gesetzt und
+--      die Note in `available_targets`/`autoref_targets` registriert —
+--      Wikilinks auf die Note resolven dann zu „Abbildung N".
+--
+-- Optionaler `width:`-Key im Frontmatter setzt img.attributes.width
+-- (Prozent, px, cm, mm oder LaTeX-Längen wie 0.6\textwidth) — analog zum
+-- `|w=…`-Hint bei normalen Image-Embeds, aber Frontmatter-driven.
+-- ----------------------------------------------------------------------------
+local function wrap_mermaid(notename, env_name, sliced, doc_meta)
+  local caption_inlines = meta_to_inlines(doc_meta.caption)
+  if not caption_inlines or #caption_inlines == 0 then
+    error("[obsidian-transclude] Note '" .. notename
+      .. "' hat latex-env: mermaid, aber kein 'caption:' im Frontmatter.")
+  end
+
+  local _, code_block = find_block(sliced, is_mermaid_code)
+  if not code_block then
+    error("[obsidian-transclude] Note '" .. notename
+      .. "' hat latex-env: mermaid, aber keinen ```mermaid-Block im Inhalt gefunden.")
+  end
+
+  local png_abs = render_mermaid_to_png(code_block.text)
+  if not png_abs then
+    error("[obsidian-transclude] Note '" .. notename
+      .. "': mermaid-Rendering fehlgeschlagen (Details in last_latex_run.log).")
+  end
+
+  local label, first_embed = register_target(notename, "fig")
+
+  local img_attrs = {}
+  if doc_meta.width then
+    img_attrs["width"] = pandoc.utils.stringify(doc_meta.width)
+  end
+
+  -- Alt-Text aus dem Notenamen — fließt nur in `alt={…}` von \includegraphics
+  -- als PDF-Accessibility-Metadata, ist im sichtbaren PDF NICHT enthalten.
+  -- Sichtbarer Text kommt allein aus der Figure-Caption (caption_blocks).
+  local img = pandoc.Image(
+    { pandoc.Str(notename) },
+    png_abs,
+    "",
+    pandoc.Attr("", {}, img_attrs)
+  )
+
+  local caption_blocks = { pandoc.Plain(caption_inlines) }
+  if first_embed then
+    table.insert(caption_blocks[1].content,
+      pandoc.RawInline("latex", "\\label{" .. label .. "}"))
+  end
+
+  local figure = pandoc.Figure(
+    { pandoc.Plain({ img }) },
+    pandoc.Caption(caption_blocks),
+    pandoc.Attr("", {}, {})
+  )
+
+  return { figure }
 end
 
 -- ----------------------------------------------------------------------------
@@ -572,6 +732,8 @@ local function load_note(src, host_level)
         return wrap_math(notename, env_name, sliced, doc.meta)
       elseif env_name == "table" then
         return wrap_table(notename, env_name, sliced, doc.meta)
+      elseif env_name == "mermaid" then
+        return wrap_mermaid(notename, env_name, sliced, doc.meta)
       else
         return wrap_block(notename, env_name, sliced, doc.meta)
       end

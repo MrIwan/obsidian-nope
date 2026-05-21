@@ -38,6 +38,11 @@ if [[ -f "$WORK/branding-override.yml" ]]; then
   EXTRA_METADATA_FILES+=(--metadata-file="$WORK/branding-override.yml")
 fi
 
+# Mermaid-Render in obsidian-transclude.lua (wrap_mermaid für latex-env: mermaid)
+# legt PNGs in $WORK/mermaid/ ab; die .tex referenziert sie relativ als
+# „mermaid/<sha1>.png", was beim latexmk-cd in $WORK direkt aufgeht.
+export MERMAID_WORK_DIR="$WORK"
+
 # Pandoc: Markdown -> LaTeX
 echo ">>> Pandoc: $BASE.md → $BASE.tex"
 pandoc \
