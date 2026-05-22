@@ -91,6 +91,12 @@ Der Command „Create branding template" schreibt eine vorbefüllte `Branding-Te
 
 **3. Auto Rerender PDF** Ein Feature für viel viel Später! Mit einem Command soll ein extra Fenster oder Leaf ( Also Tab ) geöffnet werden. Dieser Tab sieht aus wie der rechte Teil auf overleaf und macht auch das. Oben links kann man das Auto Rerender an und aus stellen. Ein Button sagt auch einfach "Neu rendern". Auto Automatische Mode braucht irgendwie einen Life Cykle der halt immer wieder ausgelöst wird, wenn änderungen in einer der betroffenen Notes festgestellt wird und den neu rendern auslöst, wenn sich etwas geändert hat. 
 
+**4. Schriftarten einbinden**
+
+**5. Mehrere Logos** 
+
+**6. Über Bases als TOC ein Document** Handhabung mit Bases. 
+
 ## Test-Dateien
 
 `ExampleFiles/HelperFiles/`: `Theorem-Pythagoras.md`, `Tabelle-Vergleich.md`, `Tabelle-Projektphasen.md` (Counter-Test), `Navier-Stokes.md` (Multi-Line via `aligned`), `Eulersche-Identitaet.md` (einzeilig), `slice-source-{1,2,3}.md`, `env-test.md`, `image-test.md`, `gleichungen-test.md`, `glossar-test.md`, Glossary-Atoms `KI.md`/`CNN.md`/`DNN.md`/`NLP.md`/`Transformer.md`/`Spracherkennung.md`/`Computer Vision.md`. Test-Bilder: `neuron.excalidraw.png`, `neuronales_netz.excalidraw.png`. Im `ExampleFiles/`-Root: `tabellen-test.md`, `Testdokument.md`, `Testdokument-minimal.md`.
