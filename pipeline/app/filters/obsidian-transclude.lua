@@ -239,6 +239,12 @@ end
 
 local mermaid_outdir = nil
 
+-- Default-Scale für mmdc (--scale flag). 1 = native Basis-Auflösung
+-- (800px Breite), 2 = doppelt (~1600px → grob 300dpi bei halber Seitenbreite,
+-- für Print-PDFs scharf genug). Per Frontmatter `scale:` übersteuerbar
+-- (Werte 1–5 typisch; mmdc weist Werte außerhalb ab).
+local MERMAID_DEFAULT_SCALE = 2
+
 local function ensure_mermaid_outdir()
   if mermaid_outdir then return mermaid_outdir end
   local work = os.getenv("MERMAID_WORK_DIR") or "."
@@ -259,9 +265,11 @@ end
 
 -- Rendert Diagramm-Source zu PNG, gibt den ABSOLUTEN Pfad fürs .tex zurück.
 -- Bei Render-Fehler: nil + Log-Eintrag in stderr (→ last_latex_run.log).
-local function render_mermaid_to_png(source_text)
+-- Scale geht in den Cache-Key ein — sonst würden Renders mit anderer
+-- Auflösung kollidieren.
+local function render_mermaid_to_png(source_text, scale)
   local outdir = ensure_mermaid_outdir()
-  local hash = pandoc.utils.sha1(source_text)
+  local hash = pandoc.utils.sha1(source_text .. ":scale:" .. tostring(scale))
   local mmd_path = outdir .. "/" .. hash .. ".mmd"
   local png_abs = outdir .. "/" .. hash .. ".png"
 
@@ -281,6 +289,7 @@ local function render_mermaid_to_png(source_text)
     "-i", mermaid_shell_escape(mmd_path),
     "-o", mermaid_shell_escape(png_abs),
     "-b", "transparent",
+    "-s", tostring(scale),
     "-p", "/etc/mmdc/puppeteer-config.json",
     "2>&1",
   }, " ")
@@ -481,10 +490,15 @@ end
 --      die Note in `available_targets`/`autoref_targets` registriert —
 --      Wikilinks auf die Note resolven dann zu „Abbildung N".
 --
--- Optionaler Skalierungs-Key im Frontmatter — kurz `w:` (konsistent zu
--- `|w=…` bei Image-Embeds) oder ausgeschrieben `width:`; `w:` gewinnt bei
--- Konflikt. Setzt img.attributes.width — Prozent, px, cm, mm oder
--- LaTeX-Längen wie 0.6\textwidth.
+-- Zwei orthogonale Frontmatter-Keys steuern Bild-Größe vs. Schärfe:
+--   `w:` (oder `width:`) — Darstellungsgröße im PDF, gesetzt als
+--      img.attributes.width (Prozent, px, cm, mm, LaTeX-Längen wie
+--      0.6\textwidth). `w:` gewinnt bei Konflikt mit `width:`. Analog zu
+--      `|w=…` bei Image-Embeds.
+--   `scale:` — mmdc-Render-Auflösung (1–5), Default 2 (~1600px-Breite,
+--      ~300dpi bei halber Seitenbreite). Höher → schärfer bei großen
+--      Diagrammen, aber größere PNG-Datei. Geht in den Cache-Key ein,
+--      damit Renders mit unterschiedlicher Auflösung nicht kollidieren.
 -- ----------------------------------------------------------------------------
 local function wrap_mermaid(notename, env_name, sliced, doc_meta)
   local caption_inlines = meta_to_inlines(doc_meta.caption)
@@ -499,7 +513,15 @@ local function wrap_mermaid(notename, env_name, sliced, doc_meta)
       .. "' hat latex-env: mermaid, aber keinen ```mermaid-Block im Inhalt gefunden.")
   end
 
-  local png_abs = render_mermaid_to_png(code_block.text)
+  -- Render-Scale: Frontmatter `scale:` (1–5, mmdc `--scale`-Flag) übersteuert
+  -- den Default. Höherer Scale = schärferes PNG = größere Datei.
+  local scale = MERMAID_DEFAULT_SCALE
+  if doc_meta.scale then
+    local n = tonumber(pandoc.utils.stringify(doc_meta.scale))
+    if n then scale = n end
+  end
+
+  local png_abs = render_mermaid_to_png(code_block.text, scale)
   if not png_abs then
     error("[obsidian-transclude] Note '" .. notename
       .. "': mermaid-Rendering fehlgeschlagen (Details in last_latex_run.log).")
@@ -507,10 +529,10 @@ local function wrap_mermaid(notename, env_name, sliced, doc_meta)
 
   local label, first_embed = register_target(notename, "fig")
 
-  -- Width-Hint: kurz `w:` (konsistent zu `|w=…` bei Image-Embeds) oder
-  -- ausgeschrieben `width:`. `w:` gewinnt bei Konflikt. Akzeptiert Pandoc's
-  -- übliche Längenangaben — Prozent (`60%`), LaTeX-Längen (`0.6\textwidth`,
-  -- `5cm`, `60mm`), Pixel (`200px`).
+  -- Width-Hint (Darstellungsgröße im PDF, unabhängig von `scale`): kurz `w:`
+  -- (konsistent zu `|w=…` bei Image-Embeds) oder ausgeschrieben `width:`.
+  -- `w:` gewinnt bei Konflikt. Akzeptiert Pandoc's übliche Längenangaben —
+  -- Prozent (`60%`), LaTeX-Längen (`0.6\textwidth`, `5cm`, `60mm`), Pixel.
   local img_attrs = {}
   local width_meta = doc_meta.w or doc_meta.width
   if width_meta then
