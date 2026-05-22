@@ -125,13 +125,13 @@ Refs ergeben „Abbildung N":
 Wie in [[Diagramm-Datenfluss]] gezeigt …
 ```
 
-Optional `width:` im Frontmatter (Prozent, px, cm, mm, oder LaTeX-Längen wie `0.6\textwidth`):
+Optional `w:` im Frontmatter zum Skalieren — Prozent, px, cm, mm oder LaTeX-Längen wie `0.6\textwidth` (konsistent mit `|w=…` bei Image-Embeds). Alternativ ausgeschrieben `width:`; `w:` gewinnt bei Konflikt.
 
 ```yaml
 ---
 latex-env: mermaid
 caption: "Architektur-Übersicht"
-width: "60%"
+w: "60%"
 ---
 ```
 

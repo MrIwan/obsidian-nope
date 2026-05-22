@@ -481,9 +481,10 @@ end
 --      die Note in `available_targets`/`autoref_targets` registriert —
 --      Wikilinks auf die Note resolven dann zu „Abbildung N".
 --
--- Optionaler `width:`-Key im Frontmatter setzt img.attributes.width
--- (Prozent, px, cm, mm oder LaTeX-Längen wie 0.6\textwidth) — analog zum
--- `|w=…`-Hint bei normalen Image-Embeds, aber Frontmatter-driven.
+-- Optionaler Skalierungs-Key im Frontmatter — kurz `w:` (konsistent zu
+-- `|w=…` bei Image-Embeds) oder ausgeschrieben `width:`; `w:` gewinnt bei
+-- Konflikt. Setzt img.attributes.width — Prozent, px, cm, mm oder
+-- LaTeX-Längen wie 0.6\textwidth.
 -- ----------------------------------------------------------------------------
 local function wrap_mermaid(notename, env_name, sliced, doc_meta)
   local caption_inlines = meta_to_inlines(doc_meta.caption)
