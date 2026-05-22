@@ -506,9 +506,14 @@ local function wrap_mermaid(notename, env_name, sliced, doc_meta)
 
   local label, first_embed = register_target(notename, "fig")
 
+  -- Width-Hint: kurz `w:` (konsistent zu `|w=…` bei Image-Embeds) oder
+  -- ausgeschrieben `width:`. `w:` gewinnt bei Konflikt. Akzeptiert Pandoc's
+  -- übliche Längenangaben — Prozent (`60%`), LaTeX-Längen (`0.6\textwidth`,
+  -- `5cm`, `60mm`), Pixel (`200px`).
   local img_attrs = {}
-  if doc_meta.width then
-    img_attrs["width"] = pandoc.utils.stringify(doc_meta.width)
+  local width_meta = doc_meta.w or doc_meta.width
+  if width_meta then
+    img_attrs["width"] = pandoc.utils.stringify(width_meta)
   end
 
   -- Alt-Text aus dem Notenamen — fließt nur in `alt={…}` von \includegraphics
