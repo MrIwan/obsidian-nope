@@ -2,7 +2,7 @@
 name: obsi-print
 description: Use when authoring or editing Obsidian notes that will be exported to PDF via the obsi-print plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, obsi-print-branding), wikilink embed/ref semantics, image figures, inline filters, glossary, mermaid diagrams, and branding.
 obsi-print-version: 0.x
-last-updated: 2026-05-21
+last-updated: 2026-05-26
 ---
 
 # obsi-print — Schreibkonvention
@@ -70,6 +70,20 @@ obsi-print-branding: "[[Branding-Kunde1]]"
 `![[Note#^block-id]]` — Slice ab Block-ID.
 
 Im Host-Dokument den Embed unter dem gewünschten Heading platzieren — der Auto-Heading-Shift macht den Rest.
+
+### Passiver Embed (`+[[…]]`)
+
+`+[[Note]]` verhält sich beim PDF-Export **identisch** zu `![[Note]]` (gleiche Slices, gleiche Wraps, gleiche Auto-Heading-Shift-Logik, gleiche Refs). Der Unterschied ist nur Obsidians Editor-/Reader-Ansicht: `+[[…]]` wird in Obsidian **nicht** als Embed gerendert — du siehst nur ein `+` gefolgt vom Wikilink. Praktisch, wenn das Hauptdokument viele Embeds enthält und du beim Schreiben die Übersicht behalten willst (z.B. TOC-artige Listen aus Kapitel-Embeds), aber im PDF-Export trotzdem den vollen Inhalt brauchst.
+
+Alle Varianten von `![[…]]` funktionieren analog mit `+`: `+[[Note#Heading]]`, `+[[Note#^block-id]]`, `+[[bild.png|Caption]]`, `+[[bild.png|Caption|w=60%]]`.
+
+```markdown
++[[Kapitel-Einleitung]]
++[[Kapitel-Theorie]]
++[[Kapitel-Daten]]
+```
+
+Im Editor siehst du drei Wikilinks zu den Kapiteln, im PDF erscheinen sie voll expandiert.
 
 ### Image-Embeds
 

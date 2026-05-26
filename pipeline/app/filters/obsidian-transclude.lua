@@ -5,6 +5,9 @@
 --   ![[Note#^block-id]]        single block ending in "^block-id"
 --   ![[Bild.png|Caption]]      labeled figure with caption
 --   ![[Bild.png]]              labeled figure, filename as caption
+--   +[[Note]]                  passiver Embed: Obsidian rendert NICHT, Pipeline schon
+--                              (Pre-Processing in load_note + build.sh, identische Semantik
+--                              wie ![[…]]).
 --
 -- Frontmatter-gesteuerte Wraps (Single-Source: Konfiguration immer im
 -- Frontmatter der embedded Note, nie über den Embed-Tag):
@@ -722,6 +725,13 @@ local function load_note(src, host_level)
   visiting[path] = true
   local f = io.open(path, "rb")
   local content = f:read("*all"); f:close()
+  -- Passive-Embed-Rewrite `+[[…]]` → `![[…]]`. Spiegel der sed-Regel in build.sh
+  -- (top-level Datei). Hier greift sie für rekursiv eingebundene Notes, damit
+  -- die Syntax in jeder Tiefe konsistent funktioniert. Semantik identisch zu
+  -- `![[…]]` — der Unterschied ist nur Obsidians Render-Verhalten in der
+  -- Editor-/Reader-Ansicht (passiv = wird nicht gerendert, bleibt als
+  -- Wikilink-Text sichtbar). Beide Stellen müssen synchron bleiben.
+  content = content:gsub("%+%[%[", "![[")
   local doc = pandoc.read(content, "markdown+wikilinks_title_after_pipe")
   local blocks = process_blocks(doc.blocks)
   visiting[path] = nil

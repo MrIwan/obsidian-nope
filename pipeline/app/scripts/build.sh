@@ -20,6 +20,19 @@ INPUT_DIR=$(dirname "$INPUT_ABS")
 WORK="/build/$BASE"
 mkdir -p "$WORK"
 
+# Passive-Embed-Syntax `+[[Note]]` → `![[Note]]`.
+# Obsidian rendert `+[[…]]` NICHT als Embed (man sieht nur `+` + Wikilink in der
+# Editor-Ansicht), aber die Pipeline expandiert ihn wie ein normales `![[…]]`.
+# Praktisch, wenn man im Editor Übersicht behalten will (z.B. lange
+# Kapitel-Embeds in einem TOC-artigen Hauptdokument), das PDF aber den vollen
+# Inhalt enthalten soll. Spiegelbild dieser Regel sitzt in
+# obsidian-transclude.lua's load_note() für rekursiv eingebundene Notes —
+# beide Stellen müssen synchron bleiben.
+# Die Top-Level-Datei liegt unter /vault read-only — daher kopieren statt
+# in-place modifizieren, in $WORK landet ohnehin der Build-Output.
+PROCESSED_INPUT="$WORK/$BASE.md"
+sed 's/+\[\[/![[/g' "$INPUT_ABS" > "$PROCESSED_INPUT"
+
 # Vault resource-path discovery: collect vault dirs, exclude common non-content folders.
 # Order: INPUT_DIR first, then vault dirs, with /app/assets as fallback.
 VAULT_PATHS=$(find /vault -type d \
@@ -59,7 +72,7 @@ pandoc \
   -s \
   -t latex \
   -o "$WORK/$BASE.tex" \
-  "$INPUT_ABS"
+  "$PROCESSED_INPUT"
 #   --filter=pandoc-crossref \
 
 cd "$WORK"
