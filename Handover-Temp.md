@@ -93,11 +93,13 @@ Der Command „Create branding template" schreibt eine vorbefüllte `Branding-Te
 
 **3. Auto Rerender PDF** Ein Feature für viel viel Später! Mit einem Command soll ein extra Fenster oder Leaf ( Also Tab ) geöffnet werden. Dieser Tab sieht aus wie der rechte Teil auf overleaf und macht auch das. Oben links kann man das Auto Rerender an und aus stellen. Ein Button sagt auch einfach "Neu rendern". Auto Automatische Mode braucht irgendwie einen Life Cykle der halt immer wieder ausgelöst wird, wenn änderungen in einer der betroffenen Notes festgestellt wird und den neu rendern auslöst, wenn sich etwas geändert hat. 
 
-**4. Schriftarten einbinden**
+**4. Schriftarten einbinden.** Blocker: pdflatex spricht kein TTF/OTF — für Brand-Fonts braucht es `fontspec`, das nur unter lualatex/xelatex läuft. Natürlicher Pfad in drei Schichten: (i) Engine-Switch in `latexmkrc` auf `-pdflua` (lualatex ist schon in `pandoc/extra` drin, kein zusätzlicher tlmgr-Ballast); (ii) Tier 1 — curated Font-Set via tlmgr ins Image (libertinus, fira, source-sans, ebgaramond, charter, lato; ~50 MB) plus `mainfont`/`sansfont`/`monofont`/`mathfont` als reguläre Keys in `_base.yml`, User schreibt nur den Font-Namen; (iii) Tier 2 — BYO-Fonts via Wikilink im Branding-Frontmatter analog zur Logo-Resolution: neuer Helper `expandFontWikilink` in `src/utils/branding.ts` (gleicher `copyAssetByLinkpath`-Pfad), TTF/OTF wird nach `$WORK/branding/fonts/` kopiert, YAML-Serializer schreibt `mainfont` als fontspec-Struct mit `Path: ./branding/fonts/` plus optionaler `BoldFont`/`ItalicFont`. Bestehendes `rm -rf $WORK/branding`-Cleanup räumt mit weg. Tier 1 ist der kleine Patch (Engine, tlmgr-Liste, vier YAML-Keys); Tier 2 ist substantieller (Resolver). Offene Variantenfragen vor Implementation: Engine immer lualatex oder opt-in via `use-fontspec`-Frontmatter (Empfehlung: immer), Math-Font (`mathfont`) mit aufnehmen (Empfehlung: ja).
 
 **5. Mehrere Logos** 
 
 **6. Über Bases als TOC ein Document** Handhabung mit Bases. 
+
+**7. Anmerkungen als Fußnote** 
 
 ## Test-Dateien
 
