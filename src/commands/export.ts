@@ -6,6 +6,7 @@ import type ObsiPrintPlugin from '../main';
 import { buildImage, cleanupIntermediates, imageExists, runPipeline } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '../utils/paths';
 import { prepareBrandingOverride } from '../utils/branding';
+import { prepareBibliography } from '../utils/bibliography';
 import { getSkillStatus } from '../utils/skill';
 
 export function registerExportCommand(plugin: ObsiPrintPlugin): void {
@@ -82,6 +83,32 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
 		new Notice(`Branding override failed. ${msg}`, 10000);
+		return;
+	}
+
+	// Bibliography (Pandoc-citeproc bridge). Same idea as branding-override:
+	// resolve via metadataCache here, copy to $WORK under fixed filenames
+	// (`references.bib` / `citation-style.csl`), build.sh just probes for
+	// the files. No frontmatter parsing or vault traversal in bash.
+	try {
+		const preparedBib = prepareBibliography(
+			plugin.app,
+			file,
+			workDir,
+			vaultPath,
+			pluginDir,
+		);
+		if (preparedBib) {
+			const cslPart = preparedBib.cslHostPath
+				? preparedBib.cslPreinstalled
+					? ' + preinstalled CSL'
+					: ' + custom CSL'
+				: '';
+			new Notice(`Bibliography prepared${cslPart}.`);
+		}
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		new Notice(`Bibliography prep failed. ${msg}`, 10000);
 		return;
 	}
 

@@ -42,19 +42,26 @@ VAULT_PATHS=$(find /vault -type d \
     -not -path '*/node_modules*' \
     2>/dev/null | tr '\n' ':')
 
-# Branding override: TS side writes branding-override.yml + branding/ assets
-# into $WORK before docker runs. Append --metadata-file when present so it
-# overrides _base.yml; the doc's own frontmatter still wins over both.
+# Check if Branding Override exists
 EXTRA_METADATA_FILES=()
 if [[ -f "$WORK/branding-override.yml" ]]; then
   echo ">>> Branding override detected: $WORK/branding-override.yml"
   EXTRA_METADATA_FILES+=(--metadata-file="$WORK/branding-override.yml")
 fi
 
-# Mermaid-Render in obsidian-transclude.lua (wrap_mermaid für latex-env: mermaid)
-# legt PNGs in $WORK/mermaid/ ab; die .tex referenziert sie relativ als
-# „mermaid/<sha1>.png", was beim latexmk-cd in $WORK direkt aufgeht.
+# Mermaid-Render in obsidian-transclude.lua (wrap_mermaid für latex-env: mermaid) legt PNGs in $WORK/mermaid/ ab; die .tex referenziert sie relativ als „mermaid/<sha1>.png", was beim latexmk-cd in $WORK direkt aufgeht.
 export MERMAID_WORK_DIR="$WORK"
+
+# Check if bibliography exists
+EXTRA_BIB_ARGS=()
+if [[ -f "$WORK/references.bib" ]]; then
+  echo ">>> Bibliography: $WORK/references.bib"
+  EXTRA_BIB_ARGS+=(--citeproc --bibliography="$WORK/references.bib")
+  if [[ -f "$WORK/citation-style.csl" ]]; then
+    echo ">>> CSL: $WORK/citation-style.csl"
+    EXTRA_BIB_ARGS+=(--csl="$WORK/citation-style.csl")
+  fi
+fi
 
 # Pandoc: Markdown -> LaTeX
 echo ">>> Pandoc: $BASE.md → $BASE.tex"
@@ -68,19 +75,30 @@ pandoc \
   --lua-filter=/app/filters/obsidian-transclude.lua \
   --lua-filter=/app/filters/obsidian-inline.lua \
   --lua-filter=/app/filters/callouts.lua \
+  "${EXTRA_BIB_ARGS[@]}" \
   --toc \
   -s \
   -t latex \
   -o "$WORK/$BASE.tex" \
   "$PROCESSED_INPUT"
+# WICHTIG: EXTRA_BIB_ARGS (--citeproc + --bibliography + ggf. --csl) muss NACH
+# den --lua-filter-Flags stehen. Pandoc 2.11+ läuft Filter und Citeproc in der
+# Reihenfolge der Kommandozeile durch. Steht --citeproc davor, sieht es nur
+# Top-Level-Citations — eingebettete Notes mit [@key] werden erst danach durch
+# obsidian-transclude.lua expandiert und entgehen der Citeproc-Verarbeitung
+# komplett. Symptom: Citation-Marker erscheinen als escaped Roh-Text
+# (`{[}@key{]}`) statt als formatierte Citation (`(Vaswani u. a. 2023)`).
 #   --filter=pandoc-crossref \
 
 cd "$WORK"
 echo ">>> latexmk (pdflatex + makeglossaries, so oft bis stabil)"
 latexmk -pdf -interaction=nonstopmode -r /app/scripts/latexmkrc "$BASE.tex"
 
-# Branding-Override-Cleanup
-rm -f "$WORK/branding-override.yml"
+# Per-export-Artefakte aufräumen, damit kein stale State zwischen Builds übrig
+# bleibt. branding-override.yml + branding/-Assets von der Branding-Mechanik,
+# references.bib + citation-style.csl von der Bibliography-Mechanik — beide
+# werden vor jedem Export von der TS-Seite neu materialisiert.
+rm -f "$WORK/branding-override.yml" "$WORK/references.bib" "$WORK/citation-style.csl"
 rm -rf "$WORK/branding"
 
 echo ""

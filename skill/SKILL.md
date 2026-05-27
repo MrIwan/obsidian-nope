@@ -2,7 +2,7 @@
 name: obsi-print
 description: Use when authoring or editing Obsidian notes that will be exported to PDF via the obsi-print plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, obsi-print-branding), wikilink embed/ref semantics, image figures, inline filters, glossary, mermaid diagrams, and branding.
 obsi-print-version: 0.x
-last-updated: 2026-05-26
+last-updated: 2026-05-27
 ---
 
 # obsi-print — Schreibkonvention
@@ -163,6 +163,44 @@ scale: 4
 Identische Diagramm-Sources werden gecacht (Hash-basiert) — ein Diagramm in mehreren Docs verwenden kostet nur einen Render. Vorteil gegenüber Inline-`mermaid`-Blöcken: Obsidian zeigt das Diagramm beim Editieren der Atomic Note live in der Preview, Caption und Cross-Ref kommen aus dem Frontmatter wie bei Tabellen, und das Diagramm ist im Vault wiederverwendbar.
 
 Inline-`mermaid`-Blöcke direkt im Hauptdokument oder in einer beliebigen Note ohne `latex-env: mermaid`-Frontmatter werden NICHT gerendert — sie bleiben als Code-Fence im PDF. Wenn das Diagramm im PDF erscheinen soll, gehört es in eine eigene atomic Note.
+
+## Zitationen
+
+Citations laufen über Pandoc-citeproc gegen eine `.bib`-Datei im Vault. Die Resolution arbeitet wie bei `obsi-print-branding` — das Plugin sucht die Datei via Obsidian's Link-Index, du kannst Plain-Pfad oder Wikilink schreiben.
+
+Im Doc-Frontmatter:
+
+```yaml
+---
+title: "Mein Bericht"
+bibliography: "references.bib"      # Plain-Pfad
+# bibliography: "[[references.bib]]" # ODER als Wikilink (gleicher Effekt)
+csl: chicago-author-date            # optional; ohne Angabe greift Pandoc-Default
+---
+```
+
+Folder mit Leerzeichen ist egal — der Resolver matcht über den Vault-Index, nicht über String-Vergleich.
+
+In-Text-Syntax (Standard-Pandoc):
+
+```markdown
+Die These ist belegt [@schmidt2020].
+Wie [-@schmidt2020] zeigt, ...           # Author unterdrückt
+@schmidt2020 argumentiert, dass ...       # Author im Fließtext
+Siehe [@schmidt2020, p. 42].              # Locator
+Mehrere [@a; @b, p. 12].                  # Multi
+```
+
+Bibliography landet automatisch am Doc-Ende. Wenn du den genauen Platz selbst bestimmen willst (z.B. vor Anhängen), Placeholder einfügen:
+
+```markdown
+## Literaturverzeichnis
+
+::: {#refs}
+:::
+```
+
+Empfohlener Authoring-Workflow für größere Quell-Mengen: Zotero als Source-of-Truth + Better-BibTeX-Plugin (auto-exportiert die Library als `.bib` in den Vault auf jede Änderung) + Obsidian Citations-Plugin oder Zotero Integration (Quick-Insert von `[@key]`-Markern). Damit ist der Vault self-contained und das `.bib` immer aktuell.
 
 ## Inline-Syntax
 
