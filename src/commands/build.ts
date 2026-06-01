@@ -13,11 +13,21 @@ export function registerBuildCommand(plugin: ObsiPrintPlugin): void {
 	});
 }
 
-async function buildDockerImage(plugin: ObsiPrintPlugin): Promise<void> {
+export function registerBuildCommandnoCache(plugin: ObsiPrintPlugin): void {
+	plugin.addCommand({
+		id: 'build-docker-image-no-cache',
+		name: 'Build docker image (no cache)',
+		callback: async () => {
+			await buildDockerImage(plugin, true);
+		},
+	});
+}
+
+async function buildDockerImage(plugin: ObsiPrintPlugin, noCache: boolean = false): Promise<void> {
 	new Notice('Building docker image (may take several minutes)…');
 	try {
 		const pluginDir = getPluginAbsoluteDir(plugin);
-		await buildImage(pluginDir);
+		await buildImage(pluginDir, noCache);
 		new Notice('Docker image build complete.');
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
