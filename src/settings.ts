@@ -25,7 +25,7 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		// ===== Output section =====
+		// Output configuration section.
 		new Setting(containerEl).setName('Output').setHeading();
 
 		new Setting(containerEl)
@@ -70,7 +70,7 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 					});
 			});
 
-		// ===== Preflight section =====
+		// System preflight checks section.
 		new Setting(containerEl).setName('Preflight').setHeading();
 
 		const preflightResultsDiv = containerEl.createEl('div');
@@ -106,14 +106,14 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 				});
 			});
 
-		// Auto-run preflight when the tab opens.
+		// Auto-run preflight checks on tab open.
 		void runPreflightChecks(this.app)
 			.then(renderPreflightResults)
 			.catch(() => {
 				/* errors will surface when user clicks Re-check */
 			});
 
-		// ===== Setup section =====
+		// Docker image setup section.
 		new Setting(containerEl).setName('Setup').setHeading();
 
 		const setupStatusDiv = containerEl.createEl('div', { text: 'Checking image…' });
@@ -156,7 +156,7 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 
 		void refreshImageStatus();
 
-		// ===== Maintenance section =====
+		// System maintenance section.
 		new Setting(containerEl).setName('Maintenance').setHeading();
 
 		new Setting(containerEl)
@@ -192,7 +192,7 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 				});
 			});
 
-		// ===== AI conventions skill section =====
+		// AI skill installation and status section.
 		new Setting(containerEl).setName('AI conventions skill').setHeading();
 
 		const skillStatusDiv = containerEl.createEl('div');
@@ -232,9 +232,9 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 }
 
 const SKILL_STATUS_LABEL: Record<SkillStatus, string> = {
-	missing: '✗ Skill nicht angelegt.',
-	outdated: '⚠ Skill nicht mehr aktuell.',
-	current: '✓ Skill aktuell.',
+	missing: '✗ Skill not installed.',
+	outdated: '⚠ Skill outdated.',
+	current: '✓ Skill up to date.',
 };
 
 const SKILL_BUTTON_LABEL: Record<SkillStatus, string> = {

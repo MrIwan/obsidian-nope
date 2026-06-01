@@ -988,6 +988,23 @@ $endif$
       \renewcommand{\paragraphautorefname}{Absatz}%
       \renewcommand{\itemautorefname}{Punkt}%
       \renewcommand{\footnoteautorefname}{Fu\ss note}%
+      \renewcommand{\contentsname}{Inhaltsverzeichnis}%
+      \renewcommand{\listfigurename}{Abbildungsverzeichnis}%
+      \renewcommand{\listtablename}{Tabellenverzeichnis}%
+    }{}%
+    \iflanguage{english}{%
+      \renewcommand{\figureautorefname}{Figure}%
+      \renewcommand{\tableautorefname}{Table}%
+      \renewcommand{\equationautorefname}{Equation}%
+      \renewcommand{\sectionautorefname}{Section}%
+      \renewcommand{\subsectionautorefname}{Subsection}%
+      \renewcommand{\subsubsectionautorefname}{Subsubsection}%
+      \renewcommand{\paragraphautorefname}{Paragraph}%
+      \renewcommand{\itemautorefname}{Item}%
+      \renewcommand{\footnoteautorefname}{Footnote}%
+      \renewcommand{\contentsname}{Table of Contents}%
+      \renewcommand{\listfigurename}{List of Figures}%
+      \renewcommand{\listtablename}{List of Tables}%
     }{}%
     % --- Add further \iflanguage{<lang>}{...} blocks below if needed ---
   }{}%
@@ -1191,8 +1208,9 @@ $include-before$
 $endfor$
 $if(no-toc)$
 $else$
+$if(toc-title)$
 \renewcommand*\contentsname{$toc-title$}
-\renewcommand*\contentsname{Table of Contents}
+$endif$
 $endif$
 $if(beamer)$
 \begin{frame}[allowframebreaks]

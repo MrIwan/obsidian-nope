@@ -59,6 +59,29 @@ local function strip_marker(inlines)
   return rest
 end
 
+-- Split inlines at the first SoftBreak/LineBreak.
+-- Everything before is the title; everything after is body content
+-- that belonged to the same Pandoc paragraph (Obsidian single-block callout).
+local function split_at_first_break(inlines)
+  local title = {}
+  local rest = {}
+  local found = false
+  for _, inl in ipairs(inlines) do
+    if not found and (inl.t == "SoftBreak" or inl.t == "LineBreak") then
+      found = true
+    elseif found then
+      rest[#rest + 1] = inl
+    else
+      title[#title + 1] = inl
+    end
+  end
+  -- trim leading whitespace of rest
+  while #rest > 0 and (rest[1].t == "Space" or rest[1].t == "SoftBreak" or rest[1].t == "LineBreak") do
+    table.remove(rest, 1)
+  end
+  return title, rest
+end
+
 function BlockQuote(el)
   if #el.content == 0 then return nil end
 
@@ -72,11 +95,17 @@ function BlockQuote(el)
   local env = type_map[typ] or "noteblock"
   has_callout = true
 
-  -- Title: rest of first line after marker
-  local title_inlines = strip_marker(first.content)
+  -- Title: rest of first line after marker, only up to the first line break.
+  -- Anything after the line break belongs to the body, even if Obsidian put it
+  -- into the same paragraph (single-block callout written with one ">" per line).
+  local after_marker = strip_marker(first.content)
+  local title_inlines, rest_inlines = split_at_first_break(after_marker)
 
-  -- Body: all blocks after the first
+  -- Body: leftover inlines from the first paragraph + all blocks after the first
   local body_blocks = {}
+  if #rest_inlines > 0 then
+    body_blocks[#body_blocks + 1] = pandoc.Para(rest_inlines)
+  end
   for i = 2, #el.content do
     body_blocks[#body_blocks + 1] = el.content[i]
   end

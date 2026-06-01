@@ -2,12 +2,11 @@
 # `lang: de` treibt Babel-ngerman im Template, was wiederum
 # \figurename/\tablename (Caption-Prefix) und die \autoref-Namen
 # (\figureautorefname etc., gesetzt in eisvogel.tex Z.~980) liefert.
-lang: de
+lang: en
 
 # Toc settings
 toc: true
 toc-own-page: true
-toc-title: "Inhaltsverzeichnis"
 toc-depth: 3
 lof: true # List of Figures
 lot: true # List of Tables

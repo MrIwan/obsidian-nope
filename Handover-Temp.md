@@ -97,7 +97,15 @@ Der Command „Create branding template" schreibt eine vorbefüllte `Branding-Te
 
 **5. Mehrere Logos** 
 
-**6. Über Bases als TOC ein Document** Handhabung mit Bases. 
+**6. Über Bases als TOC ein Document** Handhabung mit Bases.
+
+**7. Docker Discovery on Linux & Windows** Testenm, ob die Discovery auch auf anderen Manschinen funktioniert. Evtl Install Path mit angeben.
+
+**8. Lang eng hinzufügen** Hinzufügen von Lang en Block in Template.
+
+**9. Custom Latex Templates** Hinzufügen einer Anleitung für Custom Latex Templates. Liste mit notwendigen Packeten? Disclaimer: Nur mit Custom Eisvogel getestet...
+
+**10. About Abstract** Abstact Optional machen. Momentan wird eine Fehlermeldung bei fehlendem Abstract erzeugt. 
 
 ## Test-Dateien
 

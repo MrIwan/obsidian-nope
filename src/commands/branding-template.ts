@@ -1,10 +1,4 @@
-// Command: "Create branding template".
-//
-// Writes a `Branding-Template.md` to the vault root. Frontmatter contains all
-// keys currently shipped in `pipeline/app/branding/_base.yml`, ready to be
-// duplicated per customer. The body documents what each key does so the user
-// can edit confidently inside Obsidian — body is ignored on export, it is
-// pure documentation.
+// Generate branding template file with documented frontmatter keys.
 
 import { Notice, normalizePath, TFile } from 'obsidian';
 import type ObsiPrintPlugin from '../main';
@@ -21,8 +15,7 @@ export function registerBrandingTemplateCommand(plugin: ObsiPrintPlugin): void {
 	});
 }
 
-/** Returns the first vault-relative path in the `name`, `name-2`, `name-3`, …
- * sequence that doesn't yet exist. Suffix is inserted before the extension. */
+// Return next available numbered path if filename already exists.
 function pickAvailablePath(plugin: ObsiPrintPlugin, filename: string): string {
 	const dotIdx = filename.lastIndexOf('.');
 	const stem = dotIdx >= 0 ? filename.slice(0, dotIdx) : filename;
@@ -37,10 +30,7 @@ function pickAvailablePath(plugin: ObsiPrintPlugin, filename: string): string {
 }
 
 async function createBrandingTemplate(plugin: ObsiPrintPlugin): Promise<void> {
-	// If `Branding-Template.md` already exists, fall back to a numbered
-	// variant (`Branding-Template-2.md`, `-3.md`, …) so we never silently
-	// clobber a customized template. The user sees the new file appear
-	// next to the original and decides what to keep.
+	// Use numbered suffix to avoid overwriting existing branding templates.
 	const path = pickAvailablePath(plugin, TEMPLATE_FILENAME);
 
 	try {
@@ -55,9 +45,7 @@ async function createBrandingTemplate(plugin: ObsiPrintPlugin): Promise<void> {
 	}
 }
 
-// -----------------------------------------------------------------------------
-// Template content. Frontmatter mirrors `pipeline/app/branding/_base.yml`; body
-// is German prose documentation. Keep these in sync when `_base.yml` changes.
+// Template content with branding keys and documentation (German prose for user).
 const TEMPLATE_CONTENT = `---
 # === Sprache ==============================================================
 lang: de
@@ -65,7 +53,6 @@ lang: de
 # === Inhaltsverzeichnis ===================================================
 toc: true
 toc-own-page: true
-toc-title: "Inhaltsverzeichnis"
 toc-depth: 3
 lof: true
 lot: true

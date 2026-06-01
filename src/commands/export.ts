@@ -30,14 +30,10 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 	const pluginDir = getPluginAbsoluteDir(plugin);
 	const vaultPath = getVaultAbsolutePath(plugin.app);
 
-	// Hinweis (kein Block): wenn das AI-Conventions-Skill nicht im Vault liegt,
-	// bekommen AI-Agents im Vault die Schreibkonvention nicht mit. Pipeline ist
-	// davon unabhängig, also nur Notice → User-Settings statt Abbruch.
+	// Warn if AI skill is missing; does not block export since pipeline is independent.
 	if (getSkillStatus(pluginDir, vaultPath) === 'missing') {
 		new Notice(
-			'obsi-print: AI conventions skill nicht installiert. ' +
-				'In den Plugin-Settings unter „AI conventions skill" auf „Install" klicken, ' +
-				'damit AI-Agents die Schreibkonvention kennen.',
+			'obsi-print: AI conventions skill not installed. Install via Plugin Settings → AI conventions skill.',
 			10000,
 		);
 	}
@@ -54,19 +50,16 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 		}
 	}
 
-	// Resolve paths.
+	// Resolve source and destination paths.
 	const sourceAbs = join(vaultPath, file.path);
 	const destPath = resolveOutputPath(plugin.settings.outputPath, sourceAbs, vaultPath);
 
-	// Compute the per-doc build dir (host path that maps to /build/<base>/ in container).
+	// Create per-document build directory.
 	const baseName = file.basename;
 	const workDir = join(pluginDir, 'pipeline', 'build', baseName);
 	mkdirSync(workDir, { recursive: true });
 
-	// Branding-Override (Feature 4): materialize per-export YAML + assets.
-	// Aborts the export with a Notice if the doc references a branding file
-	// that can't be resolved — better fail-loud than ship a PDF that silently
-	// fell back to the base defaults.
+	// Materialize branding overrides; fail loudly if branding file cannot be resolved.
 	try {
 		const prepared = prepareBrandingOverride(
 			plugin.app,
@@ -86,10 +79,7 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 		return;
 	}
 
-	// Bibliography (Pandoc-citeproc bridge). Same idea as branding-override:
-	// resolve via metadataCache here, copy to $WORK under fixed filenames
-	// (`references.bib` / `citation-style.csl`), build.sh just probes for
-	// the files. No frontmatter parsing or vault traversal in bash.
+	// Materialize bibliography; copy to work directory with fixed filenames for build.sh.
 	try {
 		const preparedBib = prepareBibliography(
 			plugin.app,
@@ -112,7 +102,7 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 		return;
 	}
 
-	// Run the pipeline.
+	// Run export pipeline.
 	new Notice(`Exporting "${file.basename}"…`);
 	let producedPdf: string;
 	try {
@@ -123,18 +113,18 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 		return;
 	}
 
-	// Copy the produced PDF to the user's destination.
+	// Copy PDF to destination.
 	mkdirSync(dirname(destPath), { recursive: true });
 	copyFileSync(producedPdf, destPath);
 
-	// Drop the whole build/<doc>/ folder unless the user wants intermediates for debugging.
+	// Cleanup build artifacts unless keepLatexIntermediates is enabled.
 	if (!plugin.settings.keepLatexIntermediates) {
 		cleanupIntermediates(workDir);
 	}
 
 	new Notice(`Exported to ${destPath}`);
 
-	// Optional auto-open.
+	// Auto-open PDF if enabled.
 	if (plugin.settings.autoOpenPdf) {
 		void shell.openPath(destPath);
 	}

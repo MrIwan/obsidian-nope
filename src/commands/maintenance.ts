@@ -1,5 +1,4 @@
-// Maintenance commands: remove the docker image and wipe pipeline/build/*.
-// Both actions are also exposed as buttons in the settings tab.
+// System maintenance commands: image removal and build cleanup.
 
 import { Notice } from 'obsidian';
 import type ObsiPrintPlugin from '../main';

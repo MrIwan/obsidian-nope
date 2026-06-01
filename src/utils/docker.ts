@@ -1,4 +1,4 @@
-// Docker-compose invocation wrapper and shared docker constants.
+// Docker CLI wrapper and configuration.
 
 import { execFile, spawn } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs';
@@ -7,7 +7,7 @@ import { join } from 'path';
 export const DOCKER_BIN = '/usr/local/bin/docker';
 export const DOCKER_IMAGE_NAME = 'obsidian2pdf';
 
-// Check for the Docker binary ( ony tested on macOS )
+// Locate Docker binary by augmenting PATH with common installation locations.
 export function getDockerEnv(): typeof process.env {
 	const extraPaths = [
 		'/usr/local/bin',
@@ -19,8 +19,7 @@ export function getDockerEnv(): typeof process.env {
 	return { ...process.env, PATH: newPath };
 }
 
-// Check if the Docker image exists
-// command: docker image inspect DOCKER_IMAGE_NAME
+// Check if the Docker image exists.
 export async function imageExists(): Promise<boolean> {
 	return new Promise<boolean>((resolve) => {
 		const proc = execFile(
@@ -35,8 +34,7 @@ export async function imageExists(): Promise<boolean> {
 	});
 }
 
-// Remove the Docker image
-// command: docker image rm -f DOCKER_IMAGE_NAME
+// Remove the Docker image.
 export async function removeImage(): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		execFile(
@@ -48,8 +46,7 @@ export async function removeImage(): Promise<void> {
 	});
 }
 
-// Delete every entry inside pipeline/build/ (logs, per-doc folders, …) but
-// keep the build/ folder itself so subsequent runs don't have to recreate it.
+// Delete build artifacts but preserve the build/ directory structure.
 export function cleanupBuildFolder(pluginDir: string): number {
 	const buildDir = join(pluginDir, 'pipeline', 'build');
 	if (!existsSync(buildDir)) return 0;
@@ -60,22 +57,18 @@ export function cleanupBuildFolder(pluginDir: string): number {
 	return entries.length;
 }
 
-// Drop the per-doc build dir entirely. Called after a successful export when
-// "Keep LaTeX intermediates" is off — the PDF is already copied to the user's
-// destination, so the work dir has nothing worth keeping.
+// Remove per-document build directory and LaTeX intermediates after successful export.
 export function cleanupIntermediates(workDir: string): void {
 	rmSync(workDir, { recursive: true, force: true });
 }
 
-// building the image, can take a while
-// command: docker compose build --no-cache
-// logging to build/last-build.log for debugging and user feedback on failures
+// Build Docker image; logs written to build/last-build.log.
 export async function buildImage(pluginDir: string, noCache: boolean = false): Promise<void> {
 	const pipelineDir = join(pluginDir, 'pipeline');
 	const buildDir = join(pipelineDir, 'build');
 	const logFile = join(buildDir, 'last-build.log');
 
-	// Prepare the build dir.
+	// Prepare build directory.
 	mkdirSync(buildDir, { recursive: true });
 
 	return new Promise<void>((resolve, reject) => {
@@ -111,8 +104,7 @@ export async function buildImage(pluginDir: string, noCache: boolean = false): P
 	});
 }
 
-// Runs the pipeline
-// command: docker compose run --rm pipeline <mdRelPath>
+// Run the export pipeline for a given markdown file.
 export async function runPipeline(
 	pluginDir: string,
 	vaultPath: string,
@@ -122,7 +114,7 @@ export async function runPipeline(
 	const buildDir = join(pipelineDir, 'build');
 	const logFile = join(buildDir, 'last_latex_run.log');
 
-	// Pipeline writes its output PDF to /build/<basename>/<basename>.pdf inside the container, which maps to <pluginDir>/pipeline/build/... on host.
+	// Container output PDF is mapped from /build/<basename>/<basename>.pdf to <pluginDir>/pipeline/build/...
 	const baseName = mdRelPath
 		.split('/')
 		.pop()!

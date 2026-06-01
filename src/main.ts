@@ -19,7 +19,7 @@ export default class ObsiPrintPlugin extends Plugin {
 	}
 
 	onunload() {
-		// No-op for now. Add cleanup here when long-running listeners are registered.
+		// Cleanup will be added when long-running listeners are registered.
 	}
 
 	async loadSettings() {
