@@ -7,7 +7,7 @@ last-updated: 2026-05-27
 
 # obsi-print — Schreibkonvention
 
-obsi-print exportiert Obsidian-Notes über eine Pandoc/LaTeX-Pipeline zu PDF. Die Konvention ist atomic: jedes Konzept (Theorem, Tabelle, Glossar-Eintrag, größere Definition) **und jedes Kapitel** bekommt eine eigene `.md`-Datei und wird per Wikilink-Embed in Hauptdokumente eingebunden. Hauptdokumente sind kurz und bestehen primär aus Frontmatter und `![[Embeds]]`. Cross-Refs zeigen automatisch auf die richtige Nummer („Theorem 3", „Tabelle 5", „Abbildung 2", „Gleichung 1").
+obsi-print exportiert Obsidian-Notes über eine Pandoc/LaTeX-Pipeline zu PDF. Die Konvention ist atomic: jedes Konzept (Theorem, Tabelle, Glossar-Eintrag, größere Definition) **und jedes Kapitel** bekommt eine eigene `.md`-Datei und wird per Wikilink-Embed in Hauptdokumente eingebunden. Hauptdokumente sind kurz und bestehen primär aus Frontmatter und `![[Embeds]]` (`+[[Embeds2]]`). Cross-Refs zeigen automatisch auf die richtige Nummer („Theorem 3", „Tabelle 5", „Abbildung 2", „Gleichung 1"), wenn das Embedd in der Datei gerendert wird und mit [[Embeds]] darauf verwiesen wird. Referenzen auf nicht-embedded Notes fallen auf Plain-Text zurück, damit du während des Schreibens flexibel bleiben kannst.
 
 **Atomic Notes starten immer mit H1** (`# Titel`). Der Auto-Heading-Shift verschiebt H1 beim Embed automatisch auf die passende Tiefe relativ zum Host-Heading. Du musst Header in Embeds nie von Hand anpassen.
 
@@ -59,7 +59,7 @@ obsi-print-branding: "[[Branding-Kunde1]]"
 
 ### Pandoc-/Eisvogel-Keys
 
-Übliche Pandoc- und Eisvogel-Keys (`lang`, `toc`, `toc-depth`, `lof`, `lot`, `titlepage`, `titlepage-logo`, `header-left`, …) funktionieren wie gewohnt im Doc-Frontmatter, in der Branding-Datei oder als Plugin-Default. Doc-Frontmatter > Branding > `_base.yml`.
+Übliche Pandoc- und Eisvogel-Keys (`lang`, `toc`, `toc-depth`, `lof`, `lot`, `titlepage`, `titlepage-logo`, `header-left`, …) funktionieren wie gewohnt im Doc-Frontmatter, in der Branding-Datei oder als Plugin-Default. Die Keys können im Doc-Frontmatter, in der Branding-Datei oder als Plugin-Default definiert werden. Die Reihenfolge der Priorität ist: Doc-Frontmatter > Branding > `_base.yml`.
 
 ## Wikilink-Embeds (`![[…]]`)
 
@@ -274,6 +274,8 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 title: "Mein Bericht"
 obsi-print-branding: "[[Branding-Kunde1]]"
 toc: true
+abstract: |
+  Kurzfassung des Berichts. Optional, wird als separate Seite vor dem Inhaltsverzeichnis gerendert.
 ---
 
 ![[Kapitel-Einleitung]]
