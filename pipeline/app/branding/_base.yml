@@ -1,7 +1,4 @@
-# Language settings
-# `lang: de` treibt Babel-ngerman im Template, was wiederum
-# \figurename/\tablename (Caption-Prefix) und die \autoref-Namen
-# (\figureautorefname etc., gesetzt in eisvogel.tex Z.~980) liefert.
+# Language settings en/de are supprted.
 lang: en
 
 # Toc settings
