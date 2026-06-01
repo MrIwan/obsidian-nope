@@ -1,12 +1,11 @@
---   %%text%%   --> removed f
+--   %%text%%   --> removed
 --   ==text==   --> wrapped in \hl{...} (LaTeX `soul` package).
 
 local doc_state = { hidden = false }
 
 local process_inlines  -- forward declaration
 
--- Recurse into nested inline containers (Strong, Emph, Link content, ...).
--- Keeps comment/highlight handling consistent inside `**bold ==hl==**` etc.
+-- Process nested inline containers consistently within bold/italic/links.
 local function recurse_inline(inline)
 	if inline.content and (
 		   inline.t == "Strong" or inline.t == "Emph"
@@ -34,6 +33,7 @@ process_inlines = function(inlines)
 	end
 
 	local function end_marked()
+		-- Wrap buffered content in \hl{} and flush.
 		table.insert(out, pandoc.RawInline("latex", "\\hl{"))
 		for _, x in ipairs(marked) do table.insert(out, x) end
 		table.insert(out, pandoc.RawInline("latex", "}"))
@@ -41,7 +41,7 @@ process_inlines = function(inlines)
 	end
 
 	local function revert_marked()
-		-- Unbalanced "==": treat the opener as literal text and flush buffer.
+		-- Flush unbalanced == as literal text.
 		if marked then
 			table.insert(out, pandoc.Str("=="))
 			for _, x in ipairs(marked) do table.insert(out, x) end
@@ -49,8 +49,7 @@ process_inlines = function(inlines)
 		end
 	end
 
-	-- Scan a Str token for "%%" / "==" markers; transitions may happen
-	-- multiple times inside a single token (e.g. "%%a%%==b==").
+	-- Parse Str tokens for %% and == markers; handle multiple transitions per token.
 	local function handle_str(text)
 		while #text > 0 do
 			if doc_state.hidden then

@@ -1,11 +1,8 @@
--- Unterstützte Typen werden auf awesomebox-Stile gemappt:
---   note, info, tip, hint, warning, caution, danger, important, tldr, summary, example, todo
--- Convert Obsidian callouts ([!type] Title \n> Content) to LaTeX environments.
--- Supported types map to awesomebox styles.
+-- Convert Obsidian callouts ([!type] Title \n> Content) to LaTeX awesomebox environments.
 
 local has_callout = false
 
--- Mapping: Obsidian-Typ → awesomebox-Umgebung
+-- Obsidian type to awesomebox environment mapping.
 local type_map = {
   note      = "noteblock",
   info      = "noteblock",

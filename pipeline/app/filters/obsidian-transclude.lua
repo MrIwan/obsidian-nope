@@ -1,35 +1,7 @@
--- Recursively include ![[Note]] transclusions. Pandoc 3.x compatible.
--- Supports:
---   ![[Note]]                  full note
---   ![[Note#Heading]]          slice from Heading to next heading of same/higher level
---   ![[Note#^block-id]]        single block ending in "^block-id"
---   ![[Bild.png|Caption]]      labeled figure with caption
---   ![[Bild.png]]              labeled figure, filename as caption
---   +[[Note]]                  passiver Embed: Obsidian rendert NICHT, Pipeline schon
---                              (Pre-Processing in load_note + build.sh, identische Semantik
---                              wie ![[…]]).
---
--- Frontmatter-gesteuerte Wraps (Single-Source: Konfiguration immer im
--- Frontmatter der embedded Note, nie über den Embed-Tag):
---   latex-env: theorem (oder lemma, definition, …)
---       → \begin{env}[latex-short]\label{note:X}…\end{env}
---   latex-env: table
---       caption: "…"   ← MANDATORY, sonst Filter-Fehler
---       → Pandoc-Table mit Caption aus Frontmatter, injiziertes \label{tab:X}.
---   latex-env: mermaid
---       caption: "…"   ← MANDATORY
---       Body enthält genau einen ```mermaid-Block. mmdc rendert das Diagramm
---       zu PNG in $MERMAID_WORK_DIR/mermaid/<sha1>.png, Filter ersetzt den
---       Block durch eine Pandoc-Figure mit Caption + \label{fig:X}.
---
--- Auto-Heading-Shift: shift = max(0, host_last_level + 1 − min_embed_level).
--- Details siehe Handover.
---
--- After embedding, the filter also resolves wikilinks ([[Note]], [[Note#H]],
--- [[Note#^id]], [[Bild.png]]) against the targets that ended up in the PDF.
--- Image-Wikilinks und Tabellen-Wikilinks auf eingebettete Targets werden zu
--- \autoref ("Abbildung N" / "Tabelle N"), Custom-Display bleibt \hyperref.
--- Wikilinks to non-embedded targets fall back to plain text — content is preserved.
+-- Recursively expand ![[Note]] and ![[Image]] embeds; resolve wikilinks to embedded targets.
+-- Supports heading slices (#Heading), block IDs (#^block-id), and image figures with captions.
+-- Frontmatter-driven wraps: latex-env (theorem/table/mermaid), auto-heading-shift, glossary terms.
+-- After expansion, wikilinks resolve to \autoref (default display) or \hyperref (custom text).
 
 local image_exts = {
   png=true, jpg=true, jpeg=true, gif=true, svg=true,
@@ -52,8 +24,7 @@ local function find_note_path(notename)
   return nil
 end
 
--- Parse a transclusion source into (notename, anchor_type, anchor_value).
--- anchor_type is "none", "heading", or "block_id".
+-- Parse embed source into notename and anchor; returns (notename, anchor_type, anchor_value).
 local function parse_anchor(src)
   local hash = src:find("#", 1, true)
   if not hash then return src, "none", nil end
@@ -74,8 +45,7 @@ local function sanitize_label_id(s)
   return (s:gsub("[^%w%-_:]", "_"))
 end
 
--- Heading-Shift-Helpers — siehe Handover für den Algorithmus.
--- shift_headings: in-place, no-op bei shift <= 0, clamp max 6.
+-- Shift heading levels in-place; no-op if shift <= 0, clamp max 6.
 
 local function find_min_header_level(blocks)
   local min_level = nil
@@ -104,6 +74,7 @@ end
 -- Phase 1 helpers — slicing
 -- ============================================================================
 
+-- Slice blocks from heading match to next heading of same/higher level.
 local function slice_by_heading(blocks, heading_text)
   local result, started, start_level = {}, false, nil
   for _, block in ipairs(blocks) do
@@ -125,6 +96,7 @@ local function slice_by_heading(blocks, heading_text)
   return result, started
 end
 
+-- Check if a block ends with ^block_id marker.
 local function block_has_id(block, target_id)
   if block.t ~= "Para" and block.t ~= "Plain" then return false end
   local content = block.content
@@ -134,6 +106,7 @@ local function block_has_id(block, target_id)
   return last.text == "^" .. target_id
 end
 
+-- Extract single block marked with ^target_id.
 local function slice_by_block_id(blocks, target_id)
   for _, block in ipairs(blocks) do
     if block_has_id(block, target_id) then
@@ -144,17 +117,12 @@ local function slice_by_block_id(blocks, target_id)
   return {}, false
 end
 
--- ============================================================================
--- Phase 1 — annotate embedded blocks with hyperref targets,
--- populate the available_targets map for the resolver.
--- ============================================================================
-
+-- Map of embedded targets and auto-reference targets for wikilink resolution.
 local available_targets = {}
-
--- Notes whose embed is wrapped in a labeled LaTeX environment (e.g. theorem, lemma) via `latex-env` frontmatter. The wikilink resolver switches to \autoref for default-display links on these targets so the rendered text becomes "Theorem N" instead of the note name.
 local autoref_targets = {}
 
--- Strip a trailing ^id Str (with preceding whitespace) from a block's inlines.
+-- Remove trailing ^block_id from inlines and strip trailing whitespace.
+-- Strip trailing ^id and trailing whitespace inlines.
 local function inlines_without_block_id(content)
   local out = {}
   for i = 1, #content - 1 do table.insert(out, content[i]) end
@@ -167,6 +135,7 @@ local function inlines_without_block_id(content)
   return out
 end
 
+-- Annotate blocks with LaTeX labels for hyperref targets; register in available_targets.
 local function annotate_with_labels(blocks, notename, skip_outer_anchor)
   local note_label = "note:" .. sanitize_label_id(notename)
   local result = {}
@@ -190,7 +159,7 @@ local function annotate_with_labels(blocks, notename, skip_outer_anchor)
         table.insert(result, pandoc.Header(block.level, new_content, block.attr))
         available_targets[key] = heading_label
       else
-        -- Already labeled in a previous embed
+        -- Already labeled in previous embed.
         table.insert(result, block)
       end
 
@@ -212,7 +181,7 @@ local function annotate_with_labels(blocks, notename, skip_outer_anchor)
           table.insert(stripped_inlines, pandoc.RawInline("latex", "\\label{" .. block_label .. "}"))
           available_targets[key] = block_label
         end
-        -- Either way the ^id suffix is gone from visible text.
+        -- ^id suffix stripped from visible output.
         local new_block = (block.t == "Para") and pandoc.Para(stripped_inlines) or pandoc.Plain(stripped_inlines)
         table.insert(result, new_block)
       else
@@ -227,27 +196,14 @@ local function annotate_with_labels(blocks, notename, skip_outer_anchor)
   return result
 end
 
--- ============================================================================
--- Mermaid-Render (für `latex-env: mermaid`-Notes; ruft mmdc im Container auf)
---
--- PNG landet in $MERMAID_WORK_DIR/mermaid/<sha1>.png. WICHTIG: Der Image-src
--- im AST muss ein ABSOLUTER Pfad sein. Pandoc löst relative Image-Pfade über
--- `--resource-path` auf, und $MERMAID_WORK_DIR ist da nicht enthalten — bei
--- einem relativen Pfad droppt der LaTeX-Writer den Image-Inline komplett und
--- gibt nur leere `{}` in der Figure aus (verifizierter Stolperstein). Mit
--- absolutem Pfad umgehen wir die Pandoc-Pfad-Resolution gänzlich.
--- Sha1-Hash über den Diagramm-Source dient als Cache-Key: identische
--- Diagramme rendern nur einmal pro Build (auch über mehrere Notes).
--- ============================================================================
+-- Render Mermaid diagrams; PNG cached by source hash, absolute paths for Pandoc.
 
 local mermaid_outdir = nil
 
--- Default-Scale für mmdc (--scale flag). 1 = native Basis-Auflösung
--- (800px Breite), 2 = doppelt (~1600px → grob 300dpi bei halber Seitenbreite,
--- für Print-PDFs scharf genug). Per Frontmatter `scale:` übersteuerbar
--- (Werte 1–5 typisch; mmdc weist Werte außerhalb ab).
+-- Default mmdc scale: 1 (native 800px), 2 (1600px ~300dpi, default for print).
 local MERMAID_DEFAULT_SCALE = 2
 
+-- Create and return mermaid output directory.
 local function ensure_mermaid_outdir()
   if mermaid_outdir then return mermaid_outdir end
   local work = os.getenv("MERMAID_WORK_DIR") or "."
@@ -266,10 +222,7 @@ local function mermaid_shell_escape(s)
   return "'" .. s:gsub("'", "'\\''") .. "'"
 end
 
--- Rendert Diagramm-Source zu PNG, gibt den ABSOLUTEN Pfad fürs .tex zurück.
--- Bei Render-Fehler: nil + Log-Eintrag in stderr (→ last_latex_run.log).
--- Scale geht in den Cache-Key ein — sonst würden Renders mit anderer
--- Auflösung kollidieren.
+-- Render diagram source to PNG; return absolute path or nil on error. Scale included in cache key.
 local function render_mermaid_to_png(source_text, scale)
   local outdir = ensure_mermaid_outdir()
   local hash = pandoc.utils.sha1(source_text .. ":scale:" .. tostring(scale))
@@ -305,22 +258,18 @@ local function render_mermaid_to_png(source_text, scale)
   return png_abs
 end
 
--- ============================================================================
--- Embedding (recursive)
--- ============================================================================
-
+-- Recursive embedding and LaTeX environment handling.
 local visiting = {}
 local process_blocks
 
--- Extrahiert Frontmatter-Inlines (z.B. caption: "Text") als flache
--- Inline-Liste. Unterstützt MetaInlines, MetaString und MetaBlocks (1. Block).
+-- Extract frontmatter value (caption, width, etc.) as flat inline list.
 local function meta_to_inlines(meta_value)
   if not meta_value then return nil end
   local t = type(meta_value)
   if t == "string" then
     return { pandoc.Str(meta_value) }
   end
-  -- MetaInlines: iterierbare Liste von Inlines
+  -- Extract inlines from MetaInlines or MetaBlocks.
   local out = {}
   for _, x in ipairs(meta_value) do
     if x.t == "Plain" or x.t == "Para" then
@@ -332,20 +281,7 @@ local function meta_to_inlines(meta_value)
   return out
 end
 
--- ============================================================================
--- LaTeX-Environment-Wraps für `latex-env: …`-Notes
---
--- Drei Handler nach Env-Family:
---   wrap_math   für equation, align, gather, multline, alignat (+ Stern-Varianten)
---   wrap_table  nur für `table` (Sonderfall wegen Caption-Pflicht + longtable-Konflikt)
---   wrap_block  Default-Handler — theorem, lemma, definition, proof + jeder
---               user-defined amsthm-Env (\newtheorem im Template)
---
--- Shared Pattern: `register_target` setzt Label + autoref-Flag + first_embed-Guard,
--- `find_block` lokalisiert den zu labelnden Block. Beide Handler-übergreifend,
--- damit ein neuer Env-Wert nur eine Zeile in `MATH_ENVS` bzw. einen zusätzlichen
--- Handler kostet statt ~40 Zeilen Boilerplate.
--- ============================================================================
+-- LaTeX environment wrappers for math (equation/align/etc.), tables, mermaid, and block envs.
 
 local MATH_ENVS = {
   equation = true, ["equation*"] = true,
@@ -355,13 +291,7 @@ local MATH_ENVS = {
   alignat = true,  ["alignat*"] = true,
 }
 
--- Registriert die Note als verfügbares Wikilink-Target mit dem gegebenen
--- LaTeX-Label-Prefix (z.B. "eq", "tab", "note"). Setzt zusätzlich `autoref_targets`,
--- damit Default-Display-Wikilinks „Gleichung N" / „Tabelle N" / „Theorem N"
--- rendern statt den nackten Note-Namen.
--- Returns: full_label_string (z.B. "eq:Navier-Stokes"), is_first_embed (bool).
--- WICHTIG: muss VOR `annotate_with_labels` aufgerufen werden, sonst registriert
--- letzteres die Note intern mit "note:"-Prefix und der first_embed-Snapshot kippt.
+-- Register embed target with label prefix; set autoref for default-display links ("Equation N" etc.).
 local function register_target(notename, label_prefix)
   local label = label_prefix .. ":" .. sanitize_label_id(notename)
   local first_embed = (available_targets[notename] == nil)
@@ -370,8 +300,7 @@ local function register_target(notename, label_prefix)
   return label, first_embed
 end
 
--- Findet den ersten Block in `blocks`, der `predicate(block)` zu true auswertet.
--- Returns: (index, block) oder (nil, nil) wenn nichts passt.
+-- Find first block matching predicate; return (index, block) or (nil, nil).
 local function find_block(blocks, predicate)
   for i, b in ipairs(blocks) do
     if predicate(b) then return i, b end
@@ -388,9 +317,7 @@ local function is_display_math(b)
     and b.content[1].mathtype == "DisplayMath"
 end
 
--- Mermaid-CodeBlock-Predicate. Greift sowohl bei der Standard-Fence
--- ```mermaid (Pandoc setzt class "mermaid") als auch bei expliziter
--- Attribut-Form `{.mermaid}`.
+-- Check for mermaid code block (class "mermaid").
 local function is_mermaid_code(b)
   if b.t ~= "CodeBlock" then return false end
   for _, cls in ipairs(b.classes or {}) do
@@ -399,18 +326,7 @@ local function is_mermaid_code(b)
   return false
 end
 
--- ----------------------------------------------------------------------------
--- wrap_math: Atomic-Math-Note (equation, align, gather, multline, alignat)
---
--- Erwartet einen `$$…$$`-Block (= Para mit einem DisplayMath-Inline) im Body.
--- Ersetzt diesen Block durch `\begin{<env>}\label{eq:X}…\end{<env>}` als RawBlock.
--- Permissiv: Prosa um den Math-Block bleibt erhalten und wird mit-embedded.
--- Bei mehreren Math-Blöcken wird nur der erste gewrapped/gelabelt; weitere
--- bleiben Plain-Display-Math (kein Counter, kein Label).
---
--- Caption-Frontmatter wird absichtlich NICHT gerendert (Equations haben in
--- LaTeX keine native Caption). `caption:` ist optional und reine Obsidian-Doku.
--- ----------------------------------------------------------------------------
+-- Wrap first DisplayMath block in LaTeX equation environment with label.
 local function wrap_math(notename, env_name, sliced, doc_meta)
   local label, first_embed = register_target(notename, "eq")
   local annotated = annotate_with_labels(sliced, notename, true)
@@ -422,10 +338,7 @@ local function wrap_math(notename, env_name, sliced, doc_meta)
       .. ", aber kein $$…$$-Block im Inhalt gefunden.")
   end
 
-  -- Whitespace um den Math-Text trimmen, sonst entstehen Leerzeilen innerhalb
-  -- der Math-Umgebung — Leerzeile = Paragraph-Break = Math-Mode-Termination.
-  -- Symptom: "amsmath Error: \begin{aligned} allowed only in math mode" +
-  -- "Bad math environment delimiter".
+  -- Trim whitespace from math text to prevent paragraph breaks in math mode.
   local content = annotated[idx].content[1].text:gsub("^%s+", ""):gsub("%s+$", "")
   local label_part = first_embed and ("\\label{" .. label .. "}") or ""
   annotated[idx] = pandoc.RawBlock("latex",
@@ -435,14 +348,7 @@ local function wrap_math(notename, env_name, sliced, doc_meta)
   return annotated
 end
 
--- ----------------------------------------------------------------------------
--- wrap_table: Atomic-Tabellen-Note (nur env_name == "table")
---
--- Caption MUSS im Frontmatter als `caption: "…"` stehen (Single-Source-Garantie,
--- keine Pipe-Caption, kein Pandoc-Native-Caption-Fallback). Caption + \label{tab:X}
--- werden direkt an die Pandoc-Table gehängt — kein `\begin{table}`-Wrap, weil
--- das mit longtable konfligieren würde.
--- ----------------------------------------------------------------------------
+-- Attach frontmatter caption and label to table; caption required in frontmatter.
 local function wrap_table(notename, env_name, sliced, doc_meta)
   local caption_inlines = meta_to_inlines(doc_meta.caption)
   if not caption_inlines or #caption_inlines == 0 then
@@ -459,11 +365,10 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
       .. "' hat latex-env: table, aber keine Tabelle im Inhalt gefunden.")
   end
 
-  -- Caption immer aus Frontmatter setzen (überschreibt evtl. existierende
-  -- Pandoc-Caption — Single-Source).
+  -- Always set caption from frontmatter to ensure single-source truth.
   table_block.caption = pandoc.Caption({ pandoc.Plain(caption_inlines) })
 
-  -- \label nur beim ersten Embed setzen (sonst "multiply defined"-Warnung).
+  -- Label only on first embed to avoid multiply-defined warnings.
   if first_embed then
     local last = table_block.caption.long[#table_block.caption.long]
     table.insert(last.content,
@@ -473,36 +378,7 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
   return annotated
 end
 
--- ----------------------------------------------------------------------------
--- wrap_mermaid: Atomic-Mermaid-Note (nur env_name == "mermaid")
---
--- Body MUSS einen ```mermaid-Block enthalten (Pandoc parst die Standard-Fence
--- als CodeBlock mit class "mermaid"). Caption MUSS im Frontmatter stehen —
--- Single-Source, kein Inline-Caption-Fallback, kein Default auf Dateinamen.
---
--- Reihenfolge im Wrap (verifizierte Stolpersteine):
---   1. Render mmdc → ABSOLUTER PNG-Pfad. Relativer Pfad scheitert weiter unten
---      im Pandoc-LaTeX-Writer, weil $MERMAID_WORK_DIR nicht im resource-path
---      ist — der Image-Inline würde dann auf `{}` reduziert.
---   2. Image-Inline mit NON-EMPTY Alt-Text (notename als Accessibility-
---      Metadata analog zu Pandoc's eigenen Image-Figures, die per
---      --extract-media generiert werden). Leerer Alt führt im LaTeX-Writer
---      ebenfalls zu fehlendem \includegraphics.
---   3. Pandoc.Figure mit Caption aus Frontmatter, \label{fig:X} als
---      RawInline am Caption-Ende. Beim ersten Embed wird Label gesetzt und
---      die Note in `available_targets`/`autoref_targets` registriert —
---      Wikilinks auf die Note resolven dann zu „Abbildung N".
---
--- Zwei orthogonale Frontmatter-Keys steuern Bild-Größe vs. Schärfe:
---   `w:` (oder `width:`) — Darstellungsgröße im PDF, gesetzt als
---      img.attributes.width (Prozent, px, cm, mm, LaTeX-Längen wie
---      0.6\textwidth). `w:` gewinnt bei Konflikt mit `width:`. Analog zu
---      `|w=…` bei Image-Embeds.
---   `scale:` — mmdc-Render-Auflösung (1–5), Default 2 (~1600px-Breite,
---      ~300dpi bei halber Seitenbreite). Höher → schärfer bei großen
---      Diagrammen, aber größere PNG-Datei. Geht in den Cache-Key ein,
---      damit Renders mit unterschiedlicher Auflösung nicht kollidieren.
--- ----------------------------------------------------------------------------
+-- Render mermaid diagram to PNG figure with frontmatter caption, scale, and width hints.
 local function wrap_mermaid(notename, env_name, sliced, doc_meta)
   local caption_inlines = meta_to_inlines(doc_meta.caption)
   if not caption_inlines or #caption_inlines == 0 then
@@ -516,8 +392,7 @@ local function wrap_mermaid(notename, env_name, sliced, doc_meta)
       .. "' hat latex-env: mermaid, aber keinen ```mermaid-Block im Inhalt gefunden.")
   end
 
-  -- Render-Scale: Frontmatter `scale:` (1–5, mmdc `--scale`-Flag) übersteuert
-  -- den Default. Höherer Scale = schärferes PNG = größere Datei.
+  -- Scale factor for mermaid rendering: higher scale yields sharper PNG but larger file.
   local scale = MERMAID_DEFAULT_SCALE
   if doc_meta.scale then
     local n = tonumber(pandoc.utils.stringify(doc_meta.scale))
@@ -532,19 +407,14 @@ local function wrap_mermaid(notename, env_name, sliced, doc_meta)
 
   local label, first_embed = register_target(notename, "fig")
 
-  -- Width-Hint (Darstellungsgröße im PDF, unabhängig von `scale`): kurz `w:`
-  -- (konsistent zu `|w=…` bei Image-Embeds) oder ausgeschrieben `width:`.
-  -- `w:` gewinnt bei Konflikt. Akzeptiert Pandoc's übliche Längenangaben —
-  -- Prozent (`60%`), LaTeX-Längen (`0.6\textwidth`, `5cm`, `60mm`), Pixel.
+  -- Width hint: frontmatter keys w: or width: set image display size in PDF.
   local img_attrs = {}
   local width_meta = doc_meta.w or doc_meta.width
   if width_meta then
     img_attrs["width"] = pandoc.utils.stringify(width_meta)
   end
 
-  -- Alt-Text aus dem Notenamen — fließt nur in `alt={…}` von \includegraphics
-  -- als PDF-Accessibility-Metadata, ist im sichtbaren PDF NICHT enthalten.
-  -- Sichtbarer Text kommt allein aus der Figure-Caption (caption_blocks).
+  -- Alt-text from note name; flows into \includegraphics accessibility metadata.
   local img = pandoc.Image(
     { pandoc.Str(notename) },
     png_abs,
@@ -567,17 +437,7 @@ local function wrap_mermaid(notename, env_name, sliced, doc_meta)
   return { figure }
 end
 
--- ----------------------------------------------------------------------------
--- wrap_block: Default-Env-Wrap (theorem, lemma, definition, proof, …)
---
--- Greift für jeden `latex-env`-Wert, der nicht in MATH_ENVS oder "table" ist.
--- Wrappt die ganze Note in `\begin{<env>}[latex-short]\label{note:X}…\end{<env>}`.
--- `latex-short` aus Frontmatter wird als optionales amsthm-Argument verwendet
--- (z.B. [Pythagoras] → „Theorem 1 (Pythagoras)").
---
--- Counter inkrementiert bei jedem Embed (jeder Wrap ist eine eigene Env-Instanz),
--- `\label` aber nur beim ersten — sonst "multiply defined".
--- ----------------------------------------------------------------------------
+-- Wrap content in generic LaTeX environment with optional short title and label.
 local function wrap_block(notename, env_name, sliced, doc_meta)
   local env_short = doc_meta["latex-short"]
     and pandoc.utils.stringify(doc_meta["latex-short"]) or nil
@@ -601,28 +461,11 @@ local function wrap_block(notename, env_name, sliced, doc_meta)
 end
 
 -- ============================================================================
--- Glossary-Resolution
---
--- Atomic Glossary-Notes haben `gls-id` (plus optional `gls-short`, `gls-long`,
--- `gls-description`, `gls-type`) im Frontmatter. Wikilinks `[[KI]]` werden im
--- Resolver (Phase 2 von Pandoc(doc)) zu `\gls{<id>}` ersetzt, der Entry für
--- `\newacronym`/`\newglossaryentry` wird gesammelt und am Ende in
--- `header-includes` injiziert (Phase 3 von Pandoc(doc)).
---
--- Funktioniert für Top-Level-Wikilinks UND für Wikilinks in expandierten
--- Embeds, weil der Walker in Phase 2 auf dem schon-expandierten AST läuft.
---
--- Frontmatter-Cache (`frontmatter_cache`) verhindert wiederholtes Datei-IO bei
--- mehrfachen Wikilinks auf dasselbe Target. Sentinel `false` markiert „schon
--- geprüft, kein gls-id" (vs. `nil` = „noch nicht geprüft").
--- ============================================================================
-
+-- Glossary term resolution: wikilinks [[KI]] → \gls{ki}; entries injected to header-includes.
 local glossary_entries = {}
 local frontmatter_cache = {}
 
--- Liest YAML-Frontmatter via Regex (leichtgewichtig — kein Pandoc-Roundtrip
--- für reine Key-Value-Lookups). Akzeptiert `key: value` mit optionalen
--- Quotes. Reicht für die gls-*-Konvention.
+-- Read YAML frontmatter via regex (lightweight, no Pandoc roundtrip); cache results.
 local function read_frontmatter(path)
   local f = io.open(path, "rb")
   if not f then return nil end
@@ -639,19 +482,17 @@ local function read_frontmatter(path)
   return result
 end
 
--- Escapt LaTeX-Sonderzeichen für sicheren Einsatz in \newacronym{}/\newglossaryentry{}.
+-- Escape LaTeX special characters for safe use in glossary commands.
 local function tex_escape(s)
   return s:gsub("([&%%$#_{}])", "\\%1")
 end
 
--- Versucht, einen Wikilink-Target als Glossary-Ref aufzulösen.
--- Returns: RawInline `\gls{<id>}` bei Treffer, sonst nil.
--- Seiteneffekt: registriert den Entry in `glossary_entries` beim ersten Treffer.
+-- Try to resolve wikilink target as glossary term; return \gls{id} or nil.
 local function try_resolve_glossary(target)
   local cached = frontmatter_cache[target]
   local fm
   if cached == false then
-    return nil  -- bereits geprüft, kein gls-id
+    return nil  -- Already checked, no gls-id.
   elseif cached then
     fm = cached
   else
@@ -680,9 +521,7 @@ local function try_resolve_glossary(target)
   return pandoc.RawInline("latex", "\\gls{" .. id .. "}")
 end
 
--- Schreibt die gesammelten `\newacronym`/`\newglossaryentry`-Lines in
--- `header-includes` und setzt `has-glossary` für die Template-Logik.
--- No-Op wenn nichts gesammelt wurde.
+-- Flush collected glossary entries to header-includes; set has-glossary meta flag.
 local function flush_glossary_entries(doc)
   if next(glossary_entries) == nil then return end
 
@@ -708,29 +547,23 @@ local function flush_glossary_entries(doc)
   doc.meta["has-glossary"] = pandoc.MetaBool(true)
 end
 
+-- Load and process a note embed; handle slicing, shifting, and env wraps.
 local function load_note(src, host_level)
   host_level = host_level or 0
   local notename, anchor_type, anchor_value = parse_anchor(src)
-  -- Canonical-Form ohne .md, damit Map-Keys konsistent zum Resolver bleiben
-  -- (der Resolver strippt .md vom Wikilink-Target — Embedder muss das gleiche tun).
-  -- Andere Extensions (z.B. .png für Images) bleiben unverändert.
+  -- Canonical form without .md extension for consistent map keys.
   notename = notename:gsub("%.md$", "")
   local path = find_note_path(notename)
   if not path then
-    return {pandoc.Para({pandoc.Str("[Nicht gefunden: " .. notename .. "]")})}
+    return {pandoc.Para({pandoc.Str("[Not found: " .. notename .. "]")})}
   end
   if visiting[path] then
-    return {pandoc.Para({pandoc.Str("[Zirkulärer Embed: " .. notename .. "]")})}
+    return {pandoc.Para({pandoc.Str("[Circular embed: " .. notename .. "]")})}
   end
   visiting[path] = true
   local f = io.open(path, "rb")
   local content = f:read("*all"); f:close()
-  -- Passive-Embed-Rewrite `+[[…]]` → `![[…]]`. Spiegel der sed-Regel in build.sh
-  -- (top-level Datei). Hier greift sie für rekursiv eingebundene Notes, damit
-  -- die Syntax in jeder Tiefe konsistent funktioniert. Semantik identisch zu
-  -- `![[…]]` — der Unterschied ist nur Obsidians Render-Verhalten in der
-  -- Editor-/Reader-Ansicht (passiv = wird nicht gerendert, bleibt als
-  -- Wikilink-Text sichtbar). Beide Stellen müssen synchron bleiben.
+  -- Rewrite passive embeds +[[…]] → ![[…]]; mirrors build.sh sed rule.
   content = content:gsub("%+%[%[", "![[")
   local doc = pandoc.read(content, "markdown+wikilinks_title_after_pipe")
   local blocks = process_blocks(doc.blocks)
@@ -740,28 +573,27 @@ local function load_note(src, host_level)
   if anchor_type == "heading" then
     local s, found = slice_by_heading(blocks, anchor_value)
     if not found then
-      return {pandoc.Para({pandoc.Str("[Section nicht gefunden: " .. notename .. "#" .. anchor_value .. "]")})}
+      return {pandoc.Para({pandoc.Str("[Heading not found: " .. notename .. "#" .. anchor_value .. "]")})}
     end
     sliced = s
   elseif anchor_type == "block_id" then
     local s, found = slice_by_block_id(blocks, anchor_value)
     if not found then
-      return {pandoc.Para({pandoc.Str("[Block-ID nicht gefunden: " .. notename .. "#^" .. anchor_value .. "]")})}
+      return {pandoc.Para({pandoc.Str("[Block ID not found: " .. notename .. "#^" .. anchor_value .. "]")})}
     end
     sliced = s
   else
     sliced = blocks
   end
 
-  -- Auto-Shift NACH dem Slice (Slice-Break-Bedingung braucht Original-Levels).
+  -- Auto-shift headings after slicing; use original levels for slice-break detection.
   local min_level = find_min_header_level(sliced)
   if min_level then
     local shift = host_level + 1 - min_level
     if shift > 0 then shift_headings(sliced, shift) end
   end
 
-  -- LaTeX-environment wrap on full embeds — Dispatch nach Env-Family.
-  -- Drei Handler-Funktionen (oben definiert): wrap_math, wrap_table, wrap_block.
+  -- Wrap full embeds in LaTeX environments (math, table, mermaid, or generic block).
   if anchor_type == "none" then
     local meta_env = doc.meta["latex-env"]
     if meta_env then
@@ -781,8 +613,7 @@ local function load_note(src, host_level)
   return annotate_with_labels(sliced, notename)
 end
 
--- Liefert die src eines Figure-Blocks, der einen Note-Embed enthält
--- (Image mit nicht-image-Extension wie .md). nil sonst.
+-- Extract embed src from figure block if image has non-image extension (e.g., .md).
 local function figure_transclusion_src(block)
   if block.t ~= "Figure" or #block.content ~= 1 then return nil end
   local inner = block.content[1]
@@ -792,36 +623,13 @@ local function figure_transclusion_src(block)
   return img.src
 end
 
--- ============================================================================
--- Image-Figure-Feature
--- Pandoc baut aus einem alleinstehenden Image-Inline automatisch ein
--- `Figure` mit Caption (alt-text). Wir hängen hier nur einen \label{fig:...}
--- ans Ende der Caption und tragen den Image-Source in die Wikilink-Map ein,
--- damit [[bild.png]] zu \autoref{fig:...} aufgelöst wird → "Abbildung N".
--- Pandoc 3.9.x emit kein \label aus Figure.attr.identifier — RawInline in
--- der Caption ist der portable Weg, der unabhängig von Pandoc-Version
--- funktioniert (\label im \caption ist Standard-LaTeX und greift auf den
--- bereits erhöhten figure-Counter zu).
---
--- Width-Hint: ein optionaler Suffix `|w=<value>` in der Caption setzt die
--- Image-Width. `wikilinks_title_after_pipe` faltet alles hinter dem ersten
--- Pipe in den Title, also kommt `![[bild.png|Caption|w=60%]]` als Caption
--- `Caption|w=60%` rein. Wir scannen den letzten Caption-Block auf das
--- Marker-Muster, strippen ihn aus der Caption und übergeben den Wert als
--- Image-Attribut an Pandoc — Pandoc übersetzt z. B. `60%` zu
--- `width=0.6\textwidth` im LaTeX-Output. Akzeptierte Formate: `60%`, `400px`,
--- `8cm`, `0.5\textwidth` etc. — alles was Pandoc als Längenangabe versteht.
--- ============================================================================
+-- Register standalone images with labels for autoref; extract and apply width hints.
 
--- Sucht das Width-Hint-Suffix `|w=<value>` am Ende der Caption-Inlines.
--- Returns (cleaned_inlines, width_string | nil). Bei nil bleibt die Caption
--- unverändert. Markierung muss am Ende stehen (nur Whitespace dahinter).
+-- Extract width hint suffix |w=<value> from end of caption inlines.
 local function extract_width_hint(inlines)
   if not inlines or #inlines == 0 then return inlines, nil end
 
-  -- Rückwärts den letzten Str finden, der `|w=` enthält. Alles dahinter darf
-  -- nur Whitespace sein, sonst ist der Marker nicht am Caption-Ende und wir
-  -- behandeln ihn als Caption-Text.
+  -- Scan backwards for |w= width suffix; must be at end with only whitespace after.
   for i = #inlines, 1, -1 do
     local inline = inlines[i]
     if inline.t == "Str" then
@@ -862,16 +670,14 @@ local function register_image_figure(figure_block)
 
   local src = img.src
 
-  -- Pandoc legt für ![file.png|Caption] die Caption in figure.caption.long ab.
-  -- Falls leer (z. B. `![[bild.png]]` ohne Pipe), fallback auf den Dateinamen.
+  -- Fallback to filename if no caption provided.
   local caption = figure_block.caption
   if not caption or not caption.long or #caption.long == 0 then
     caption = pandoc.Caption({ pandoc.Plain({ pandoc.Str(src) }) })
     figure_block.caption = caption
   end
 
-  -- Width-Hint aus Caption herauslösen (pro Embed, vor dem Label-Anhang —
-  -- Mehrfach-Embeds desselben Bildes dürfen jeweils eigene Widths haben).
+  -- Extract width hint from caption; each embed can have its own width.
   local last_block = caption.long[#caption.long]
   if last_block.content then
     local cleaned, width = extract_width_hint(last_block.content)
@@ -879,25 +685,21 @@ local function register_image_figure(figure_block)
       last_block.content = cleaned
       img.attributes = img.attributes or {}
       img.attributes["width"] = width
-      -- Caption ist jetzt evtl. leer (z. B. `![[bild.png|w=60%]]`). Dann
-      -- ebenfalls auf Dateiname als Caption zurückfallen, damit LoF + Label
-      -- sinnvoll arbeiten.
+      -- Fallback to filename if caption is now empty.
       if #last_block.content == 0 then
         last_block.content = { pandoc.Str(src) }
       end
     end
   end
 
-  -- Mehrfach-Embed: nur das erste Vorkommen kriegt das \label. Width-Hint
-  -- wurde oben bereits gesetzt — sie pro Embed individuell zu erlauben ist
-  -- intentional, label-Eindeutigkeit ist es auch.
+  -- Only first embed gets the \label; width hints are per-embed.
   if available_targets[src] then return figure_block end
 
   local label = "fig:" .. sanitize_label_id(src)
   available_targets[src] = label
   autoref_targets[src] = true
 
-  -- \label ans Ende der letzten Caption-Block-Inlines hängen.
+  -- Append \label to caption inlines.
   if last_block.content then
     table.insert(last_block.content, pandoc.RawInline("latex", "\\label{" .. label .. "}"))
   end
@@ -939,9 +741,8 @@ local function process_para(el, host_level)
   return result
 end
 
+-- Process blocks; expand embeds and register image figures; track heading level for shift.
 process_blocks = function(blocks)
-  -- current_level trackt nur Header DIESES Scopes; Embed-Header propagieren
-  -- nicht (sonst shiften zwei Embeds in Folge gegen unterschiedliche Levels).
   local result = {}
   local current_level = 0
   for _, block in ipairs(blocks) do
@@ -968,10 +769,9 @@ process_blocks = function(blocks)
   return result
 end
 
--- ============================================================================
--- Phase 2 — wikilink resolution against available_targets
--- ============================================================================
+-- Phase 2: Resolve wikilinks against expanded targets; handle glossary and autoref.
 
+-- Check if target resembles a wikilink (not URL/mail/anchor).
 local function is_wikilink_like(target)
   if target == nil or target == "" then return false end
   if target:match("^[a-zA-Z]+://") then return false end
@@ -980,30 +780,22 @@ local function is_wikilink_like(target)
   return true
 end
 
--- Resolver-Präzedenz für Wikilinks (drei sich gegenseitig ausschließende Fälle):
---   1. Glossary-Entry (`gls-id` im Frontmatter)       → \gls{<id>}
---   2. Embed-Target (in available_targets)            → \autoref oder \hyperref
---   3. Sonst                                          → Plain-Text (Denk-Verweis)
--- Glossary gewinnt bei Konflikt (Note mit gls-id UND latex-env: theorem) —
--- glossary-Refs sind intentional, theorem-Embeds sind seltener im selben Kontext.
+-- Resolve wikilinks: glossary → \gls{}, embed targets → \autoref/\hyperref, else plain text.
 local function resolve_wikilink(link)
   if not is_wikilink_like(link.target) then return nil end
 
-  -- Pandoc behält ggf. ".md" im Target; Map-Keys sind ohne Extension.
-  -- Auch führendes "./" strippen, falls Pandoc relative Pfade so präfixt.
+  -- Strip .md extension and leading ./ if present; map keys have no extension.
   local target = link.target
   target = target:gsub("^%./", "")
   target = target:gsub("%.md$", "")
 
-  -- Case 1: Glossary-Entry
+  -- Try glossary first.
   local gls = try_resolve_glossary(target)
   if gls then return gls end
 
-  -- Case 2: Embed-Target
+  -- Try embed target; use \autoref for default display, \hyperref for custom text.
   local label = available_targets[target]
   if label then
-    -- Default-Display (kein |Custom) auf autoref_target → \autoref ("Theorem N").
-    -- Custom-Display bleibt \hyperref mit User-Text.
     local content_str = pandoc.utils.stringify(link.content)
     local is_default_display = (content_str == link.target or content_str == target)
     if autoref_targets[target] and is_default_display then
@@ -1015,19 +807,18 @@ local function resolve_wikilink(link)
     return result
   end
 
-  -- Case 3: Plain-Text-Fallback
+  -- Fall back to plain-text content if unresolved.
   return link.content
 end
 
+-- Main entry: expand embeds, resolve wikilinks, flush glossary entries.
 function Pandoc(doc)
-  -- Phase 1: Embeds expandieren und Targets in available_targets registrieren.
+  -- Phase 1: Expand embeds and register targets.
   doc.blocks = process_blocks(doc.blocks)
-  -- Phase 2: Wikilinks auflösen (glossary + embed-targets) auf dem nun-expandierten
-  -- AST. walk_block braucht einen einzelnen Block-Baum — daher der Div-Wrap.
+  -- Phase 2: Resolve wikilinks on expanded AST.
   local walked = pandoc.walk_block(pandoc.Div(doc.blocks), { Link = resolve_wikilink })
   doc.blocks = walked.content
-  -- Phase 3: Gesammelte Glossary-Entries als \newacronym/\newglossaryentry in
-  -- header-includes injizieren (Template kümmert sich um \makeglossaries + \printglossary).
+  -- Phase 3: Inject glossary entries to header-includes.
   flush_glossary_entries(doc)
   return doc
 end
