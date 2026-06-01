@@ -33,7 +33,7 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 	// Warn if AI skill is missing; does not block export since pipeline is independent.
 	if (getSkillStatus(pluginDir, vaultPath) === 'missing') {
 		new Notice(
-			'obsi-print: AI conventions skill not installed. Install via Plugin Settings → AI conventions skill.',
+			'AI conventions skill not installed. Install via plugin settings → AI conventions skill.',
 			10000,
 		);
 	}

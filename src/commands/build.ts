@@ -14,7 +14,7 @@ export function registerBuildCommand(plugin: ObsiPrintPlugin): void {
 }
 
 async function buildDockerImage(plugin: ObsiPrintPlugin): Promise<void> {
-	new Notice('Building Docker image (may take several minutes)…');
+	new Notice('Building docker image (may take several minutes)…');
 	try {
 		const pluginDir = getPluginAbsoluteDir(plugin);
 		await buildImage(pluginDir);
