@@ -8,6 +8,16 @@ import { installSkill } from '../utils/skill';
 
 export function registerMaintenanceCommands(plugin: ObsiPrintPlugin): void {
 	plugin.addCommand({
+		id: 'toggle open pdf after export',
+		name: `Toggle open PDF after export`,
+		callback: async () => {
+			plugin.settings.autoOpenPdf = !plugin.settings.autoOpenPdf;
+			await plugin.saveSettings();
+			new Notice(`Open PDF after export ${plugin.settings.autoOpenPdf ? 'enabled' : 'disabled'}.`);
+		},
+	});
+
+	plugin.addCommand({
 		id: 'remove-docker-image',
 		name: 'Remove docker image',
 		callback: () => removeDockerImage(),
