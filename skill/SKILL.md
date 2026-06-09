@@ -19,7 +19,7 @@ Setzt eine embedded Note in eine LaTeX-Environment.
 
 `theorem`, `lemma`, `definition`, `proof`, plus eigene amsthm-Environments → Voll-Embed wird zu `\begin{<env>}[<latex-short>]…\end{<env>}` gewrapt. `\autoref` liefert „Theorem N" etc.
 
-`table` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau eine Pandoc-Tabelle. Refs liefern „Tabelle N".
+`table` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau eine Pandoc-Tabelle. Refs liefern „Tabelle N". Optional `page-break:` (Default `true`) steuert, ob die Tabelle über Seiten umbrechen darf — siehe unten.
 
 `mermaid` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau einen ```mermaid-Codeblock — Obsidian rendert die Note im Live-Preview als Diagramm, der Export ruft `mmdc` (mermaid-cli) im Container auf und ersetzt den Block durch ein nummeriertes Image mit Caption. Refs liefern „Abbildung N". Optional `w:` (oder ausgeschrieben `width:`) im Frontmatter zum Skalieren der PDF-Darstellungsgröße — Prozent, px, cm, mm oder LaTeX-Längen wie `0.6\textwidth`. Optional `scale:` (1–5, Default 2) für die Render-Auflösung — höher = schärfer bei großen Diagrammen, größere PNG-Datei. Identische Diagramm-Sources werden gecacht — dasselbe Diagramm in mehreren Docs kostet nur einen Render.
 
@@ -28,6 +28,24 @@ Setzt eine embedded Note in eine LaTeX-Environment.
 ### `caption`
 
 Mandatory bei `latex-env: table` und `latex-env: mermaid`. Wird als Caption gerendert und im Tabellen- bzw. Abbildungsverzeichnis aufgeführt.
+
+### `page-break`
+
+Optional bei `latex-env: table`, Default `true`. Steuert, ob die Tabelle über einen Seitenumbruch laufen darf.
+
+`true` (Default) → die Tabelle wird als `longtable` gesetzt und bricht bei Bedarf über Seiten um (Kopfzeile wiederholt sich).
+
+`false` → die Tabelle soll auf einer Seite zusammenbleiben. Vor der Tabelle wird `\needspace` gesetzt; reicht der Platz auf der aktuellen Seite nicht, beginnt der Export eine neue Seite und schiebt die ganze Tabelle dorthin. Sinnvoll für kompakte Tabellen, die nicht mitten im Float zerrissen werden sollen.
+
+```yaml
+---
+latex-env: table
+caption: "Vergleich der Verfahren"
+page-break: false
+---
+```
+
+Achtung: `page-break: false` setzt voraus, dass die Tabelle auf eine Seite passt. Ist sie länger als eine Seite, greift das Fallback und sie bricht trotzdem um (longtable-Verhalten), da sonst Inhalt unten überliefe.
 
 ### `latex-short`
 

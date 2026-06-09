@@ -281,6 +281,16 @@ local function meta_to_inlines(meta_value)
   return out
 end
 
+-- Read a boolean frontmatter flag; falls back to default if absent or empty.
+local function meta_bool(doc_meta, key, default)
+  local v = doc_meta[key]
+  if v == nil then return default end
+  local s = pandoc.utils.stringify(v):lower()
+  if s == "false" or s == "no" or s == "0" or s == "" then return false end
+  if s == "true" or s == "yes" or s == "1" then return true end
+  return default
+end
+
 -- LaTeX environment wrappers for math (equation/align/etc.), tables, mermaid, and block envs.
 
 local MATH_ENVS = {
@@ -359,7 +369,7 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
   local label, first_embed = register_target(notename, "tab")
   local annotated = annotate_with_labels(sliced, notename, true)
 
-  local _, table_block = find_block(annotated, is_table)
+  local idx, table_block = find_block(annotated, is_table)
   if not table_block then
     error("[obsidian-transclude] Note '" .. notename
       .. "' hat latex-env: table, aber keine Tabelle im Inhalt gefunden.")
@@ -373,6 +383,18 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
     local last = table_block.caption.long[#table_block.caption.long]
     table.insert(last.content,
       pandoc.RawInline("latex", "\\label{" .. label .. "}"))
+  end
+
+  -- Default: longtable (Seitenumbruch erlaubt). page-break: false hält die
+  -- Tabelle zusammen: \needspace reserviert genug Platz; passt sie nicht mehr
+  -- auf die Rest-Seite, beginnt LaTeX vor der Tabelle eine neue Seite. Ist die
+  -- Tabelle länger als eine Seite, bricht longtable normal um (gewolltes Fallback).
+  if not meta_bool(doc_meta, "page-break", true) then
+    local rows = #table_block.head.rows
+    for _, b in ipairs(table_block.bodies) do rows = rows + #b.body end
+    -- +4 für Caption/Regeln, *1.6 für booktabs-Padding (Schätzung der Höhe).
+    local h = string.format("%.1f\\baselineskip", (rows + 4) * 1.6)
+    table.insert(annotated, idx, pandoc.RawBlock("latex", "\\needspace{" .. h .. "}"))
   end
 
   return annotated

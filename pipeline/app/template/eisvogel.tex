@@ -343,6 +343,7 @@ $highlighting-macros$
 $endif$
 $if(tables)$
 \usepackage{longtable,booktabs,array}
+\usepackage{needspace} % für page-break: false (Tabelle auf einer Seite halten)
 \newcounter{none} % für unnumbered Tabellen, vermeidet "No counter 'none'"
 $if(multirow)$
 \usepackage{multirow}
@@ -965,6 +966,8 @@ $endif$
 \theoremstyle{remark}
 \newtheorem*{remark}{Remark}
 \newtheorem*{note}{Note}
+
+\usepackage{needspace}
 
 % Optional: customize the "Theorem N (Name)" prefix rendered by \autoref.
 % Without these overrides hyperref shows "Theorem N" by default which is
