@@ -33,6 +33,37 @@ export function getDockerEnv(): typeof process.env {
 // Docker is invoked as a bare command and resolved via PATH 
 export const DOCKER_BIN = process.platform === 'win32' ? 'docker.exe' : 'docker';
 
+export type DockerReadiness = { ok: true } | { ok: false; message: string };
+
+// Run a docker subcommand and report success/failure (no output captured).
+function tryDocker(args: string[], timeout: number): Promise<boolean> {
+	return new Promise((resolve) => {
+		execFile(DOCKER_BIN, args, { timeout, windowsHide: true, env: getDockerEnv() }, (err) =>
+			resolve(!err),
+		);
+	});
+}
+
+// Verify Docker is usable before building/running: CLI reachable AND daemon up.
+// Returns an actionable message when not, so callers surface that instead of a
+// cryptic `docker compose` error.
+export async function checkDockerReady(): Promise<DockerReadiness> {
+	if (!(await tryDocker(['--version'], 4000))) {
+		return {
+			ok: false,
+			message:
+				'Docker CLI not found. Install Docker Desktop and make sure `docker` is on your PATH, then retry.',
+		};
+	}
+	if (!(await tryDocker(['info'], 6000))) {
+		return {
+			ok: false,
+			message: 'Docker is installed but the daemon is not running. Start Docker Desktop and retry.',
+		};
+	}
+	return { ok: true };
+}
+
 // Check if the Docker image exists.
 export async function imageExists(): Promise<boolean> {
 	return new Promise<boolean>((resolve) => {
@@ -84,6 +115,9 @@ export async function buildImage(pluginDir: string, noCache: boolean = false): P
 
 	// Prepare build directory.
 	mkdirSync(buildDir, { recursive: true });
+
+	const ready = await checkDockerReady();
+	if (!ready.ok) throw new Error(ready.message);
 
 	return new Promise<void>((resolve, reject) => {
 		let output = '';
@@ -139,6 +173,9 @@ export async function runPipeline(
 	const pdfPath = join(buildDir, baseName, `${baseName}.pdf`);
 
 	mkdirSync(buildDir, { recursive: true });
+
+	const ready = await checkDockerReady();
+	if (!ready.ok) throw new Error(ready.message);
 
 	return new Promise<string>((resolve, reject) => {
 		let output = '';

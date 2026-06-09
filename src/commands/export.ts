@@ -3,7 +3,7 @@ import { shell } from 'electron';
 import { copyFileSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 import type ObsiPrintPlugin from '../main';
-import { buildImage, cleanupIntermediates, imageExists, runPipeline } from '../utils/docker';
+import { buildImage, checkDockerReady, cleanupIntermediates, imageExists, runPipeline } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '../utils/paths';
 import { prepareBrandingOverride } from '../utils/branding';
 import { prepareBibliography } from '../utils/bibliography';
@@ -38,6 +38,14 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
 		new Notice(`Pipeline files missing and could not be created. ${msg}`, 10000);
+		return;
+	}
+
+	// Verify Docker is ready before doing anything else, so a stopped daemon
+	// yields a clear message instead of a cryptic compose failure.
+	const dockerReady = await checkDockerReady();
+	if (!dockerReady.ok) {
+		new Notice(dockerReady.message, 10000);
 		return;
 	}
 
