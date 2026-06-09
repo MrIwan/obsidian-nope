@@ -12,7 +12,7 @@ lot: true # List of Tables
 titlepage: true
 titlepage-color: "FFFFFF"
 titlepage-text-color: "1A1A1A"
-titlepage-background: /app/assets/bg.png
-titlepage-logo: /app/assets/logo.png
+titlepage-background: /app/assets/bg-tiny.jpg
+titlepage-logo: /app/assets/logo-tiny.png
 header-left: |
-  \raisebox{-0.3\height}{\includegraphics[height=0.7cm]{/app/assets/logo-horizontal.png}}
+  \raisebox{-0.3\height}{\includegraphics[height=0.7cm]{/app/assets/logo-horizontal-tiny.png}}

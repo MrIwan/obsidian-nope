@@ -26,3 +26,9 @@ data.json
 build/
 
 Handover-Temp.md
+
+# Generated at build time from pipeline/ + skill/ (scripts/bundle-assets.mjs)
+src/generated/
+
+# Runtime marker written when bundled assets are extracted
+.bundled-assets-version

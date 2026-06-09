@@ -1,16 +1,28 @@
-import { Plugin } from 'obsidian';
+import { Notice, Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, ObsiPrintSettingTab } from './settings';
 import type { ObsiPrintSettings } from './types';
 import { registerExportCommand } from './commands/export';
 import { registerBuildCommand, registerBuildCommandnoCache } from './commands/build';
 import { registerBrandingTemplateCommand } from './commands/branding-template';
 import { registerMaintenanceCommands } from './commands/maintenance';
+import { getPluginAbsoluteDir } from './utils/paths';
+import { ensureBundledAssets } from './utils/assets';
 
 export default class ObsiPrintPlugin extends Plugin {
 	settings!: ObsiPrintSettings;
 
 	async onload() {
 		await this.loadSettings();
+
+		// Materialize bundled pipeline/ + skill/ files so installs that only
+		// deliver main.js (BRAT/store) still have the full toolchain on disk.
+		try {
+			ensureBundledAssets(getPluginAbsoluteDir(this), this.manifest.version);
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			new Notice(`Obsi Print: could not set up pipeline files. ${msg}`, 10000);
+		}
+
 		this.addSettingTab(new ObsiPrintSettingTab(this.app, this));
 		registerExportCommand(this);
 		registerBuildCommand(this);

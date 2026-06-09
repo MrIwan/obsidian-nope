@@ -8,6 +8,7 @@ import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '.
 import { prepareBrandingOverride } from '../utils/branding';
 import { prepareBibliography } from '../utils/bibliography';
 import { getSkillStatus } from '../utils/skill';
+import { ensureBundledAssets } from '../utils/assets';
 
 export function registerExportCommand(plugin: ObsiPrintPlugin): void {
 	plugin.addCommand({
@@ -29,6 +30,16 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 
 	const pluginDir = getPluginAbsoluteDir(plugin);
 	const vaultPath = getVaultAbsolutePath(plugin.app);
+
+	// Ensure the bundled pipeline/ + skill/ are present (idempotent; no-op once
+	// extracted for this version). Guards against installs without onload setup.
+	try {
+		ensureBundledAssets(pluginDir, plugin.manifest.version);
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		new Notice(`Pipeline files missing and could not be created. ${msg}`, 10000);
+		return;
+	}
 
 	// Warn if AI skill is missing; does not block export since pipeline is independent.
 	if (getSkillStatus(pluginDir, vaultPath) === 'missing') {
