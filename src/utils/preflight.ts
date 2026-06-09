@@ -25,19 +25,20 @@ function execFilePromise(cmd: string, args: string[], timeout = 5000): Promise<{
 
 export async function runPreflightChecks(_app: App): Promise<PreflightResults> {
 	const checks: PreflightCheckResult[] = [];
+	const dockerBin = DOCKER_BIN;
 
 	// Docker CLI
 	try {
-		const { stdout } = await execFilePromise(DOCKER_BIN, ['--version'], 4000);
-		checks.push({ name: 'Docker CLI installed', passed: true, message: stdout.trim() });
+		const { stdout } = await execFilePromise(dockerBin, ['--version'], 4000);
+		checks.push({ name: 'Docker CLI installed', passed: true, message: `${dockerBin}: ${stdout.trim()}` });
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
-		checks.push({ name: 'Docker CLI installed', passed: false, message: `${DOCKER_BIN}: ${msg}` });
+		checks.push({ name: 'Docker CLI installed', passed: false, message: `${dockerBin}: ${msg}` });
 	}
 
 	// Docker daemon
 	try {
-		await execFilePromise(DOCKER_BIN, ['info'], 5000);
+		await execFilePromise(dockerBin, ['info'], 5000);
 		checks.push({ name: 'Docker daemon running', passed: true, message: 'Docker daemon reachable' });
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);

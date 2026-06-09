@@ -2,22 +2,36 @@
 
 import { execFile, spawn } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { delimiter, join } from 'path';
 
-export const DOCKER_BIN = '/usr/local/bin/docker';
 export const DOCKER_IMAGE_NAME = 'obsidian2pdf';
+function dockerSearchDirs(): string[] {
+	switch (process.platform) {
+		case 'win32':
+			return [
+				'C:\\Program Files\\Docker\\Docker\\resources\\bin',
+				'C:\\ProgramData\\DockerDesktop\\version-bin',
+			];
+		case 'linux':
+			return ['/usr/bin', '/usr/local/bin', '/snap/bin'];
+		default:
+			return [
+				'/usr/local/bin',
+				'/opt/homebrew/bin',
+				'/Applications/Docker.app/Contents/Resources/bin',
+			];
+	}
+}
 
-// Locate Docker binary by augmenting PATH with common installation locations.
+// Augment PATH so a bare `docker` and our candidate dirs resolve in Electron.
 export function getDockerEnv(): typeof process.env {
-	const extraPaths = [
-		'/usr/local/bin',
-		'/opt/homebrew/bin',
-		'/Applications/Docker.app/Contents/Resources/bin',
-	];
 	const existingPath = process.env.PATH ?? '';
-	const newPath = [...extraPaths, existingPath].filter(Boolean).join(':');
+	const newPath = [...dockerSearchDirs(), existingPath].filter(Boolean).join(delimiter);
 	return { ...process.env, PATH: newPath };
 }
+
+// Docker is invoked as a bare command and resolved via PATH 
+export const DOCKER_BIN = process.platform === 'win32' ? 'docker.exe' : 'docker';
 
 // Check if the Docker image exists.
 export async function imageExists(): Promise<boolean> {
@@ -75,7 +89,10 @@ export async function buildImage(pluginDir: string, noCache: boolean = false): P
 		let output = '';
 		const proc = spawn(DOCKER_BIN, ['compose', 'build', noCache ? '--no-cache' : undefined].filter(Boolean) as string[], {
 			cwd: pipelineDir,
-			env: getDockerEnv(),
+			// VAULT_PATH is only mounted at runtime (compose run), but compose still
+			// validates the volume spec at build time — so give it a valid existing
+			// path here to avoid an "empty section between colons" error.
+			env: { ...getDockerEnv(), VAULT_PATH: pipelineDir },
 			windowsHide: true,
 		});
 
