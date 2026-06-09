@@ -1,6 +1,6 @@
 // Extract bundled pipeline/ + skill/ files to disk.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { BUNDLED_ASSETS } from '../generated/bundled-assets';
 
@@ -23,6 +23,15 @@ export function ensureBundledAssets(pluginDir: string, version: string): void {
 		const dest = join(pluginDir, relPath);
 		mkdirSync(dirname(dest), { recursive: true });
 		writeFileSync(dest, Buffer.from(base64, 'base64'));
+		// writeFileSync drops the executable bit; restore it for shell scripts
+		// (no-op on Windows). The container also invokes build.sh via `bash`.
+		if (relPath.endsWith('.sh')) {
+			try {
+				chmodSync(dest, 0o755);
+			} catch {
+				// Non-fatal: bash entrypoint runs the script regardless.
+			}
+		}
 	}
 
 	writeFileSync(markerPath, version);
