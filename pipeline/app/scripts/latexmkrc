@@ -7,7 +7,7 @@ $pdf_mode = 1;
 # Glossary deps: .glo -> .gls and .acn -> .acr trigger makeglossaries
 $pdf_mode = 1;
 
-# Glossar-Dependencies: .glo → .gls und .acn → .acr triggern makeglossaries
+# Glossar-Dependencies: .glo → .gls und .acn → .acr trigger makeglossaries
 add_cus_dep('glo', 'gls', 0, 'run_makeglossaries');
 add_cus_dep('acn', 'acr', 0, 'run_makeglossaries');
 

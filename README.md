@@ -12,13 +12,15 @@ The core authoring model is **atomic**. Chapters, theorems, tables, glossary ent
 
 ## Install
 
+> **Note:** So far the plugin has only been tested on macOS. It should work on Windows and Linux via Docker, but this is currently unverified — feedback from other platforms is welcome.
+
 At a high level, the setup is simple:
 
 1. Install Docker.
 2. Install the Obsi Print plugin.
 3. Export the active note to PDF.
 
-The first export prepares the full toolchain, including the download and build of the Docker image. Alternatively you can build the image in the Settings or via the command palette. After that, PDF export is a regular command from the Obsidian command palette.
+The first export prepares the full toolchain, including the download and build of the Docker image. Alternatively you can build the image in the Settings or via the command palette. PDF export is a regular command from the Obsidian command palette.
 
 ### Install the plugin
 
@@ -66,7 +68,7 @@ Vault/
 
 A main document is usually short. It mostly contains frontmatter and embeds.
 
-This is the central idea of Obsi Print: the main file acts as composition, while the actual content lives in reusable notes.
+The main file acts as composition, while the actual content lives in reusable notes.
 
 ### Example
 
@@ -87,7 +89,7 @@ toc: true
 
 ### Atomic notes
 
-Atomic notes are the foundation of the plugin. Instead of writing one huge export note, you split content into small units that each represent one concept.
+Atomic notes are the foundation of Obsidian. Instead of writing one huge export note, you split content into small units that each represent one concept.
 
 Good candidates for atomic notes include:
 
@@ -142,12 +144,6 @@ This lets you keep using familiar Obsidian links while getting proper PDF cross-
 Passive embeds use the `+[[...]]` syntax. They behave like normal embeds during export, but remain visually compact in the Obsidian editor.
 
 This is useful when a document contains many large chapter embeds and you want the source note to stay readable while still expanding everything in the final PDF.
-
-### Multi-embed behavior
-
-The same note can be embedded more than once. Obsi Print avoids the usual LaTeX label conflicts by assigning the label only on the first occurrence while still keeping counters consistent.
-
-This is helpful when reused content appears in multiple places of the same exported document.
 
 ***
 
@@ -514,3 +510,18 @@ This is particularly useful when AI is used for report drafting, technical writi
 
 With the skill installed, asking an AI assistant for "a new theorem note about the triangle inequality" yields an atomic note with proper `latex-env: theorem` frontmatter instead of an inline theorem buried in a chapter.
 
+***
+
+## License
+
+Copyright (C) 2026 Wanja Zemke
+
+Obsi Print is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License v3.0** as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the full license text in [LICENSE](LICENSE) for details.
+
+***
+
+## A note on AI assistance
+
+Parts of this codebase were written with the help of Claude. Everything was reviewed, tested, and understood before being committed.
