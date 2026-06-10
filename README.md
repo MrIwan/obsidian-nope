@@ -14,7 +14,7 @@ The core authoring model is **atomic**. Chapters, theorems, tables, glossary ent
 
 > **Requirements:** Docker must be installed **and on your `PATH`** — the plugin invokes `docker` directly. (The plugin augments `PATH` with common install locations so launching Obsidian from the GUI still works, but a non-standard Docker install must be reachable via `PATH`.)
 >
-> **Platform support:** Only **macOS** is tested. Windows and Linux are **experimental and currently untested** — they may not work yet. Feedback and reports from those platforms are very welcome.
+> **Platform support:** Only **Linux** and **macOS** are tested. Windows is **experimental and currently untested** — it may not work yet. Feedback and reports very welcome.
 
 At a high level, the setup is simple:
 
@@ -483,6 +483,14 @@ This command creates a branding template note in the vault. It is a quick way to
 #### Example
 
 Run `Obsi Print: Create branding template` to generate a `Branding-Template.md` you can rename and adapt for your needs.
+
+### Create example main document
+
+This command creates an example main document in the vault. It is a quick way to see the atomic authoring model in action: a short file with frontmatter plus wikilink embeds of chapters and structured notes.
+
+#### Example
+
+Run `Obsi Print: Create example main document` to generate an `Example-Main-Document.md` you can use as a starting point for your own report.
 
 ### Remove Docker image
 
