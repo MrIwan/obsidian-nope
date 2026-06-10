@@ -1,7 +1,7 @@
 {
 	"id": "obsi-print",
 	"name": "Obsi Print",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"minAppVersion": "0.15.0",
 	"description": "Export Obsidian notes to publication-ready PDFs via Pandoc and the Eisvogel LaTeX template. Custom branding, glossaries, transclusions, and cross-references — Docker-powered toolchain, no LaTeX install required.",
 	"author": "Wanja Zemke",
