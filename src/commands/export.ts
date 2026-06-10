@@ -1,9 +1,9 @@
 import { Notice, TFile } from 'obsidian';
 import { shell } from 'electron';
-import { copyFileSync, mkdirSync } from 'fs';
+import { copyFileSync, mkdirSync, statSync } from 'fs';
 import { dirname, join } from 'path';
 import type ObsiPrintPlugin from '../main';
-import { buildImage, checkDockerReady, cleanupIntermediates, imageExists, runPipeline } from '../utils/docker';
+import { buildImage, checkDockerReady, cleanupIntermediates, imageExists, runPipeline, waitForStablePdf } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '../utils/paths';
 import { prepareBrandingOverride } from '../utils/branding';
 import { prepareBibliography } from '../utils/bibliography';
@@ -132,9 +132,23 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 		return;
 	}
 
-	// Copy PDF to destination.
-	mkdirSync(dirname(destPath), { recursive: true });
-	copyFileSync(producedPdf, destPath);
+	// Copy PDF to destination. Container exit does not guarantee the bind-mounted
+	// PDF is fully synced to the host (observed on Linux: build log fine, vault
+	// PDF empty) — wait for a stable non-zero size and verify the copy. On any
+	// failure keep the build folder so the produced PDF can be inspected.
+	try {
+		const srcSize = await waitForStablePdf(producedPdf);
+		mkdirSync(dirname(destPath), { recursive: true });
+		copyFileSync(producedPdf, destPath);
+		const dstSize = statSync(destPath).size;
+		if (dstSize !== srcSize) {
+			throw new Error(`Copied PDF is incomplete (${dstSize} of ${srcSize} bytes): ${destPath}`);
+		}
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		new Notice(`Export failed while copying the PDF. Build folder kept for inspection. ${msg}`, 10000);
+		return;
+	}
 
 	// Cleanup build artifacts unless keepLatexIntermediates is enabled.
 	if (!plugin.settings.keepLatexIntermediates) {

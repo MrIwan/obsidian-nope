@@ -1,7 +1,7 @@
 // Docker CLI wrapper and configuration.
 
 import { execFile, spawn } from 'child_process';
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'fs';
 import { delimiter, join } from 'path';
 
 export const DOCKER_IMAGE_NAME = 'obsidian2pdf';
@@ -153,6 +153,32 @@ export async function buildImage(pluginDir: string, noCache: boolean = false): P
 			}
 		});
 	});
+}
+
+// Wait until the produced PDF exists with a non-zero, STABLE size, and return it.
+export async function waitForStablePdf(pdfPath: string, timeoutMs = 5000): Promise<number> {
+	const started = Date.now();
+	let lastSize = -1;
+	for (;;) {
+		let size = -1;
+		try {
+			size = statSync(pdfPath).size;
+		} catch {
+			// Not visible on the host yet.
+		}
+		if (size > 0 && size === lastSize) return size;
+		if (Date.now() - started >= timeoutMs) {
+			throw new Error(
+				size <= 0
+					? `Produced PDF missing or empty on host after ${Math.round(timeoutMs / 1000)}s: ${pdfPath}. ` +
+						'The container reported success, so this points to a bind-mount sync problem ' +
+						'(e.g. Docker Desktop VM file sharing). Check pipeline/build/ manually.'
+					: `Produced PDF size kept changing for ${Math.round(timeoutMs / 1000)}s: ${pdfPath}.`,
+			);
+		}
+		lastSize = size;
+		await new Promise((r) => setTimeout(r, 250));
+	}
 }
 
 // Run the export pipeline for a given markdown file.

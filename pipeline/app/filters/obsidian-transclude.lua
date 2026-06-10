@@ -833,6 +833,12 @@ local function resolve_wikilink(link)
   return link.content
 end
 
+-- ============================================================================
+-- Abstract resolution: meta.abstract may be plain text or a solo wikilink.
+-- Solo wikilink ([[Note]] or [[Note#Heading]]) → note body is transcluded via
+-- load_note (frontmatter stripped, embeds expanded, slices supported).
+-- ============================================================================
+
 -- Return wikilink target if meta value consists of exactly one wikilink.
 local function meta_solo_wikilink(meta_value)
   local mt = pandoc.utils.type(meta_value)
