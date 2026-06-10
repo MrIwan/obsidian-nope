@@ -833,13 +833,64 @@ local function resolve_wikilink(link)
   return link.content
 end
 
+-- Return wikilink target if meta value consists of exactly one wikilink.
+local function meta_solo_wikilink(meta_value)
+  local mt = pandoc.utils.type(meta_value)
+  local inlines
+  if mt == "Inlines" then
+    inlines = meta_value
+  elseif mt == "Blocks" and #meta_value == 1
+      and (meta_value[1].t == "Para" or meta_value[1].t == "Plain") then
+    inlines = meta_value[1].content
+  else
+    return nil
+  end
+  local link = nil
+  for _, il in ipairs(inlines) do
+    if il.t == "Link" then
+      if link then return nil end -- more than one link → treat as text
+      link = il
+    elseif il.t ~= "Space" and il.t ~= "SoftBreak" and il.t ~= "LineBreak" then
+      return nil -- non-whitespace content besides the link → treat as text
+    end
+  end
+  if link and link.title == "wikilink" and is_wikilink_like(link.target) then
+    return link.target
+  end
+  return nil
+end
+
+-- Expand a solo-wikilink abstract into the target note's blocks.
+local function expand_abstract(meta)
+  if not meta.abstract then return end
+  local target = meta_solo_wikilink(meta.abstract)
+  if target then
+    meta.abstract = pandoc.MetaBlocks(load_note(target, 0))
+  end
+end
+
+-- Resolve wikilinks inside the abstract content (transcluded or inline text).
+local function resolve_abstract_links(meta)
+  if not meta.abstract then return end
+  local mt = pandoc.utils.type(meta.abstract)
+  if mt == "Blocks" then
+    meta.abstract = pandoc.walk_block(pandoc.Div(meta.abstract), { Link = resolve_wikilink }).content
+  elseif mt == "Inlines" then
+    meta.abstract = pandoc.walk_inline(pandoc.Span(meta.abstract), { Link = resolve_wikilink }).content
+  end
+end
+
 -- Main entry: expand embeds, resolve wikilinks, flush glossary entries.
 function Pandoc(doc)
   -- Phase 1: Expand embeds and register targets.
   doc.blocks = process_blocks(doc.blocks)
+  -- Phase 1b: Expand abstract transclusion (after body, so body labels win first-embed).
+  expand_abstract(doc.meta)
   -- Phase 2: Resolve wikilinks on expanded AST.
   local walked = pandoc.walk_block(pandoc.Div(doc.blocks), { Link = resolve_wikilink })
   doc.blocks = walked.content
+  -- Phase 2b: Resolve wikilinks in abstract (glossary refs, autoref, plain-text fallback).
+  resolve_abstract_links(doc.meta)
   -- Phase 3: Inject glossary entries to header-includes.
   flush_glossary_entries(doc)
   return doc

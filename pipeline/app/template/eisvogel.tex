@@ -1136,34 +1136,19 @@ $if(has-frontmatter)$
 % \maketitle
 \pagenumbering{Roman} % set the numbering style to lowercase letter
 
+$if(abstract)$
 \begin{center}
- {\LARGE \textbf{\textsf{Abstract}}}
+ {\LARGE \textbf{\textsf{$if(abstract-title)$$abstract-title$$else$Abstract$endif$}}}
 \end{center}
 
 \begin{abstract}
 \begin{justify}
-  $if(abstract)$
   $abstract$
-  $else$
-  Add your abstract at the beginning of your markdown file like this 
-  \begin{verbatim}
-  ---
-  title: "Your Title" 
-  abstract: "your abstract here"
-  author: Leonardo V. Castorina, Another 1, Another 2
-  titlepage-logo: /absolute/path/to/logo.pdf
-  acknowledgements: "I would like to thank my dog Data."
-  declaration: "I declare that this thesis was composed by myself."
-  ---
-  \end{verbatim}
-  This is called YAML frontmatter.  Make sure to set up a title! If you set your abstract correctly you should not see this message.
-
-  Optionally you can set up \texttt{titlepage-logo} for a logo in the cover page, \texttt{acknowledgements} section, and  \texttt{declaration} section.
-
-  $endif$
 \end{justify}
 \end{abstract}
 \pagebreak
+
+$endif$
 
 
 $if(acknowledgements)$

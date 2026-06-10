@@ -2,7 +2,7 @@
 name: obsi-print
 description: Use when authoring or editing Obsidian notes that will be exported to PDF via the obsi-print plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, obsi-print-branding), wikilink embed/ref semantics, image figures, inline filters, glossary, mermaid diagrams, and branding.
 obsi-print-version: 0.x
-last-updated: 2026-05-27
+last-updated: 2026-06-10
 ---
 
 # obsi-print — Schreibkonvention
@@ -74,6 +74,21 @@ Optional. Wikilink (quoted!) auf eine Branding-Note. Ohne den Key gelten die Plu
 ```yaml
 obsi-print-branding: "[[Branding-Kunde1]]"
 ```
+
+### `abstract` — Kurzfassung (optional)
+
+Optional. Fehlt der Key, wird keine Abstract-Seite gerendert. Zwei Schreibweisen:
+
+```yaml
+# Variante 1: Text direkt im Frontmatter
+abstract: |
+  Kurzfassung des Berichts als Fließtext.
+
+# Variante 2: Wikilink (quoted!) — der Body der Note wird als Abstract eingesetzt
+abstract: "[[Meine-Kurzfassung]]"
+```
+
+Beim Wikilink wird das Frontmatter der Ziel-Note gestrippt; Heading-Slices (`[[Note#Abschnitt]]`) und Embeds innerhalb der Note funktionieren. Wikilinks im Abstract-Text (z.B. `[[KI]]`) werden wie im Body aufgelöst (Glossar, Refs, Plain-Text-Fallback). Mit `abstract-title: "Kurzfassung"` lässt sich die Überschrift der Abstract-Seite ändern (Default: „Abstract").
 
 ### Pandoc-/Eisvogel-Keys
 
@@ -292,8 +307,7 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 title: "Mein Bericht"
 obsi-print-branding: "[[Branding-Kunde1]]"
 toc: true
-abstract: |
-  Kurzfassung des Berichts. Optional, wird als separate Seite vor dem Inhaltsverzeichnis gerendert.
+abstract: "[[Meine-Kurzfassung]]" # optional; alternativ Text direkt, ohne Key keine Abstract-Seite
 ---
 
 ![[Kapitel-Einleitung]]

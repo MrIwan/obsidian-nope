@@ -5,8 +5,8 @@ lang: en
 toc: true
 toc-own-page: true
 toc-depth: 3
-lof: true # List of Figures
-lot: true # List of Tables
+lof: false # List of Figures
+lot: false # List of Tables
 
 # Title page settings
 titlepage: true
