@@ -1,9 +1,9 @@
-import { Notice, TFile } from 'obsidian';
+import { Notice, TFile, normalizePath } from 'obsidian';
 import { shell } from 'electron';
-import { copyFileSync, mkdirSync, statSync } from 'fs';
-import { dirname, join } from 'path';
+import { copyFileSync, mkdirSync, readFileSync } from 'fs';
+import { dirname, isAbsolute, join, relative, sep } from 'path';
 import type ObsiPrintPlugin from '../main';
-import { buildImage, checkDockerReady, cleanupIntermediates, imageExists, runPipeline, waitForStablePdf } from '../utils/docker';
+import { buildImage, checkDockerReady, cleanupIntermediates, imageExists, runPipeline } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '../utils/paths';
 import { prepareBrandingOverride } from '../utils/branding';
 import { prepareBibliography } from '../utils/bibliography';
@@ -132,17 +132,29 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 		return;
 	}
 
-	// Copy PDF to destination. Container exit does not guarantee the bind-mounted
-	// PDF is fully synced to the host (observed on Linux: build log fine, vault
-	// PDF empty) — wait for a stable non-zero size and verify the copy. On any
-	// failure keep the build folder so the produced PDF can be inspected.
+	// Copy PDF to destination. Destinations INSIDE the vault are written through
+	// Obsidian's adapter instead of raw fs: a raw copy bypasses the vault API,
+	// and on Linux the inotify-based watcher can leave the embedded PDF viewer
+	// rendering a stale/blank file (valid PDF on disk, but Obsidian shows it
+	// empty). Adapter writes propagate the change event to viewer and index
+	// directly. On failure the build folder is kept so the PDF can be inspected.
 	try {
-		const srcSize = await waitForStablePdf(producedPdf);
-		mkdirSync(dirname(destPath), { recursive: true });
-		copyFileSync(producedPdf, destPath);
-		const dstSize = statSync(destPath).size;
-		if (dstSize !== srcSize) {
-			throw new Error(`Copied PDF is incomplete (${dstSize} of ${srcSize} bytes): ${destPath}`);
+		const vaultRelPath = relative(vaultPath, destPath);
+		if (vaultRelPath.startsWith('..') || isAbsolute(vaultRelPath)) {
+			// Destination outside the vault: plain filesystem copy.
+			mkdirSync(dirname(destPath), { recursive: true });
+			copyFileSync(producedPdf, destPath);
+		} else {
+			const data = readFileSync(producedPdf);
+			const adapterPath = normalizePath(vaultRelPath.split(sep).join('/'));
+			const parentDir = adapterPath.includes('/')
+				? adapterPath.slice(0, adapterPath.lastIndexOf('/'))
+				: '';
+			if (parentDir) {
+				await plugin.app.vault.adapter.mkdir(parentDir);
+			}
+			const buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+			await plugin.app.vault.adapter.writeBinary(adapterPath, buf);
 		}
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
