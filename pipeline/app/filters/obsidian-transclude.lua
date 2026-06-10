@@ -860,7 +860,11 @@ local function meta_solo_wikilink(meta_value)
       return nil -- non-whitespace content besides the link → treat as text
     end
   end
-  if link and link.title == "wikilink" and is_wikilink_like(link.target) then
+  -- Pandoc marks wikilinks with the class "wikilink" (older versions used the
+  -- title); accept both. Plain markdown links are NOT transcluded.
+  local is_wl = link
+    and (link.title == "wikilink" or (link.classes and link.classes:includes("wikilink")))
+  if is_wl and is_wikilink_like(link.target) then
     return link.target
   end
   return nil
