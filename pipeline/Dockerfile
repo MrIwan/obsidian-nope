@@ -10,6 +10,9 @@ RUN mkdir -p /etc/mmdc && \
     printf '{ "args": ["--no-sandbox", "--disable-setuid-sandbox"] }\n' \
       > /etc/mmdc/puppeteer-config.json
 RUN npm install -g @mermaid-js/mermaid-cli
+# kpsewhich am Ende verifiziert die Installation: tlmgr kann mit Exit 0
+# scheitern (z.B. beim TeX-Live-Release-Wechsel) -- ohne den Check cacht
+# BuildKit dann einen Layer OHNE die Pakete als Erfolg.
 RUN tlmgr update --self && \
     tlmgr install \
         glossaries \
@@ -17,6 +20,7 @@ RUN tlmgr update --self && \
         awesomebox \
         svg \
         background \
-        setspace
+        setspace && \
+    kpsewhich ragged2e.sty glossaries.sty awesomebox.sty svg.sty background.sty setspace.sty
 ENTRYPOINT []
 WORKDIR /build

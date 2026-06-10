@@ -2,7 +2,7 @@ import { Notice, TFile, normalizePath } from 'obsidian';
 import { shell } from 'electron';
 import { copyFileSync, mkdirSync, readFileSync } from 'fs';
 import { dirname, isAbsolute, join, relative, sep } from 'path';
-import type ObsiPrintPlugin from '../main';
+import type AtomicPressPlugin from '../main';
 import { buildImage, checkDockerReady, cleanupIntermediates, imageExists, runPipeline } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '../utils/paths';
 import { prepareBrandingOverride } from '../utils/branding';
@@ -10,7 +10,7 @@ import { prepareBibliography } from '../utils/bibliography';
 import { getSkillStatus } from '../utils/skill';
 import { ensureBundledAssets } from '../utils/assets';
 
-export function registerExportCommand(plugin: ObsiPrintPlugin): void {
+export function registerExportCommand(plugin: AtomicPressPlugin): void {
 	plugin.addCommand({
 		id: 'export-active-note',
 		name: 'Export active note to PDF',
@@ -20,7 +20,7 @@ export function registerExportCommand(plugin: ObsiPrintPlugin): void {
 	});
 }
 
-async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
+async function exportActiveNote(plugin: AtomicPressPlugin): Promise<void> {
 	// Get the active markdown file.
 	const file = plugin.app.workspace.getActiveFile();
 	if (!file || !(file instanceof TFile) || file.extension.toLowerCase() !== 'md') {
@@ -153,7 +153,7 @@ async function exportActiveNote(plugin: ObsiPrintPlugin): Promise<void> {
 			if (parentDir) {
 				await plugin.app.vault.adapter.mkdir(parentDir);
 			}
-			const buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+			const buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
 			await plugin.app.vault.adapter.writeBinary(adapterPath, buf);
 		}
 	} catch (e) {

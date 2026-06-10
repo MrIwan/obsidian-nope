@@ -1,11 +1,11 @@
 // Generate branding template file with documented frontmatter keys.
 
 import { Notice, normalizePath, TFile } from 'obsidian';
-import type ObsiPrintPlugin from '../main';
+import type AtomicPressPlugin from '../main';
 
 const TEMPLATE_FILENAME = 'Branding-Template.md';
 
-export function registerBrandingTemplateCommand(plugin: ObsiPrintPlugin): void {
+export function registerBrandingTemplateCommand(plugin: AtomicPressPlugin): void {
 	plugin.addCommand({
 		id: 'create-branding-template',
 		name: 'Create branding template',
@@ -16,7 +16,7 @@ export function registerBrandingTemplateCommand(plugin: ObsiPrintPlugin): void {
 }
 
 // Return next available numbered path if filename already exists.
-function pickAvailablePath(plugin: ObsiPrintPlugin, filename: string): string {
+function pickAvailablePath(plugin: AtomicPressPlugin, filename: string): string {
 	const dotIdx = filename.lastIndexOf('.');
 	const stem = dotIdx >= 0 ? filename.slice(0, dotIdx) : filename;
 	const ext = dotIdx >= 0 ? filename.slice(dotIdx) : '';
@@ -29,7 +29,7 @@ function pickAvailablePath(plugin: ObsiPrintPlugin, filename: string): string {
 	return candidate;
 }
 
-async function createBrandingTemplate(plugin: ObsiPrintPlugin): Promise<void> {
+async function createBrandingTemplate(plugin: AtomicPressPlugin): Promise<void> {
 	// Use numbered suffix to avoid overwriting existing branding templates.
 	const path = pickAvailablePath(plugin, TEMPLATE_FILENAME);
 
@@ -75,12 +75,12 @@ header-left: "[[logo-horizontal.png]]"
 
 # Branding Template
 
-This file defines **branding overrides** for \`obsi-print\`. Duplicate it per customer
+This file defines **branding overrides** for \`atomic-press\`. Duplicate it per customer
 (e.g., \`Branding-Customer1.md\`) and edit the frontmatter keys above.
 Enable branding in an export note by adding to its frontmatter:
 
 \`\`\`yaml
-obsi-print-branding: "[[Branding-Customer1]]"
+atomic-press-branding: "[[Branding-Customer1]]"
 \`\`\`
 
 If unset, the plugin uses defaults from \`_base.yml\`.

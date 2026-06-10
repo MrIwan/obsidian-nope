@@ -1,10 +1,10 @@
-# Obsi Print
+# Atomic Press
 
-Obsi Print turns Obsidian notes into publication-ready PDFs through a Docker-based Pandoc/LaTeX pipeline. You write in Obsidian, keep your notes modular, and export a polished PDF without installing a local TeX distribution.
+Atomic Press turns Obsidian notes into publication-ready PDFs through a Docker-based Pandoc/LaTeX pipeline. You write in Obsidian, keep your notes modular, and export a polished PDF without installing a local TeX distribution.
 
-## What Obsi Print does
+## What Atomic Press does
 
-Obsi Print keeps the Obsidian authoring model intact and adds the parts that are usually painful to wire up by hand: PDF export, numbering, cross-references, glossaries, branding, citation handling, and LaTeX-backed structured blocks.
+Atomic Press keeps the Obsidian authoring model intact and adds the parts that are usually painful to wire up by hand: PDF export, numbering, cross-references, glossaries, branding, citation handling, and LaTeX-backed structured blocks.
 
 The core authoring model is **atomic**. Chapters, theorems, tables, glossary entries, diagrams, and other reusable content blocks live in their own notes and are embedded into a main document.
 
@@ -19,7 +19,7 @@ The core authoring model is **atomic**. Chapters, theorems, tables, glossary ent
 At a high level, the setup is simple:
 
 1. Install Docker.
-2. Install the Obsi Print plugin.
+2. Install the Atomic Press plugin.
 3. Export the active note to PDF.
 
 The first export prepares the full toolchain, including the download and build of the Docker image. Alternatively you can build the image in the Settings or via the command palette. PDF export is a regular command from the Obsidian command palette.
@@ -31,8 +31,8 @@ Community Store: pending.
 Until then, via [BRAT](https://github.com/TfTHacker/obsidian42-brat):
 
 1. Install BRAT.
-2. Add beta plugin: `MrIwan/obsi-print`.
-3. Enable Obsi Print.
+2. Add beta plugin: `MrIwan/atomic-press`.
+3. Enable Atomic Press.
 
 Requires Docker. First export builds the image.
 
@@ -40,7 +40,7 @@ Requires Docker. First export builds the image.
 
 ## Recommended workflow
 
-Obsi Print works best when you treat your vault like a set of reusable building blocks instead of one long monolithic document.
+Atomic Press works best when you treat your vault like a set of reusable building blocks instead of one long monolithic document.
 
 A typical workflow looks like this:
 
@@ -107,7 +107,7 @@ This structure makes it easier to reuse content across multiple documents and re
 
 ### Embedded notes
 
-Obsi Print uses normal Obsidian embed syntax to assemble documents.
+Atomic Press uses normal Obsidian embed syntax to assemble documents.
 
 Supported patterns:
 
@@ -125,7 +125,7 @@ Supported patterns:
 
 ### Auto heading shift
 
-Embedded notes should start with a normal `# Heading`. Obsi Print automatically shifts heading depth based on where the note is embedded.
+Embedded notes should start with a normal `# Heading`. Atomic Press automatically shifts heading depth based on where the note is embedded.
 
 That means embedded content can keep a clean, local structure without forcing you to manually rewrite heading levels for every context.
 
@@ -151,7 +151,7 @@ This is useful when a document contains many large chapter embeds and you want t
 
 ## Structured blocks with `latex-env`
 
-Some notes are not just plain text blocks. Obsi Print can map a note to a LaTeX environment through frontmatter.
+Some notes are not just plain text blocks. Atomic Press can map a note to a LaTeX environment through frontmatter.
 
 This allows structured content to stay author-friendly in Obsidian while being rendered correctly in the exported PDF.
 
@@ -216,7 +216,7 @@ As shown in [[Table-Results]], the measurements indicate ...
 
 ### Equations and math environments
 
-Obsi Print supports math-focused environments such as `equation`, `align`, `gather`, `multline`, and `alignat`, including star variants.
+Atomic Press supports math-focused environments such as `equation`, `align`, `gather`, `multline`, and `alignat`, including star variants.
 
 This is useful when equations should be atomic, reusable, and cross-referenceable instead of being buried inline inside long chapter notes.
 
@@ -300,7 +300,7 @@ A reference with `[[plot.png]]` becomes `Abbildung X`.
 ## Glossary and acronyms
 
 Glossary entries and acronyms are defined as atomic notes with `gls-*` frontmatter.  
-When you link such a note with a normal wikilink like `[[GLS]]` or `[[ACN]]`, Obsi Print automatically turns it into the correct glossary or acronym reference in the exported PDF.
+When you link such a note with a normal wikilink like `[[GLS]]` or `[[ACN]]`, Atomic Press automatically turns it into the correct glossary or acronym reference in the exported PDF.
 
 ### Example
 
@@ -328,7 +328,7 @@ gls-type: acronym
 
 ## Citations and bibliography
 
-Obsi Print supports bibliography-driven citations through Pandoc. A document can point to a `.bib` file in the vault and optionally use a CSL style.
+Atomic Press supports bibliography-driven citations through Pandoc. A document can point to a `.bib` file in the vault and optionally use a CSL style.
 
 This makes the plugin suitable for academic or technical writing workflows that already rely on tools such as Zotero and Better BibTeX.
 
@@ -353,7 +353,7 @@ As shown by [@smith2020], the result holds.
 
 ## Obsidian-specific inline syntax
 
-Obsi Print also preserves and transforms selected inline authoring patterns.
+Atomic Press also preserves and transforms selected inline authoring patterns.
 
 Supported examples include:
 
@@ -387,7 +387,7 @@ A branding note can control items such as:
 - Colors and template metadata
 - Other Pandoc and Eisvogel options
 
-The branding note is activated from the document frontmatter via `obsi-print-branding`.
+The branding note is activated from the document frontmatter via `atomic-press-branding`.
 
 ### Example
 
@@ -395,7 +395,7 @@ Document frontmatter:
 
 ```yaml
 ---
-obsi-print-branding: Branding-Customer-A
+atomic-press-branding: Branding-Customer-A
 ---
 ```
 
@@ -428,7 +428,7 @@ Document frontmatter overrides selected values from the branding note:
 
 ```yaml
 ---
-obsi-print-branding: "[[Branding-Default]]"
+atomic-press-branding: "[[Branding-Default]]"
 title: "Q4 Report"
 header-color: "#003366"
 ---
@@ -440,7 +440,7 @@ In this example, the document uses the `Branding-Default` note for general styli
 
 ## Table of contents and generated lists
 
-Obsi Print supports document metadata such as a table of contents, list of figures, and list of tables.
+Atomic Press supports document metadata such as a table of contents, list of figures, and list of tables.
 
 That makes it practical for longer reports or formal deliverables where navigation and generated lists are expected.
 
@@ -466,7 +466,7 @@ This is the main command. It runs the document through the containerized export 
 
 #### Example
 
-Open `Report.md`, run `Obsi Print: Export active note to PDF`, and the PDF is written next to the note.
+Open `Report.md`, run `Atomic Press: Export active note to PDF`, and the PDF is written next to the note.
 
 ### Build Docker image
 
@@ -474,7 +474,7 @@ This command builds the Docker image used by the export pipeline. You typically 
 
 #### Example
 
-Run `Obsi Print: Build Docker image` once after installing the plugin to prepare the toolchain.
+Run `Atomic Press: Build Docker image` once after installing the plugin to prepare the toolchain.
 
 ### Create branding template
 
@@ -482,7 +482,7 @@ This command creates a branding template note in the vault. It is a quick way to
 
 #### Example
 
-Run `Obsi Print: Create branding template` to generate a `Branding-Template.md` you can rename and adapt for your needs.
+Run `Atomic Press: Create branding template` to generate a `Branding-Template.md` you can rename and adapt for your needs.
 
 ### Create example main document
 
@@ -490,7 +490,7 @@ This command creates an example main document in the vault. It is a quick way to
 
 #### Example
 
-Run `Obsi Print: Create example main document` to generate an `Example-Main-Document.md` you can use as a starting point for your own report.
+Run `Atomic Press: Create example main document` to generate an `Example-Main-Document.md` you can use as a starting point for your own report.
 
 ### Remove Docker image
 
@@ -498,7 +498,7 @@ This command removes the pipeline image. The next export can then rebuild the en
 
 #### Example
 
-Run `Obsi Print: Remove Docker image` when a dependency update is needed; the next export rebuilds the image.
+Run `Atomic Press: Remove Docker image` when a dependency update is needed; the next export rebuilds the image.
 
 ### Cleanup build folder
 
@@ -506,13 +506,13 @@ This command clears the build folder used during export. It is mainly useful for
 
 #### Example
 
-Run `Obsi Print: Cleanup build folder` after a failed export to start the next run from a clean state.
+Run `Atomic Press: Cleanup build folder` after a failed export to start the next run from a clean state.
 
 ***
 
 ## AI skill integration
 
-Obsi Print can install a skill into the vault, where thie Obsi Print conventions are defined. The goal is to help AI tools follow the plugin's writing conventions when generating or editing exportable notes.
+Atomic Press can install a skill into the vault, where thie Atomic Press conventions are defined. The goal is to help AI tools follow the plugin's writing conventions when generating or editing exportable notes.
 
 This is particularly useful when AI is used for report drafting, technical writing, or vault-assisted authoring.
 
@@ -526,7 +526,7 @@ With the skill installed, asking an AI assistant for "a new theorem note about t
 
 Copyright (C) 2026 Wanja Zemke
 
-Obsi Print is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License v3.0** as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+Atomic Press is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License v3.0** as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the full license text in [LICENSE](LICENSE) for details.
 

@@ -1,5 +1,5 @@
 
-export interface ObsiPrintSettings {
+export interface AtomicPressSettings {
 	/** Absolute or vault-relative path where the final PDF is copied after a successful build. */
 	outputPath: string;
 	autoOpenPdf: boolean;

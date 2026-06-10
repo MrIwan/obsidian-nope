@@ -4,7 +4,7 @@ import { execFile, spawn } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { delimiter, join } from 'path';
 
-export const DOCKER_IMAGE_NAME = 'obsidian2pdf';
+export const DOCKER_IMAGE_NAME = 'atomic-press';
 function dockerSearchDirs(): string[] {
 	switch (process.platform) {
 		case 'win32':

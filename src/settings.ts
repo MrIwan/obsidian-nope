@@ -1,22 +1,22 @@
 import { App, ButtonComponent, Notice, PluginSettingTab, Setting } from 'obsidian';
-import type ObsiPrintPlugin from './main';
-import type { ObsiPrintSettings, PreflightResults } from './types';
+import type AtomicPressPlugin from './main';
+import type { AtomicPressSettings, PreflightResults } from './types';
 import { runPreflightChecks } from './utils/preflight';
 import { DOCKER_IMAGE_NAME, buildImage, imageExists } from './utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath } from './utils/paths';
 import { cleanupBuild, installAiSkill, removeDockerImage } from './commands/maintenance';
 import { getSkillStatus, type SkillStatus } from './utils/skill';
 
-export const DEFAULT_SETTINGS: ObsiPrintSettings = {
+export const DEFAULT_SETTINGS: AtomicPressSettings = {
 	outputPath: '',
 	autoOpenPdf: false,
 	keepLatexIntermediates: false,
 };
 
-export class ObsiPrintSettingTab extends PluginSettingTab {
-	plugin: ObsiPrintPlugin;
+export class AtomicPressSettingTab extends PluginSettingTab {
+	plugin: AtomicPressPlugin;
 
-	constructor(app: App, plugin: ObsiPrintPlugin) {
+	constructor(app: App, plugin: AtomicPressPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -210,7 +210,7 @@ export class ObsiPrintSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Install / update')
 			.setDesc(
-				'Copy skill/SKILL.md → <vault>/.claude/skills/obsi-print/SKILL.md. ' +
+				'Copy skill/SKILL.md → <vault>/.claude/skills/atomic-press/SKILL.md. ' +
 					'Overwrites any existing file at the target.',
 			)
 			.addButton((btn) => {

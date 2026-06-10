@@ -1,12 +1,12 @@
 // System maintenance commands: image removal and build cleanup.
 
 import { Notice } from 'obsidian';
-import type ObsiPrintPlugin from '../main';
+import type AtomicPressPlugin from '../main';
 import { cleanupBuildFolder, removeImage } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath } from '../utils/paths';
 import { installSkill } from '../utils/skill';
 
-export function registerMaintenanceCommands(plugin: ObsiPrintPlugin): void {
+export function registerMaintenanceCommands(plugin: AtomicPressPlugin): void {
 	plugin.addCommand({
 		id: 'toggle open pdf after export',
 		name: `Toggle open PDF after export`,
@@ -46,7 +46,7 @@ export async function removeDockerImage(): Promise<void> {
 	}
 }
 
-export function cleanupBuild(plugin: ObsiPrintPlugin): void {
+export function cleanupBuild(plugin: AtomicPressPlugin): void {
 	try {
 		const removed = cleanupBuildFolder(getPluginAbsoluteDir(plugin));
 		new Notice(`Build folder cleaned (${removed} entr${removed === 1 ? 'y' : 'ies'} removed).`);
@@ -56,7 +56,7 @@ export function cleanupBuild(plugin: ObsiPrintPlugin): void {
 	}
 }
 
-export function installAiSkill(plugin: ObsiPrintPlugin): void {
+export function installAiSkill(plugin: AtomicPressPlugin): void {
 	try {
 		installSkill(getPluginAbsoluteDir(plugin), getVaultAbsolutePath(plugin.app));
 		new Notice('AI conventions skill installed.');
