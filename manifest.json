@@ -2,8 +2,8 @@
 	"id": "atomic-press",
 	"name": "Atomic Press",
 	"version": "0.1.5",
-	"minAppVersion": "0.15.0",
-	"description": "Export Obsidian notes to publication-ready PDFs via Pandoc and the Eisvogel LaTeX template. Custom branding, glossaries, transclusions, and cross-references — Docker-powered toolchain, no LaTeX install required.",
+	"minAppVersion": "1.7.2",
+	"description": "Export notes to publication-ready PDFs via Pandoc and the Eisvogel LaTeX template. Custom branding, glossaries, transclusions, and cross-references — Docker-powered toolchain, no LaTeX install required.",
 	"author": "Wanja Zemke",
 	"authorUrl": "https://github.com/MrIwan",
 	"isDesktopOnly": true

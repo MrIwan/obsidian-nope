@@ -464,49 +464,31 @@ The plugin exposes several commands through the Obsidian command palette.
 
 This is the main command. It runs the document through the containerized export pipeline and writes the resulting PDF.
 
-#### Example
-
-Open `Report.md`, run `Atomic Press: Export active note to PDF`, and the PDF is written next to the note.
 
 ### Build Docker image
 
 This command builds the Docker image used by the export pipeline. You typically need it for the first run and after environment-related changes.
 
-#### Example
-
-Run `Atomic Press: Build Docker image` once after installing the plugin to prepare the toolchain.
 
 ### Create branding template
 
 This command creates a branding template note in the vault. It is a quick way to start a new brand configuration without copying old project files by hand.
 
-#### Example
-
-Run `Atomic Press: Create branding template` to generate a `Branding-Template.md` you can rename and adapt for your needs.
 
 ### Create example main document
 
 This command creates an example main document in the vault. It is a quick way to see the atomic authoring model in action: a short file with frontmatter plus wikilink embeds of chapters and structured notes.
 
-#### Example
-
-Run `Atomic Press: Create example main document` to generate an `Example-Main-Document.md` you can use as a starting point for your own report.
 
 ### Remove Docker image
 
 This command removes the pipeline image. The next export can then rebuild the environment from scratch.
 
-#### Example
-
-Run `Atomic Press: Remove Docker image` when a dependency update is needed; the next export rebuilds the image.
 
 ### Cleanup build folder
 
 This command clears the build folder used during export. It is mainly useful for maintenance and debugging.
 
-#### Example
-
-Run `Atomic Press: Cleanup build folder` after a failed export to start the next run from a clean state.
 
 ***
 
