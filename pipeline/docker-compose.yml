@@ -2,9 +2,7 @@ services:
   pipeline:
     build: .
     image: obsidian2pdf
-    # Invoke via `bash` so the script needs no executable bit — the plugin
-    # extracts bundled files without preserving +x (see src/utils/assets.ts).
-    entrypoint: ["bash", "/app/scripts/build.sh"]
+    entrypoint: /app/scripts/build.sh
     volumes:
       - ./app:/app:ro
       - ${VAULT_PATH}:/vault:ro
