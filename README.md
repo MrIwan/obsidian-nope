@@ -31,7 +31,7 @@ Community Store: pending.
 Until then, via [BRAT](https://github.com/TfTHacker/obsidian42-brat):
 
 1. Install BRAT.
-2. Add beta plugin: `MrIwan/nope`.
+2. Add beta plugin: `MrIwan/obsidian-nope`.
 3. Enable NOPE.
 
 Requires Docker. First export builds the image.
