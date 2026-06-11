@@ -2,7 +2,7 @@ import { Notice, TFile, normalizePath } from 'obsidian';
 import { shell } from 'electron';
 import { copyFileSync, mkdirSync, readFileSync } from 'fs';
 import { dirname, isAbsolute, join, relative, sep } from 'path';
-import type AtomicPressPlugin from '../main';
+import type NopePlugin from '../main';
 import { buildImage, checkDockerReady, cleanupIntermediates, imageExists, runPipeline } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '../utils/paths';
 import { prepareBrandingOverride } from '../utils/branding';
@@ -10,7 +10,7 @@ import { prepareBibliography } from '../utils/bibliography';
 import { getSkillStatus } from '../utils/skill';
 import { ensureBundledAssets } from '../utils/assets';
 
-export function registerExportCommand(plugin: AtomicPressPlugin): void {
+export function registerExportCommand(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'export-active-note',
 		name: 'Export active note to PDF',
@@ -20,7 +20,7 @@ export function registerExportCommand(plugin: AtomicPressPlugin): void {
 	});
 }
 
-async function exportActiveNote(plugin: AtomicPressPlugin): Promise<void> {
+async function exportActiveNote(plugin: NopePlugin): Promise<void> {
 	// Get the active markdown file.
 	const file = plugin.app.workspace.getActiveFile();
 	if (!file || !(file instanceof TFile) || file.extension.toLowerCase() !== 'md') {

@@ -1,10 +1,10 @@
-# Atomic Press
+# NOPE
 
-Atomic Press turns Obsidian notes into publication-ready PDFs through a Docker-based Pandoc/LaTeX pipeline. You write in Obsidian, keep your notes modular, and export a polished PDF without installing a local TeX distribution.
+NOPE ( Not anOther Pdf Exporter ) turns Obsidian notes into publication-ready PDFs through a Docker-based Pandoc/LaTeX pipeline. You write in Obsidian, keep your notes modular, and export a polished PDF without installing a local TeX distribution.
 
-## What Atomic Press does
+## What NOPE does
 
-Atomic Press keeps the Obsidian authoring model intact and adds the parts that are usually painful to wire up by hand: PDF export, numbering, cross-references, glossaries, branding, citation handling, and LaTeX-backed structured blocks.
+NOPE keeps the Obsidian authoring model intact and adds the parts that are usually painful to wire up by hand: PDF export, numbering, cross-references, glossaries, branding, citation handling, and LaTeX-backed structured blocks.
 
 The core authoring model is **atomic**. Chapters, theorems, tables, glossary entries, diagrams, and other reusable content blocks live in their own notes and are embedded into a main document.
 
@@ -19,7 +19,7 @@ The core authoring model is **atomic**. Chapters, theorems, tables, glossary ent
 At a high level, the setup is simple:
 
 1. Install Docker.
-2. Install the Atomic Press plugin.
+2. Install the NOPE plugin.
 3. Export the active note to PDF.
 
 The first export prepares the full toolchain, including the download and build of the Docker image. Alternatively you can build the image in the Settings or via the command palette. PDF export is a regular command from the Obsidian command palette.
@@ -31,8 +31,8 @@ Community Store: pending.
 Until then, via [BRAT](https://github.com/TfTHacker/obsidian42-brat):
 
 1. Install BRAT.
-2. Add beta plugin: `MrIwan/atomic-press`.
-3. Enable Atomic Press.
+2. Add beta plugin: `MrIwan/nope`.
+3. Enable NOPE.
 
 Requires Docker. First export builds the image.
 
@@ -40,7 +40,7 @@ Requires Docker. First export builds the image.
 
 ## Recommended workflow
 
-Atomic Press works best when you treat your vault like a set of reusable building blocks instead of one long monolithic document.
+NOPE works best when you treat your vault like a set of reusable building blocks instead of one long monolithic document.
 
 A typical workflow looks like this:
 
@@ -107,7 +107,7 @@ This structure makes it easier to reuse content across multiple documents and re
 
 ### Embedded notes
 
-Atomic Press uses normal Obsidian embed syntax to assemble documents.
+NOPE uses normal Obsidian embed syntax to assemble documents.
 
 Supported patterns:
 
@@ -125,7 +125,7 @@ Supported patterns:
 
 ### Auto heading shift
 
-Embedded notes should start with a normal `# Heading`. Atomic Press automatically shifts heading depth based on where the note is embedded.
+Embedded notes should start with a normal `# Heading`. NOPE automatically shifts heading depth based on where the note is embedded.
 
 That means embedded content can keep a clean, local structure without forcing you to manually rewrite heading levels for every context.
 
@@ -151,7 +151,7 @@ This is useful when a document contains many large chapter embeds and you want t
 
 ## Structured blocks with `latex-env`
 
-Some notes are not just plain text blocks. Atomic Press can map a note to a LaTeX environment through frontmatter.
+Some notes are not just plain text blocks. NOPE can map a note to a LaTeX environment through frontmatter.
 
 This allows structured content to stay author-friendly in Obsidian while being rendered correctly in the exported PDF.
 
@@ -216,7 +216,7 @@ As shown in [[Table-Results]], the measurements indicate ...
 
 ### Equations and math environments
 
-Atomic Press supports math-focused environments such as `equation`, `align`, `gather`, `multline`, and `alignat`, including star variants.
+NOPE supports math-focused environments such as `equation`, `align`, `gather`, `multline`, and `alignat`, including star variants.
 
 This is useful when equations should be atomic, reusable, and cross-referenceable instead of being buried inline inside long chapter notes.
 
@@ -300,7 +300,7 @@ A reference with `[[plot.png]]` becomes `Abbildung X`.
 ## Glossary and acronyms
 
 Glossary entries and acronyms are defined as atomic notes with `gls-*` frontmatter.  
-When you link such a note with a normal wikilink like `[[GLS]]` or `[[ACN]]`, Atomic Press automatically turns it into the correct glossary or acronym reference in the exported PDF.
+When you link such a note with a normal wikilink like `[[GLS]]` or `[[ACN]]`, NOPE automatically turns it into the correct glossary or acronym reference in the exported PDF.
 
 ### Example
 
@@ -328,7 +328,7 @@ gls-type: acronym
 
 ## Citations and bibliography
 
-Atomic Press supports bibliography-driven citations through Pandoc. A document can point to a `.bib` file in the vault and optionally use a CSL style.
+NOPE supports bibliography-driven citations through Pandoc. A document can point to a `.bib` file in the vault and optionally use a CSL style.
 
 This makes the plugin suitable for academic or technical writing workflows that already rely on tools such as Zotero and Better BibTeX.
 
@@ -353,7 +353,7 @@ As shown by [@smith2020], the result holds.
 
 ## Obsidian-specific inline syntax
 
-Atomic Press also preserves and transforms selected inline authoring patterns.
+NOPE also preserves and transforms selected inline authoring patterns.
 
 Supported examples include:
 
@@ -387,7 +387,7 @@ A branding note can control items such as:
 - Colors and template metadata
 - Other Pandoc and Eisvogel options
 
-The branding note is activated from the document frontmatter via `atomic-press-branding`.
+The branding note is activated from the document frontmatter via `nope-branding`.
 
 ### Example
 
@@ -395,7 +395,7 @@ Document frontmatter:
 
 ```yaml
 ---
-atomic-press-branding: Branding-Customer-A
+nope-branding: Branding-Customer-A
 ---
 ```
 
@@ -428,7 +428,7 @@ Document frontmatter overrides selected values from the branding note:
 
 ```yaml
 ---
-atomic-press-branding: "[[Branding-Default]]"
+nope-branding: "[[Branding-Default]]"
 title: "Q4 Report"
 header-color: "#003366"
 ---
@@ -440,7 +440,7 @@ In this example, the document uses the `Branding-Default` note for general styli
 
 ## Table of contents and generated lists
 
-Atomic Press supports document metadata such as a table of contents, list of figures, and list of tables.
+NOPE supports document metadata such as a table of contents, list of figures, and list of tables.
 
 That makes it practical for longer reports or formal deliverables where navigation and generated lists are expected.
 
@@ -494,7 +494,7 @@ This command clears the build folder used during export. It is mainly useful for
 
 ## AI skill integration
 
-Atomic Press can install a skill into the vault, where thie Atomic Press conventions are defined. The goal is to help AI tools follow the plugin's writing conventions when generating or editing exportable notes.
+NOPE can install a skill into the vault, where thie NOPE conventions are defined. The goal is to help AI tools follow the plugin's writing conventions when generating or editing exportable notes.
 
 This is particularly useful when AI is used for report drafting, technical writing, or vault-assisted authoring.
 
@@ -508,7 +508,7 @@ With the skill installed, asking an AI assistant for "a new theorem note about t
 
 Copyright (C) 2026 Wanja Zemke
 
-Atomic Press is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License v3.0** as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+NOPE is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License v3.0** as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the full license text in [LICENSE](LICENSE) for details.
 

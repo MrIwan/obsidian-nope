@@ -4,7 +4,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
 
 export const SKILL_RELATIVE_SOURCE = join('skill', 'SKILL.md');
-export const SKILL_RELATIVE_TARGET = join('.claude', 'skills', 'atomic-press', 'SKILL.md');
+export const SKILL_RELATIVE_TARGET = join('.claude', 'skills', 'nope', 'SKILL.md');
 
 export type SkillStatus = 'missing' | 'outdated' | 'current';
 

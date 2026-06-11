@@ -1,6 +1,6 @@
 import { Notice, Plugin } from 'obsidian';
-import { DEFAULT_SETTINGS, AtomicPressSettingTab } from './settings';
-import type { AtomicPressSettings } from './types';
+import { DEFAULT_SETTINGS, NopeSettingTab } from './settings';
+import type { NopeSettings } from './types';
 import { registerExportCommand } from './commands/export';
 import { registerBuildCommand, registerBuildCommandnoCache } from './commands/build';
 import { registerBrandingTemplateCommand } from './commands/branding-template';
@@ -8,8 +8,8 @@ import { registerMaintenanceCommands } from './commands/maintenance';
 import { getPluginAbsoluteDir } from './utils/paths';
 import { ensureBundledAssets } from './utils/assets';
 
-export default class AtomicPressPlugin extends Plugin {
-	settings!: AtomicPressSettings;
+export default class NopePlugin extends Plugin {
+	settings!: NopeSettings;
 
 	async onload() {
 		await this.loadSettings();
@@ -20,10 +20,10 @@ export default class AtomicPressPlugin extends Plugin {
 			ensureBundledAssets(getPluginAbsoluteDir(this), this.manifest.version);
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
-			new Notice(`Atomic Press: could not set up pipeline files. ${msg}`, 10000);
+			new Notice(`NOPE: could not set up pipeline files. ${msg}`, 10000);
 		}
 
-		this.addSettingTab(new AtomicPressSettingTab(this.app, this));
+		this.addSettingTab(new NopeSettingTab(this.app, this));
 		registerExportCommand(this);
 		registerBuildCommand(this);
 		registerBuildCommandnoCache(this);
@@ -39,7 +39,7 @@ export default class AtomicPressPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<AtomicPressSettings>,
+			(await this.loadData()) as Partial<NopeSettings>,
 		);
 	}
 

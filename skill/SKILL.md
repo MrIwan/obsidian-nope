@@ -1,13 +1,13 @@
 ---
-name: atomic-press
-description: Use when authoring or editing Obsidian notes that will be exported to PDF via the atomic-press plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, atomic-press-branding), wikilink embed/ref semantics, image figures, inline filters, glossary, mermaid diagrams, and branding.
-atomic-press-version: 0.x
+name: nope
+description: Use when authoring or editing Obsidian notes that will be exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, nope-branding), wikilink embed/ref semantics, image figures, inline filters, glossary, mermaid diagrams, and branding.
+nope-version: 0.x
 last-updated: 2026-06-10
 ---
 
-# atomic-press — Schreibkonvention
+# nope — Schreibkonvention
 
-atomic-press exportiert Obsidian-Notes über eine Pandoc/LaTeX-Pipeline zu PDF. Die Konvention ist atomic: jedes Konzept (Theorem, Tabelle, Glossar-Eintrag, größere Definition) **und jedes Kapitel** bekommt eine eigene `.md`-Datei und wird per Wikilink-Embed in Hauptdokumente eingebunden. Hauptdokumente sind kurz und bestehen primär aus Frontmatter und `![[Embeds]]` (`+[[Embeds2]]`). Cross-Refs zeigen automatisch auf die richtige Nummer („Theorem 3", „Tabelle 5", „Abbildung 2", „Gleichung 1"), wenn das Embedd in der Datei gerendert wird und mit [[Embeds]] darauf verwiesen wird. Referenzen auf nicht-embedded Notes fallen auf Plain-Text zurück, damit du während des Schreibens flexibel bleiben kannst.
+nope exportiert Obsidian-Notes über eine Pandoc/LaTeX-Pipeline zu PDF. Die Konvention ist atomic: jedes Konzept (Theorem, Tabelle, Glossar-Eintrag, größere Definition) **und jedes Kapitel** bekommt eine eigene `.md`-Datei und wird per Wikilink-Embed in Hauptdokumente eingebunden. Hauptdokumente sind kurz und bestehen primär aus Frontmatter und `![[Embeds]]` (`+[[Embeds2]]`). Cross-Refs zeigen automatisch auf die richtige Nummer („Theorem 3", „Tabelle 5", „Abbildung 2", „Gleichung 1"), wenn das Embedd in der Datei gerendert wird und mit [[Embeds]] darauf verwiesen wird. Referenzen auf nicht-embedded Notes fallen auf Plain-Text zurück, damit du während des Schreibens flexibel bleiben kannst.
 
 **Atomic Notes starten immer mit H1** (`# Titel`). Der Auto-Heading-Shift verschiebt H1 beim Embed automatisch auf die passende Tiefe relativ zum Host-Heading. Du musst Header in Embeds nie von Hand anpassen.
 
@@ -67,12 +67,12 @@ gls-type: acronym                   # acronym | term
 
 `acronym` landet im Abkürzungsverzeichnis, `term` im Glossar. Wikilinks auf die Note (`[[KI]]`) werden zu `\gls{ki}`.
 
-### `atomic-press-branding`
+### `nope-branding`
 
 Optional. Wikilink (quoted!) auf eine Branding-Note. Ohne den Key gelten die Plugin-Defaults aus `_base.yml`.
 
 ```yaml
-atomic-press-branding: "[[Branding-Kunde1]]"
+nope-branding: "[[Branding-Kunde1]]"
 ```
 
 ### `abstract` — Kurzfassung (optional)
@@ -199,7 +199,7 @@ Inline-`mermaid`-Blöcke direkt im Hauptdokument oder in einer beliebigen Note o
 
 ## Zitationen
 
-Citations laufen über Pandoc-citeproc gegen eine `.bib`-Datei im Vault. Die Resolution arbeitet wie bei `atomic-press-branding` — das Plugin sucht die Datei via Obsidian's Link-Index, du kannst Plain-Pfad oder Wikilink schreiben.
+Citations laufen über Pandoc-citeproc gegen eine `.bib`-Datei im Vault. Die Resolution arbeitet wie bei `nope-branding` — das Plugin sucht die Datei via Obsidian's Link-Index, du kannst Plain-Pfad oder Wikilink schreiben.
 
 Im Doc-Frontmatter:
 
@@ -243,7 +243,7 @@ Empfohlener Authoring-Workflow für größere Quell-Mengen: Zotero als Source-of
 
 ## Branding-Notes
 
-Pro Kunde/Projekt eine `.md` mit Frontmatter-Overrides. Body wird beim Export ignoriert (reine Editor-Doku). Aktivierung im Doc-Frontmatter über `atomic-press-branding`. Eine Vorlage erzeugt der Command „Create branding template".
+Pro Kunde/Projekt eine `.md` mit Frontmatter-Overrides. Body wird beim Export ignoriert (reine Editor-Doku). Aktivierung im Doc-Frontmatter über `nope-branding`. Eine Vorlage erzeugt der Command „Create branding template".
 
 Wikilinks im YAML **müssen quoted sein** — sonst parst YAML das als Flow-Sequence:
 
@@ -305,7 +305,7 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 ```markdown
 ---
 title: "Mein Bericht"
-atomic-press-branding: "[[Branding-Kunde1]]"
+nope-branding: "[[Branding-Kunde1]]"
 toc: true
 abstract: "[[Meine-Kurzfassung]]" # optional; alternativ Text direkt, ohne Key keine Abstract-Seite
 ---

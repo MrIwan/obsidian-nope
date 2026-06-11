@@ -4,7 +4,7 @@ import { execFile, spawn } from 'child_process';
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { delimiter, join } from 'path';
 
-export const DOCKER_IMAGE_NAME = 'atomic-press';
+export const DOCKER_IMAGE_NAME = 'nope';
 function dockerSearchDirs(): string[] {
 	switch (process.platform) {
 		case 'win32':

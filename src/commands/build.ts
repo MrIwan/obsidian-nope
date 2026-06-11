@@ -1,9 +1,9 @@
 import { Notice } from 'obsidian';
-import type AtomicPressPlugin from '../main';
+import type NopePlugin from '../main';
 import { buildImage } from '../utils/docker';
 import { getPluginAbsoluteDir } from '../utils/paths';
 
-export function registerBuildCommand(plugin: AtomicPressPlugin): void {
+export function registerBuildCommand(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'build-docker-image',
 		name: 'Build docker image (with cache)',
@@ -13,7 +13,7 @@ export function registerBuildCommand(plugin: AtomicPressPlugin): void {
 	});
 }
 
-export function registerBuildCommandnoCache(plugin: AtomicPressPlugin): void {
+export function registerBuildCommandnoCache(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'build-docker-image-no-cache',
 		name: 'Build docker image (no cache)',
@@ -23,7 +23,7 @@ export function registerBuildCommandnoCache(plugin: AtomicPressPlugin): void {
 	});
 }
 
-async function buildDockerImage(plugin: AtomicPressPlugin, noCache: boolean = false): Promise<void> {
+async function buildDockerImage(plugin: NopePlugin, noCache: boolean = false): Promise<void> {
 	new Notice('Building docker image (may take several minutes)…');
 	try {
 		const pluginDir = getPluginAbsoluteDir(plugin);
