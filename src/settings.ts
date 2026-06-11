@@ -1,8 +1,9 @@
-import { App, ButtonComponent, Notice, PluginSettingTab, Setting } from 'obsidian';
+import { App, ButtonComponent, PluginSettingTab, Setting } from 'obsidian';
 import type NopePlugin from './main';
 import type { NopeSettings, PreflightResults } from './types';
 import { runPreflightChecks } from './utils/preflight';
 import { DOCKER_IMAGE_NAME, buildImage, imageExists } from './utils/docker';
+import { ProgressNotice, parseBuildStep } from './utils/progress';
 import { getPluginAbsoluteDir, getVaultAbsolutePath } from './utils/paths';
 import { cleanupBuild, installAiSkill, removeDockerImage } from './commands/maintenance';
 import { getSkillStatus, type SkillStatus } from './utils/skill';
@@ -140,13 +141,17 @@ export class NopeSettingTab extends PluginSettingTab {
 				btn.setButtonText('Build image').onClick(async () => {
 					btn.setDisabled(true);
 					btn.setButtonText('Building… (this may take 5–15 minutes)');
+					const progress = new ProgressNotice('Building docker image (no cache, 5–15 min)…');
 					try {
 						const pluginDir = getPluginAbsoluteDir(this.plugin);
-						await buildImage(pluginDir, true);
-						new Notice('Docker image build complete.');
+						await buildImage(pluginDir, true, (chunk) => {
+							const step = parseBuildStep(chunk);
+							if (step) progress.update(`Building docker image — ${step}`);
+						});
+						progress.succeed('Docker image build complete.');
 					} catch (e) {
 						const msg = e instanceof Error ? e.message : String(e);
-						new Notice(`Build failed: ${msg}`);
+						progress.fail(`Build failed: ${msg}`);
 					} finally {
 						btn.setDisabled(false);
 						await refreshImageStatus();

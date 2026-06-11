@@ -5,9 +5,9 @@ import { dirname, isAbsolute, join, relative, sep } from 'path';
 import type NopePlugin from '../main';
 import { buildImage, checkDockerReady, cleanupIntermediates, imageExists, runPipeline } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '../utils/paths';
+import { ProgressNotice, parseBuildStep, parsePipelinePhase } from '../utils/progress';
 import { prepareBrandingOverride } from '../utils/branding';
 import { prepareBibliography } from '../utils/bibliography';
-import { getSkillStatus } from '../utils/skill';
 import { ensureBundledAssets } from '../utils/assets';
 
 export function registerExportCommand(plugin: NopePlugin): void {
@@ -31,40 +31,37 @@ async function exportActiveNote(plugin: NopePlugin): Promise<void> {
 	const pluginDir = getPluginAbsoluteDir(plugin);
 	const vaultPath = getVaultAbsolutePath(plugin.app);
 
-	// Ensure the bundled pipeline/ + skill/ are present (idempotent; no-op once
-	// extracted for this version). Guards against installs without onload setup.
+	const progress = new ProgressNotice(`Exporting "${file.basename}"…`);
+
+	// Ensure the bundled pipeline/ + skill/ are present
 	try {
 		ensureBundledAssets(pluginDir, plugin.manifest.version);
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
-		new Notice(`Pipeline files missing and could not be created. ${msg}`, 10000);
+		progress.fail(`Pipeline files missing and could not be created. ${msg}`);
 		return;
 	}
 
-	// Verify Docker is ready before doing anything else, so a stopped daemon
-	// yields a clear message instead of a cryptic compose failure.
+	// Verify Docker is ready
 	const dockerReady = await checkDockerReady();
 	if (!dockerReady.ok) {
-		new Notice(dockerReady.message, 10000);
+		progress.fail(dockerReady.message);
 		return;
 	}
 
-	// Warn if AI skill is missing; does not block export since pipeline is independent.
-	if (getSkillStatus(pluginDir, vaultPath) === 'missing') {
-		new Notice(
-			'AI conventions skill not installed. Install via plugin settings → AI conventions skill.',
-			10000,
-		);
-	}
 
-	// Image must be built.
+	// Image must be built
 	if (!(await imageExists())) {
-		new Notice('Docker image not found. Building it now. This may take a while…');
+		progress.update('Docker image not found — building it now (first run, 5–15 min)…');
 		try {
-			await buildImage(pluginDir);
+			await buildImage(pluginDir, false, (chunk) => {
+				const step = parseBuildStep(chunk);
+				if (step) progress.update(`Building Docker image (first run, 5–15 min) — ${step}`);
+			});
+			progress.update(`Docker image built — exporting "${file.basename}"…`);
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
-			new Notice(`Failed to build Docker image. Try to build in the plugin settings. ${msg}`, 10000);
+			progress.fail(`Failed to build Docker image. Try to build in the plugin settings. ${msg}`);
 			return;
 		}
 	}
@@ -80,64 +77,48 @@ async function exportActiveNote(plugin: NopePlugin): Promise<void> {
 
 	// Materialize branding overrides; fail loudly if branding file cannot be resolved.
 	try {
-		const prepared = prepareBrandingOverride(
+		prepareBrandingOverride(
 			plugin.app,
 			file,
 			workDir,
 			vaultPath,
 			baseName,
 		);
-		if (prepared) {
-			new Notice(
-				`Branding override applied (${prepared.copiedAssets.length} asset(s)).`,
-			);
-		}
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
-		new Notice(`Branding override failed. ${msg}`, 10000);
+		progress.fail(`Branding override failed. ${msg}`);
 		return;
 	}
 
 	// Materialize bibliography; copy to work directory with fixed filenames for build.sh.
 	try {
-		const preparedBib = prepareBibliography(
+		prepareBibliography(
 			plugin.app,
 			file,
 			workDir,
 			vaultPath,
 			pluginDir,
 		);
-		if (preparedBib) {
-			const cslPart = preparedBib.cslHostPath
-				? preparedBib.cslPreinstalled
-					? ' + preinstalled CSL'
-					: ' + custom CSL'
-				: '';
-			new Notice(`Bibliography prepared${cslPart}.`);
-		}
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
-		new Notice(`Bibliography prep failed. ${msg}`, 10000);
+		progress.fail(`Bibliography prep failed. ${msg}`);
 		return;
 	}
 
-	// Run export pipeline.
-	new Notice(`Exporting "${file.basename}"…`);
+	// Run export pipeline
 	let producedPdf: string;
 	try {
-		producedPdf = await runPipeline(pluginDir, vaultPath, file.path);
+		producedPdf = await runPipeline(pluginDir, vaultPath, file.path, (chunk) => {
+			const phase = parsePipelinePhase(chunk);
+			if (phase) progress.update(`Exporting "${file.basename}" — ${phase}`);
+		});
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
-		new Notice(`Export failed. ${msg}`, 10000);
+		progress.fail(`Export failed. ${msg}`);
 		return;
 	}
 
-	// Copy PDF to destination. Destinations INSIDE the vault are written through
-	// Obsidian's adapter instead of raw fs: a raw copy bypasses the vault API,
-	// and on Linux the inotify-based watcher can leave the embedded PDF viewer
-	// rendering a stale/blank file (valid PDF on disk, but Obsidian shows it
-	// empty). Adapter writes propagate the change event to viewer and index
-	// directly. On failure the build folder is kept so the PDF can be inspected.
+	// Copy PDF to destination.
 	try {
 		const vaultRelPath = relative(vaultPath, destPath);
 		if (vaultRelPath.startsWith('..') || isAbsolute(vaultRelPath)) {
@@ -158,7 +139,7 @@ async function exportActiveNote(plugin: NopePlugin): Promise<void> {
 		}
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
-		new Notice(`Export failed while copying the PDF. Build folder kept for inspection. ${msg}`, 10000);
+		progress.fail(`Export failed while copying the PDF. Build folder kept for inspection. ${msg}`);
 		return;
 	}
 
@@ -167,7 +148,7 @@ async function exportActiveNote(plugin: NopePlugin): Promise<void> {
 		cleanupIntermediates(workDir);
 	}
 
-	new Notice(`Exported to ${destPath}`);
+	progress.succeed(`Exported to ${destPath}`);
 
 	// Auto-open PDF if enabled.
 	if (plugin.settings.autoOpenPdf) {
