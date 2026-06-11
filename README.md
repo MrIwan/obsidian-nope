@@ -59,17 +59,6 @@ A typical workflow looks like this:
 
 This keeps the source material maintainable, reusable, and easy to rearrange.
 
-### Example
-
-```text
-Vault/
-├── Report.md              # main document
-├── Chapter-Introduction.md
-├── Chapter-Theory.md
-├── Theorem-Pythagoras.md
-└── Table-Results.md
-```
-
 ***
 
 ## Main document structure
@@ -121,13 +110,6 @@ Supported patterns:
 - `![[Note#Heading]]` embeds a section starting at a heading.
 - `![[Note#^block-id]]` embeds a block slice.
 
-#### Example
-
-```markdown
-![[Chapter-Theory]]
-![[Chapter-Theory#Background]]
-![[Chapter-Theory#^key-result]]
-```
 
 ### Auto heading shift
 
@@ -267,8 +249,6 @@ Optional frontmatter keys also let you control width and render resolution.
 latex-env: mermaid
 caption: "Data flow from vault to PDF"
 ---
-# Data Flow
-
 ```mermaid
 graph TD
   A[Vault] --> B[Pandoc]
@@ -395,16 +375,6 @@ A branding note can control items such as:
 
 The branding note is activated from the document frontmatter via `nope-branding`.
 
-### Example
-
-Document frontmatter:
-
-```yaml
----
-nope-branding: Branding-Customer-A
----
-```
-
 ### Logos in headers and footers
 
 Logo paths can be managed through branding metadata. Header and footer logo slots are designed for easy per-project customization.
@@ -449,8 +419,6 @@ In this example, the document uses the `Branding-Default` note for general styli
 NOPE supports document metadata such as a table of contents, list of figures, and list of tables.
 
 That makes it practical for longer reports or formal deliverables where navigation and generated lists are expected.
-
-### Example
 
 ```yaml
 ---
