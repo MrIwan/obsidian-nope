@@ -28,9 +28,13 @@ The first export prepares the full toolchain, including the download and build o
 
 ### Install the plugin
 
-Community Store: pending.
+**Community store** (recommended):
 
-Until then, via [BRAT](https://github.com/TfTHacker/obsidian42-brat):
+1. In Obsidian: Settings → Community plugins → Browse.
+2. Search for "Nope" and install.
+3. Enable NOPE.
+
+**via [BRAT](https://github.com/TfTHacker/obsidian42-brat)**:
 
 1. Install BRAT.
 2. Add beta plugin: `MrIwan/obsidian-nope`.
