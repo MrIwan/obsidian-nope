@@ -108,7 +108,12 @@ export function cleanupIntermediates(workDir: string): void {
 }
 
 // Build Docker image; logs written to build/last-build.log.
-export async function buildImage(pluginDir: string, noCache: boolean = false): Promise<void> {
+// `onOutput` receives every stdout/stderr chunk for live progress reporting.
+export async function buildImage(
+	pluginDir: string,
+	noCache: boolean = false,
+	onOutput?: (chunk: string) => void,
+): Promise<void> {
 	const pipelineDir = join(pluginDir, 'pipeline');
 	const buildDir = join(pipelineDir, 'build');
 	const logFile = join(buildDir, 'last-build.log');
@@ -130,12 +135,13 @@ export async function buildImage(pluginDir: string, noCache: boolean = false): P
 			windowsHide: true,
 		});
 
-		proc.stdout?.on('data', (chunk: Buffer) => {
-			output += chunk.toString();
-		});
-		proc.stderr?.on('data', (chunk: Buffer) => {
-			output += chunk.toString();
-		});
+		const handleChunk = (chunk: Buffer) => {
+			const text = chunk.toString();
+			output += text;
+			onOutput?.(text);
+		};
+		proc.stdout?.on('data', handleChunk);
+		proc.stderr?.on('data', handleChunk);
 
 		proc.on('error', (err: Error) => {
 			writeFileSync(logFile, `Failed to spawn process: ${err.message}\n\n${output}`);
@@ -156,10 +162,12 @@ export async function buildImage(pluginDir: string, noCache: boolean = false): P
 }
 
 // Run the export pipeline for a given markdown file.
+// `onOutput` receives every stdout/stderr chunk for live progress reporting.
 export async function runPipeline(
 	pluginDir: string,
 	vaultPath: string,
 	mdRelPath: string,
+	onOutput?: (chunk: string) => void,
 ): Promise<string> {
 	const pipelineDir = join(pluginDir, 'pipeline');
 	const buildDir = join(pipelineDir, 'build');
@@ -185,12 +193,13 @@ export async function runPipeline(
 			windowsHide: true,
 		});
 
-		proc.stdout?.on('data', (chunk: Buffer) => {
-			output += chunk.toString();
-		});
-		proc.stderr?.on('data', (chunk: Buffer) => {
-			output += chunk.toString();
-		});
+		const handleChunk = (chunk: Buffer) => {
+			const text = chunk.toString();
+			output += text;
+			onOutput?.(text);
+		};
+		proc.stdout?.on('data', handleChunk);
+		proc.stderr?.on('data', handleChunk);
 
 		proc.on('error', (err: Error) => {
 			writeFileSync(logFile, `Failed to spawn process: ${err.message}\n\n${output}`);

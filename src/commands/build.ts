@@ -1,7 +1,7 @@
-import { Notice } from 'obsidian';
 import type NopePlugin from '../main';
 import { buildImage } from '../utils/docker';
 import { getPluginAbsoluteDir } from '../utils/paths';
+import { ProgressNotice, parseBuildStep } from '../utils/progress';
 
 export function registerBuildCommand(plugin: NopePlugin): void {
 	plugin.addCommand({
@@ -24,13 +24,17 @@ export function registerBuildCommandnoCache(plugin: NopePlugin): void {
 }
 
 async function buildDockerImage(plugin: NopePlugin, noCache: boolean = false): Promise<void> {
-	new Notice('Building docker image (may take several minutes)…');
+	// Persistent notice with live BuildKit steps
+	const progress = new ProgressNotice('Building docker image (first run, 5–15 min)…');
 	try {
 		const pluginDir = getPluginAbsoluteDir(plugin);
-		await buildImage(pluginDir, noCache);
-		new Notice('Docker image build complete.');
+		await buildImage(pluginDir, noCache, (chunk) => {
+			const step = parseBuildStep(chunk);
+			if (step) progress.update(`Building docker image — ${step}`);
+		});
+		progress.succeed('Docker image build complete.');
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
-		new Notice(`Build failed: ${msg}`, 10000);
+		progress.fail(`Build failed: ${msg}`);
 	}
 }
