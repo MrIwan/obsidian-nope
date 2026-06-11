@@ -6,8 +6,7 @@ import { BUNDLED_ASSETS } from '../generated/bundled-assets';
 
 const VERSION_MARKER = '.bundled-assets-version';
 
-// Write bundled assets into pluginDir unless they are already current for this
-// plugin version. Idempotent: a no-op once the marker matches `version`.
+// Write bundled assets into pluginDir unless they are already current for this plugin version.
 export function ensureBundledAssets(pluginDir: string, version: string): void {
 	const markerPath = join(pluginDir, VERSION_MARKER);
 
@@ -19,7 +18,9 @@ export function ensureBundledAssets(pluginDir: string, version: string): void {
 		}
 	}
 
-	for (const [relPath, base64] of Object.entries(BUNDLED_ASSETS)) {
+	
+	const assets: Record<string, string> = BUNDLED_ASSETS;
+	for (const [relPath, base64] of Object.entries(assets)) {
 		const dest = join(pluginDir, relPath);
 		mkdirSync(dirname(dest), { recursive: true });
 		writeFileSync(dest, Buffer.from(base64, 'base64'));
