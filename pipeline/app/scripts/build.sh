@@ -24,6 +24,10 @@ mkdir -p "$WORK"
 PROCESSED_INPUT="$WORK/$BASE.md"
 sed 's/+\[\[/![[/g' "$INPUT_ABS" > "$PROCESSED_INPUT"
 
+# Dependency manifest for plugin watch mode
+export NOPE_DEPS_FILE="$WORK/deps.txt"
+printf '%s\n' "$INPUT_ABS" > "$NOPE_DEPS_FILE"
+
 # Vault resource-path discovery: collect vault dirs, exclude common non-content folders.
 VAULT_PATHS=$(find /vault -type d \
     -not -path '*/.obsidian*' \

@@ -14,12 +14,23 @@ local function is_image_file(src)
   return ext and image_exts[ext:lower()]
 end
 
+-- Dependency manifest for the plugin's watch mode
+local deps_file = os.getenv("NOPE_DEPS_FILE")
+local deps_seen = {}
+
+local function log_dep(path)
+  if not deps_file or deps_seen[path] then return end
+  deps_seen[path] = true
+  local f = io.open(deps_file, "a")
+  if f then f:write(path, "\n"); f:close() end
+end
+
 local function find_note_path(notename)
   if not notename:match("%.%w+$") then notename = notename .. ".md" end
   for _, path in ipairs(PANDOC_STATE.resource_path or {"."}) do
     local full = path .. "/" .. notename
     local f = io.open(full, "rb")
-    if f then f:close(); return full end
+    if f then f:close(); log_dep(full); return full end
   end
   return nil
 end
@@ -691,6 +702,8 @@ local function register_image_figure(figure_block)
   if img.t ~= "Image" or not is_image_file(img.src) then return nil end
 
   local src = img.src
+  -- Resolution only for dep logging
+  find_note_path(src)
 
   -- Fallback to filename if no caption provided.
   local caption = figure_block.caption
