@@ -144,6 +144,13 @@ Some notes are not just plain text blocks. NOPE can map a note to a LaTeX enviro
 
 This allows structured content to stay author-friendly in Obsidian while being rendered correctly in the exported PDF.
 
+| Block | `latex-env` | `caption` | `w` / `width` | Other keys | Wikilink renders as |
+|---|---|---|---|---|---|
+| Theorem family | `theorem`, `lemma`, `definition`, `proof`, custom amsthm | — | — | `latex-short` (optional) | "Theorem N" |
+| Table | `table` | **required** | — | `page-break` (optional, default `true`) | "Table N" |
+| Mermaid diagram | `mermaid` | **required** | optional | `scale` (1–5, default 2) | "Figure N" |
+| Math | `equation`, `align`, `gather`, `multline`, `alignat` (+ `*` variants) | — | — | — | "Equation N" |
+
 ### Theorems, lemmas, definitions, proofs
 
 Use `latex-env` to wrap a note in a theorem-like environment.
