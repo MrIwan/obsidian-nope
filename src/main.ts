@@ -7,12 +7,14 @@ import { registerBrandingTemplateCommand } from './commands/branding-template';
 import { registerMaintenanceCommands } from './commands/maintenance';
 import { getPluginAbsoluteDir } from './utils/paths';
 import { ensureBundledAssets } from './utils/assets';
+import { setDockerPathOverride } from './utils/docker';
 
 export default class NopePlugin extends Plugin {
 	settings!: NopeSettings;
 
 	async onload() {
 		await this.loadSettings();
+		setDockerPathOverride(this.settings.dockerPath);
 
 		// Materialize bundled pipeline/ + skill/ files so installs that only
 		// deliver main.js (BRAT/store) still have the full toolchain on disk.

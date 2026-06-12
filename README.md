@@ -13,8 +13,6 @@ The core authoring model is **atomic**. Chapters, theorems, tables, glossary ent
 ***
 
 ## Install
-
-> **Requirements:** Docker must be installed **and on your `PATH`** — the plugin invokes `docker` directly. (The plugin augments `PATH` with common install locations so launching Obsidian from the GUI still works, but a non-standard Docker install must be reachable via `PATH`.)
 >
 > **Platform support:** Only **Linux** and **macOS** are tested. Windows is **experimental and currently untested** — it may not work yet. Feedback and reports very welcome.
 
@@ -490,4 +488,4 @@ It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
 
 ## A note on AI assistance
 
-Parts of this codebase were written with the help of Claude. Everything was reviewed, tested, and understood before being committed.
+Parts of this codebase were written with the help of Claude. Everything was reviewed, tested and understood before being committed.

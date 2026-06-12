@@ -30,7 +30,9 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest@v4
         with:
-          subject-path: 'main.js'
+          subject-path: |
+            main.js
+            styles.css
 
       - name: Create draft release with assets
         env:
@@ -40,4 +42,4 @@ jobs:
           gh release create "$tag" \
             --title="$tag" \
             --draft \
-            main.js manifest.json
+            main.js manifest.json styles.css

@@ -1,8 +1,41 @@
-/*
+/* Nope — plugin styles. */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* Status chips in the Docker settings section: CLI → daemon → image. */
+.nope-status-chips {
+	display: flex;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+}
 
-If your plugin does not need CSS, delete this file.
+.nope-chip {
+	padding: var(--size-2-1) var(--size-4-2);
+	border-radius: var(--radius-s);
+	font-size: var(--font-smallest);
+	border: 1px solid var(--background-modifier-border);
+}
 
-*/
+.nope-chip-ok {
+	color: var(--text-on-accent);
+	background-color: var(--color-green);
+}
+
+.nope-chip-fail {
+	color: var(--text-on-accent);
+	background-color: var(--color-red);
+}
+
+.nope-chip-skipped {
+	color: var(--text-muted);
+	background-color: var(--background-secondary);
+}
+
+.nope-status-details {
+	color: var(--text-muted);
+	font-size: var(--font-smaller);
+	margin-bottom: var(--size-4-2);
+}
+
+.nope-chip-warn {
+	color: var(--text-on-accent);
+	background-color: var(--color-orange);
+}

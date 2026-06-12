@@ -1,8 +1,9 @@
-import { App, ButtonComponent, PluginSettingTab, Setting } from 'obsidian';
+import { App, ButtonComponent, Notice, PluginSettingTab, Setting, TextComponent } from 'obsidian';
+import { remote } from 'electron';
 import type NopePlugin from './main';
 import type { NopeSettings, PreflightResults } from './types';
 import { runPreflightChecks } from './utils/preflight';
-import { DOCKER_IMAGE_NAME, buildImage, imageExists } from './utils/docker';
+import { buildImage, detectDockerBin, setDockerPathOverride } from './utils/docker';
 import { ProgressNotice, parseBuildStep } from './utils/progress';
 import { getPluginAbsoluteDir, getVaultAbsolutePath } from './utils/paths';
 import { cleanupBuild, installAiSkill, removeDockerImage } from './commands/maintenance';
@@ -12,6 +13,7 @@ export const DEFAULT_SETTINGS: NopeSettings = {
 	outputPath: '',
 	autoOpenPdf: false,
 	keepLatexIntermediates: false,
+	dockerPath: '',
 };
 
 export class NopeSettingTab extends PluginSettingTab {
@@ -26,9 +28,7 @@ export class NopeSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		// Output configuration section.
-		new Setting(containerEl).setName('Output').setHeading();
-
+		// General settings stay at the top without a heading (plugin guidelines).
 		new Setting(containerEl)
 			.setName('Output path')
 			.setDesc(
@@ -71,116 +71,7 @@ export class NopeSettingTab extends PluginSettingTab {
 					});
 			});
 
-		// System preflight checks section.
-		new Setting(containerEl).setName('Preflight').setHeading();
-
-		const preflightResultsDiv = containerEl.createEl('div');
-
-		const renderPreflightResults = (res: PreflightResults) => {
-			preflightResultsDiv.empty();
-			for (const c of res.checks) {
-				const row = preflightResultsDiv.createEl('div');
-				row.createEl('strong', { text: c.passed ? '✓ ' : '✗ ' });
-				row.createEl('span', { text: c.name });
-				row.createEl('div', { text: c.message });
-			}
-		};
-
-		new Setting(containerEl)
-			.setName('System checks')
-			.setDesc('Verify that the docker CLI and daemon are available.')
-			.addButton((btn) => {
-				btn.setButtonText('Re-check').onClick(async () => {
-					btn.setDisabled(true);
-					btn.setButtonText('Checking…');
-					try {
-						const res = await runPreflightChecks(this.app);
-						renderPreflightResults(res);
-					} catch (e) {
-						preflightResultsDiv.setText(
-							`Error: ${e instanceof Error ? e.message : String(e)}`,
-						);
-					} finally {
-						btn.setDisabled(false);
-						btn.setButtonText('Re-check');
-					}
-				});
-			});
-
-		// Auto-run preflight checks on tab open.
-		void runPreflightChecks(this.app)
-			.then(renderPreflightResults)
-			.catch(() => {
-				/* errors will surface when user clicks Re-check */
-			});
-
-		// Docker image setup section.
-		new Setting(containerEl).setName('Setup').setHeading();
-
-		const setupStatusDiv = containerEl.createEl('div', { text: 'Checking image…' });
-		let buildBtnRef: ButtonComponent | null = null;
-
-		const refreshImageStatus = async () => {
-			const exists = await imageExists();
-			if (exists) {
-				setupStatusDiv.setText(`✓ Docker image "${DOCKER_IMAGE_NAME}" is built.`);
-				buildBtnRef?.setButtonText('Rebuild image');
-			} else {
-				setupStatusDiv.setText(`✗ Docker image "${DOCKER_IMAGE_NAME}" is not built yet.`);
-				buildBtnRef?.setButtonText('Build image');
-			}
-		};
-
-		new Setting(containerEl)
-			.setName('Docker image')
-			.setDesc(
-				'Build the pipeline image. log is written to pipeline/build/last-build.log in Plugin folder.',
-			)
-			.addButton((btn) => {
-				buildBtnRef = btn;
-				btn.setButtonText('Build image').onClick(async () => {
-					btn.setDisabled(true);
-					btn.setButtonText('Building… (this may take 5–15 minutes)');
-					const progress = new ProgressNotice('Building docker image (no cache, 5–15 min)…');
-					try {
-						const pluginDir = getPluginAbsoluteDir(this.plugin);
-						await buildImage(pluginDir, true, (chunk) => {
-							const step = parseBuildStep(chunk);
-							if (step) progress.update(`Building docker image — ${step}`);
-						});
-						progress.succeed('Docker image build complete.');
-					} catch (e) {
-						const msg = e instanceof Error ? e.message : String(e);
-						progress.fail(`Build failed: ${msg}`);
-					} finally {
-						btn.setDisabled(false);
-						await refreshImageStatus();
-					}
-				});
-			});
-
-		void refreshImageStatus();
-
-		// System maintenance section.
-		new Setting(containerEl).setName('Maintenance').setHeading();
-
-		new Setting(containerEl)
-			.setName('Remove docker image')
-			.setDesc(`Delete the "${DOCKER_IMAGE_NAME}" image. A subsequent export will rebuild it.`)
-			.addButton((btn) => {
-				btn.setButtonText('Remove').onClick(async () => {
-					btn.setDisabled(true);
-					btn.setButtonText('Removing…');
-					try {
-						await removeDockerImage();
-					} finally {
-						btn.setDisabled(false);
-						btn.setButtonText('Remove');
-						await refreshImageStatus();
-					}
-				});
-			});
-
+		
 		new Setting(containerEl)
 			.setName('Cleanup build folder')
 			.setDesc('Delete everything inside pipeline/build/ (logs and per-doc intermediates).')
@@ -197,10 +88,136 @@ export class NopeSettingTab extends PluginSettingTab {
 				});
 			});
 
+		// Docker section: status chain, binary path, image build.
+		new Setting(containerEl).setName('Docker').setHeading();
+
+		const chipsEl = containerEl.createDiv({ cls: 'nope-status-chips' });
+		const detailsEl = containerEl.createDiv({ cls: 'nope-status-details' });
+
+		// Chips mirror the check chain; failures repeat their message below the row.
+		const renderChecks = (res: PreflightResults) => {
+			chipsEl.empty();
+			detailsEl.empty();
+			for (const c of res.checks) {
+				const state = c.skipped ? 'nope-chip-skipped' : c.passed ? 'nope-chip-ok' : 'nope-chip-fail';
+				chipsEl.createSpan({ cls: `nope-chip ${state}`, text: c.name, attr: { 'aria-label': c.message } });
+				if (!c.passed && !c.skipped) detailsEl.createDiv({ text: `${c.name}: ${c.message}` });
+			}
+		};
+		const refreshChecks = async () => {
+			try {
+				renderChecks(await runPreflightChecks());
+			} catch (e) {
+				detailsEl.setText(`Error: ${e instanceof Error ? e.message : String(e)}`);
+			}
+		};
+
+		new Setting(containerEl)
+			.setName('Status')
+			.setDesc('Checks run in order: CLI → daemon → image. Hover a chip for details.')
+			.addButton((btn) => {
+				btn.setButtonText('Re-check').onClick(async () => {
+					btn.setDisabled(true);
+					await refreshChecks();
+					btn.setDisabled(false);
+				});
+			});
+
+		void refreshChecks();
+
+		const detectPlaceholder = () => detectDockerBin() ?? 'Not found — set a path or install Docker';
+		let dockerPathText: TextComponent | null = null;
+
+		new Setting(containerEl)
+			.setName('Docker path')
+			.setDesc('Empty = auto-detect common install locations (shown as placeholder). Set only for non-standard installs.')
+			.addText((text) => {
+				dockerPathText = text;
+				text
+					.setPlaceholder(detectPlaceholder())
+					.setValue(this.plugin.settings.dockerPath)
+					.onChange(async (value) => {
+						this.plugin.settings.dockerPath = value.trim();
+						setDockerPathOverride(value);
+						await this.plugin.saveSettings();
+					});
+			})
+			.addButton((btn) => {
+				btn.setIcon('folder-open').setTooltip('Browse for the docker binary').onClick(async () => {
+					const result = await remote.dialog.showOpenDialog({
+						title: 'Select the docker binary',
+						properties: ['openFile', 'showHiddenFiles'],
+					});
+					const picked = result.filePaths[0];
+					if (result.canceled || !picked) return;
+					// setValue does not fire onChange, so persist explicitly.
+					dockerPathText?.setValue(picked);
+					this.plugin.settings.dockerPath = picked;
+					setDockerPathOverride(picked);
+					await this.plugin.saveSettings();
+					await refreshChecks();
+				});
+			})
+			.addButton((btn) => {
+				btn.setButtonText('Auto-detect').onClick(async () => {
+					const found = detectDockerBin();
+					dockerPathText?.setPlaceholder(detectPlaceholder());
+					new Notice(found ? `Found: ${found}` : 'Docker not found in common install locations.');
+					await refreshChecks();
+				});
+			});
+
+		// Shared build handler; cache off forces a clean rebuild of every layer.
+		const runImageBuild = async (btn: ButtonComponent, noCache: boolean) => {
+			btn.setDisabled(true);
+			btn.setButtonText('Building…');
+			const label = noCache ? 'no cache, 5–15 min' : 'cached';
+			const progress = new ProgressNotice(`Building docker image (${label})…`);
+			try {
+				const pluginDir = getPluginAbsoluteDir(this.plugin);
+				await buildImage(pluginDir, noCache, (chunk) => {
+					const step = parseBuildStep(chunk);
+					if (step) progress.update(`Building docker image — ${step}`);
+				});
+				progress.succeed('Docker image build complete.');
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e);
+				progress.fail(`Build failed: ${msg}`);
+			} finally {
+				btn.setDisabled(false);
+				btn.setButtonText(noCache ? 'Build (no cache)' : 'Build');
+				await refreshChecks();
+			}
+		};
+
+		new Setting(containerEl)
+			.setName('Docker image')
+			.setDesc('Build uses the layer cache; "no cache" rebuilds everything. Log: pipeline/build/last-build.log.')
+			.addButton((btn) => {
+				btn.setButtonText('Build').onClick(() => runImageBuild(btn, false));
+			})
+			.addButton((btn) => {
+				btn.setButtonText('Build (no cache)').onClick(() => runImageBuild(btn, true));
+			})
+			.addButton((btn) => {
+				btn.setButtonText('Remove').setTooltip('Delete the image; the next export rebuilds it').onClick(async () => {
+					btn.setDisabled(true);
+					btn.setButtonText('Removing…');
+					try {
+						await removeDockerImage();
+					} finally {
+						btn.setDisabled(false);
+						btn.setButtonText('Remove');
+						await refreshChecks();
+					}
+				});
+			});
+
 		// AI skill installation and status section.
 		new Setting(containerEl).setName('AI conventions skill').setHeading();
 
-		const skillStatusDiv = containerEl.createEl('div');
+		const skillChipsEl = containerEl.createDiv({ cls: 'nope-status-chips' });
+		const skillDetailsEl = containerEl.createDiv({ cls: 'nope-status-details' });
 		let skillBtnRef: ButtonComponent | null = null;
 
 		const refreshSkillStatus = () => {
@@ -208,7 +225,13 @@ export class NopeSettingTab extends PluginSettingTab {
 				getPluginAbsoluteDir(this.plugin),
 				getVaultAbsolutePath(this.app),
 			);
-			skillStatusDiv.setText(SKILL_STATUS_LABEL[status]);
+			skillChipsEl.empty();
+			skillChipsEl.createSpan({
+				cls: `nope-chip ${SKILL_CHIP_CLASS[status]}`,
+				text: 'AI skill',
+				attr: { 'aria-label': SKILL_STATUS_LABEL[status] },
+			});
+			skillDetailsEl.setText(SKILL_STATUS_LABEL[status]);
 			skillBtnRef?.setButtonText(SKILL_BUTTON_LABEL[status]);
 		};
 
@@ -237,9 +260,15 @@ export class NopeSettingTab extends PluginSettingTab {
 }
 
 const SKILL_STATUS_LABEL: Record<SkillStatus, string> = {
-	missing: '✗ Skill not installed.',
-	outdated: '⚠ Skill outdated.',
-	current: '✓ Skill up to date.',
+	missing: 'Skill not installed.',
+	outdated: 'Skill outdated — installed copy differs from the bundled version.',
+	current: 'Skill up to date.',
+};
+
+const SKILL_CHIP_CLASS: Record<SkillStatus, string> = {
+	missing: 'nope-chip-fail',
+	outdated: 'nope-chip-warn',
+	current: 'nope-chip-ok',
 };
 
 const SKILL_BUTTON_LABEL: Record<SkillStatus, string> = {

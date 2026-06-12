@@ -4,12 +4,14 @@ export interface NopeSettings {
 	outputPath: string;
 	autoOpenPdf: boolean;
 	keepLatexIntermediates: boolean;
+	dockerPath: string;
 }
 
 export interface PreflightCheckResult {
 	name: string;
 	passed: boolean;
 	message: string;
+	skipped?: boolean;
 }
 
 export interface PreflightResults {
