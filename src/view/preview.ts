@@ -9,6 +9,7 @@ import type NopePlugin from '../main';
 import { runExport } from '../utils/export';
 import type { ProgressReporter } from '../utils/export';
 import { getPluginAbsoluteDir } from '../utils/paths';
+import { cleanupIntermediates } from '../utils/docker';
 
 export const NOPE_PREVIEW_VIEW_TYPE = 'nope-pdf-preview';
 
@@ -65,8 +66,9 @@ export class NopePreviewView extends ItemView {
 		const previousPath = this.filePath;
 		this.filePath = typeof s?.filePath === 'string' ? s.filePath : null;
 		this.autoRender = s?.autoRender === true;
-		// Re-binding to another note invalidates the old dependency set.
+		// Re-binding to another note invalidates the old dependency set and its build folder.
 		if (this.filePath !== previousPath) {
+			if (previousPath) this.cleanupFor(previousPath);
 			this.watchSet = new Set(this.filePath ? [this.filePath] : []);
 		}
 		this.autoToggle?.setValue(this.autoRender);
@@ -120,7 +122,17 @@ export class NopePreviewView extends ItemView {
 
 	onClose(): Promise<void> {
 		this.debouncedRender.cancel();
+		this.cleanupFor(this.filePath);
 		return Promise.resolve();
+	}
+
+	// The preview forces keep-intermediates while open; closing restores the user's setting.
+	private cleanupFor(path: string | null): void {
+		if (!path || this.plugin.settings.keepLatexIntermediates) return;
+		// A render in flight would recreate the folder mid-delete; next session cleans up normally.
+		if (this.rendering) return;
+		const base = (path.split('/').pop() ?? path).replace(/\.md$/i, '');
+		cleanupIntermediates(join(getPluginAbsoluteDir(this.plugin), 'pipeline', 'build', base));
 	}
 
 	private getFile(): TFile | null {
