@@ -31,7 +31,7 @@ export interface ExportOptions {
 
 export type ExportResult =
 	| { ok: true; pdfPath: string; destPath: string | null; workDir: string; deps: string[] }
-	| { ok: false };
+	| { ok: false; deps?: string[] };
 
 export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOptions): Promise<ExportResult> {
 	const { reporter } = opts;
@@ -123,7 +123,8 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
 		reporter.fail(`Export failed. ${msg}`);
-		return { ok: false };
+		// build.sh re-seeds the manifest before pandoc runs, so it is fresh even on LaTeX failure.
+		return { ok: false, deps: readDepsManifest(workDir, file.path) };
 	}
 
 	// Read the dependency manifest before any cleanup can remove it.
