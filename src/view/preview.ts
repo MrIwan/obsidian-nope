@@ -1,0 +1,176 @@
+// PDF preview view: renders the active note via the export pipeline and shows the build PDF inline.
+
+import { ItemView, Notice, TFile, WorkspaceLeaf, normalizePath } from 'obsidian';
+import type { ViewStateResult } from 'obsidian';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import type NopePlugin from '../main';
+import { runExport } from '../utils/export';
+import type { ProgressReporter } from '../utils/export';
+import { getPluginAbsoluteDir } from '../utils/paths';
+
+export const NOPE_PREVIEW_VIEW_TYPE = 'nope-pdf-preview';
+
+interface PreviewState {
+	filePath: string | null;
+}
+
+export class NopePreviewView extends ItemView {
+	private plugin: NopePlugin;
+	private filePath: string | null = null;
+	private rendering = false;
+	private renderButton: HTMLButtonElement | null = null;
+	private statusEl: HTMLElement | null = null;
+	private bodyEl: HTMLElement | null = null;
+
+	constructor(leaf: WorkspaceLeaf, plugin: NopePlugin) {
+		super(leaf);
+		this.plugin = plugin;
+	}
+
+	getViewType(): string {
+		return NOPE_PREVIEW_VIEW_TYPE;
+	}
+
+	getDisplayText(): string {
+		const file = this.getFile();
+		return file ? `PDF preview — ${file.basename}` : 'PDF preview';
+	}
+
+	getIcon(): string {
+		return 'printer';
+	}
+
+	get boundFilePath(): string | null {
+		return this.filePath;
+	}
+
+	getState(): Record<string, unknown> {
+		return { filePath: this.filePath };
+	}
+
+	async setState(state: unknown, result: ViewStateResult): Promise<void> {
+		const s = state as Partial<PreviewState> | null;
+		this.filePath = typeof s?.filePath === 'string' ? s.filePath : null;
+		this.refreshBody();
+		await super.setState(state, result);
+	}
+
+	async onOpen(): Promise<void> {
+		this.contentEl.empty();
+		this.contentEl.addClass('nope-preview-content');
+
+		const toolbar = this.contentEl.createDiv({ cls: 'nope-preview-toolbar' });
+		this.renderButton = toolbar.createEl('button', { text: 'Render now' });
+		this.renderButton.addEventListener('click', () => void this.render());
+		this.statusEl = toolbar.createSpan({ cls: 'nope-preview-status' });
+
+		this.bodyEl = this.contentEl.createDiv({ cls: 'nope-preview-body' });
+		this.refreshBody();
+	}
+
+	private getFile(): TFile | null {
+		if (!this.filePath) return null;
+		return this.app.vault.getFileByPath(this.filePath);
+	}
+
+	// Build PDF lives inside the plugin dir, hence vault-relative and servable via getResourcePath.
+	private pdfPaths(file: TFile): { abs: string; vaultRel: string } {
+		const base = file.basename;
+		const abs = join(getPluginAbsoluteDir(this.plugin), 'pipeline', 'build', base, `${base}.pdf`);
+		const relDir =
+			this.plugin.manifest.dir ??
+			`${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}`;
+		const vaultRel = normalizePath(`${relDir}/pipeline/build/${base}/${base}.pdf`);
+		return { abs, vaultRel };
+	}
+
+	private setStatus(message: string, kind: 'info' | 'error' = 'info'): void {
+		if (!this.statusEl) return;
+		this.statusEl.setText(message);
+		this.statusEl.toggleClass('nope-preview-status-error', kind === 'error');
+	}
+
+	private refreshBody(): void {
+		if (!this.bodyEl) return;
+		this.bodyEl.empty();
+		const file = this.getFile();
+		if (!file) {
+			this.bodyEl.createDiv({
+				cls: 'nope-preview-empty',
+				text: 'No note bound — run "Open PDF preview" from a note.',
+			});
+			return;
+		}
+		const { abs, vaultRel } = this.pdfPaths(file);
+		if (!existsSync(abs)) {
+			this.bodyEl.createDiv({
+				cls: 'nope-preview-empty',
+				text: `No PDF yet for "${file.basename}" — click "Render now".`,
+			});
+			return;
+		}
+		// Fresh getResourcePath per refresh: the mtime query param is the cache-bust.
+		const src = this.app.vault.adapter.getResourcePath(vaultRel);
+		this.bodyEl.createEl('embed', {
+			cls: 'nope-preview-embed',
+			attr: { type: 'application/pdf', src },
+		});
+	}
+
+	private async render(): Promise<void> {
+		if (this.rendering) return;
+		const file = this.getFile();
+		if (!file) {
+			this.setStatus('No note bound to this preview.', 'error');
+			return;
+		}
+		this.rendering = true;
+		if (this.renderButton) this.renderButton.disabled = true;
+		// Status line doubles as the progress reporter; no notices in the preview.
+		const reporter: ProgressReporter = {
+			update: (m) => this.setStatus(m),
+			succeed: (m) => this.setStatus(m),
+			fail: (m) => this.setStatus(m, 'error'),
+		};
+		try {
+			const result = await runExport(this.plugin, file, {
+				reporter,
+				keepIntermediates: true,
+				copyToDestination: false,
+				openPdf: false,
+			});
+			if (result.ok) this.refreshBody();
+		} finally {
+			this.rendering = false;
+			if (this.renderButton) this.renderButton.disabled = false;
+		}
+	}
+}
+
+export function registerPreviewCommand(plugin: NopePlugin): void {
+	plugin.addCommand({
+		id: 'open-pdf-preview',
+		name: 'Open PDF preview',
+		callback: async () => {
+			const active = plugin.app.workspace.getActiveFile();
+			const mdFile = active && active.extension.toLowerCase() === 'md' ? active : null;
+
+			const existing = plugin.app.workspace.getLeavesOfType(NOPE_PREVIEW_VIEW_TYPE)[0];
+			const existingView = existing?.view instanceof NopePreviewView ? existing.view : null;
+			const targetPath = mdFile?.path ?? existingView?.boundFilePath ?? null;
+			if (!targetPath) {
+				new Notice('Open a note first, then open the PDF preview.');
+				return;
+			}
+
+			const leaf = existing ?? plugin.app.workspace.getLeaf('split', 'vertical');
+			await leaf.setViewState({
+				type: NOPE_PREVIEW_VIEW_TYPE,
+				active: true,
+				state: { filePath: targetPath },
+			});
+			await plugin.app.workspace.revealLeaf(leaf);
+		},
+	});
+}
