@@ -6,7 +6,7 @@ NOPE ( Not anOther Pdf Exporter ) turns Obsidian notes into publication-ready PD
 
 NOPE keeps the Obsidian authoring model intact and adds the parts that are usually painful to wire up by hand: PDF export, numbering, cross-references, glossaries, branding, citation handling, and LaTeX-backed structured blocks.
 
-The core authoring model is **atomic**. Chapters, theorems, tables, glossary entries, diagrams, and other reusable content blocks live in their own notes and are embedded into a main document.
+The core authoring model is **atomic**. Chapters, theorems, tables, glossary entries, diagrams and other reusable content blocks live in their own notes and are embedded into a main document.
 
 > **Under Construction**: NOPE is still in early development. The Plugin is not stable yet and there may be breaking changes. Feedback and contributions are very welcome to help shape the direction of the plugin.
 

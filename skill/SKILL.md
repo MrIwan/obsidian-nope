@@ -1,15 +1,15 @@
 ---
 name: nope
-description: Use when authoring or editing Obsidian notes that will be exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, nope-branding), wikilink embed/ref semantics, image figures, inline filters, glossary, mermaid diagrams, and branding.
-nope-version: 0.x
-last-updated: 2026-06-10
+description: "Use when authoring or editing Obsidian notes that will be exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, nope-branding), wikilink embed/ref semantics, image figures, inline filters, callouts, glossary, mermaid diagrams, and branding."
+nope-version: "0.x"
+last-updated: 2026-06-12
 ---
 
 # nope — Schreibkonvention
 
 nope exportiert Obsidian-Notes über eine Pandoc/LaTeX-Pipeline zu PDF. Die Konvention ist atomic: jedes Konzept (Theorem, Tabelle, Glossar-Eintrag, größere Definition) **und jedes Kapitel** bekommt eine eigene `.md`-Datei und wird per Wikilink-Embed in Hauptdokumente eingebunden. Hauptdokumente sind kurz und bestehen primär aus Frontmatter und `![[Embeds]]` (`+[[Embeds2]]`). Cross-Refs zeigen automatisch auf die richtige Nummer („Theorem 3", „Tabelle 5", „Abbildung 2", „Gleichung 1"), wenn das Embedd in der Datei gerendert wird und mit [[Embeds]] darauf verwiesen wird. Referenzen auf nicht-embedded Notes fallen auf Plain-Text zurück, damit du während des Schreibens flexibel bleiben kannst.
 
-**Atomic Notes starten immer mit H1** (`# Titel`). Der Auto-Heading-Shift verschiebt H1 beim Embed automatisch auf die passende Tiefe relativ zum Host-Heading. Du musst Header in Embeds nie von Hand anpassen.
+**Atomic Notes starten immer mit H1** (`# Titel`). Der Auto-Heading-Shift verschiebt H1 beim Embed automatisch auf die passende Tiefe relativ zum Host-Heading. Du musst Header in Embeds nie von Hand anpassen. **Ausnahme:** Notes mit `latex-env` (Theorem-Family, `table`, `mermaid`, Math-Envs) enthalten **keine Überschriften** — der Body wird in eine LaTeX-Environment gewrapt, Titel bzw. Caption kommen aus dem Frontmatter (`latex-short`, `caption`).
 
 ## Frontmatter-Keys
 
@@ -151,8 +151,6 @@ latex-env: mermaid
 caption: "Datenfluss von Vault zu PDF"
 ---
 
-# Datenfluss
-
 ```mermaid
 graph TD
   A[Vault] --> B[Pandoc]
@@ -241,6 +239,13 @@ Empfohlener Authoring-Workflow für größere Quell-Mengen: Zotero als Source-of
 
 `==text==` → Highlight. Paragraph-scoped. Unbalanciertes `==` wird literal beibehalten.
 
+Obsidian-Callouts funktionieren auch im PDF — sie werden dort ebenfalls als Callout-Box gerendert. Alle Callout-Typen (`[!note]`, `[!abstract]`, `[!warning]`, `[!tip]`, …) werden unterstützt.
+
+```markdown
+> [!abstract]
+> Inhalt des Callouts
+```
+
 ## Branding-Notes
 
 Pro Kunde/Projekt eine `.md` mit Frontmatter-Overrides. Body wird beim Export ignoriert (reine Editor-Doku). Aktivierung im Doc-Frontmatter über `nope-branding`. Eine Vorlage erzeugt der Command „Create branding template".
@@ -276,7 +281,7 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 
 **DO** jedes Kapitel in einer eigenen Note ablegen und im Hauptdokument nur per `![[…]]` einbinden.
 
-**DO** jede atomic Note mit `# Titel` (H1) starten — der Auto-Heading-Shift verschiebt das beim Embed automatisch.
+**DO** jede atomic Note mit `# Titel` (H1) starten — der Auto-Heading-Shift verschiebt das beim Embed automatisch. Ausnahme: `latex-env`-Notes (siehe unten).
 
 **DO** Bilder immer mit Caption embedden (`![[bild.png|Caption]]`).
 
@@ -287,6 +292,8 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 **DO** Caption an Tabellen-Notes setzen (mandatory).
 
 **DO** für Math-Notes genau einen `$$…$$`-Block im Body verwenden.
+
+**DON'T** Überschriften in `latex-env`-Notes verwenden (Theorem-Family, `table`, `mermaid`, Math-Envs) — der Body wird in die Environment gewrapt, Titel/Caption kommen aus dem Frontmatter.
 
 **DON'T** Headings im Hauptdokument manuell ans Embed anpassen — der Auto-Heading-Shift erledigt das.
 
