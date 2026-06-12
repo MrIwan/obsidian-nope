@@ -44,13 +44,13 @@ Requires Docker. First export builds the image.
 
 ## Recommended workflow
 
-NOPE works best when you treat your vault like a set of reusable building blocks instead of one long monolithic document.
+NOPE supports treating your vault like a set of reusable building blocks instead of one long monolithic document.
 
 A typical workflow looks like this:
 
 1. Create one short main document.
 2. Put each chapter in its own note.
-3. Put each reusable structured element in its own note, for example a theorem, table, equation, glossary entry, or Mermaid diagram.
+3. Put each reusable structured element in its own note, for example a theorem, table, equation, glossary entry, or Mermaid diagram. Some of these atomic notes are driven by a few frontmatter keys (`latex-env`, `caption`, …) — see [Structured blocks with `latex-env`](#structured-blocks-with-latex-env).
 4. Embed these notes into the main document with normal Obsidian wikilink embeds.
 5. Refer to embedded content with normal wikilinks.
 6. Export the main document to PDF.
@@ -69,7 +69,10 @@ The main file acts as composition, while the actual content lives in reusable no
 
 ```markdown
 ---
-title: "My Report"
+title: "NOPE Example Document"
+subtitle: "An example of the main document"
+author: "Wanja Zemke"
+date: 2026-06-01
 toc: true
 ---
 
@@ -96,7 +99,7 @@ Good candidates for atomic notes include:
 - Mermaid diagrams
 - Reusable image figures
 
-This structure makes it easier to reuse content across multiple documents and reduces maintenance overhead when parts of a document change.
+This structure makes it easier to reuse content across multiple documents and reduces maintenance overhead when parts of a document change. 
 
 ### Embedded notes
 
