@@ -1,8 +1,8 @@
 // PDF preview view: renders the active note via the export pipeline and shows the build PDF inline.
 // Auto mode watches the dependency set from the last render and re-renders on changes.
 
-import { ItemView, Notice, TFile, ToggleComponent, WorkspaceLeaf, debounce, normalizePath } from 'obsidian';
-import type { Debouncer, ViewStateResult } from 'obsidian';
+import { ItemView, MarkdownView, Notice, TFile, ToggleComponent, WorkspaceLeaf, debounce, normalizePath } from 'obsidian';
+import type { App, Debouncer, Editor, ViewStateResult } from 'obsidian';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import type NopePlugin from '../main';
@@ -10,26 +10,47 @@ import { runExport } from '../utils/export';
 import type { ProgressReporter } from '../utils/export';
 import { getPluginAbsoluteDir } from '../utils/paths';
 import { cleanupIntermediates } from '../utils/docker';
+import { pandocAutoIdentifier, parseAuxDestinations, sanitizeLabelId } from '../utils/pdf-anchors';
 
 export const NOPE_PREVIEW_VIEW_TYPE = 'nope-pdf-preview';
 
 const RENDER_DEBOUNCE_MS = 3000;
+const JUMP_DEBOUNCE_MS = 500;
 
 interface PreviewState {
 	filePath: string | null;
 	autoRender: boolean;
+	autoJump: boolean;
+}
+
+// Anchor candidates for the cursor position, most specific first; shared by command and auto-jump.
+function cursorAnchorCandidates(app: App, editor: Editor, file: TFile): string[] {
+	const line = editor.getCursor().line;
+	const headings = app.metadataCache.getFileCache(file)?.headings ?? [];
+	let slug: string | null = null;
+	for (const h of headings) {
+		if (h.position.start.line > line) break;
+		slug = pandocAutoIdentifier(h.heading);
+	}
+	const base = sanitizeLabelId(file.basename);
+	return [...(slug ? [slug] : []), `note:${base}`, `tab:${base}`, `eq:${base}`, `fig:${base}`];
 }
 
 export class NopePreviewView extends ItemView {
 	private plugin: NopePlugin;
 	private filePath: string | null = null;
 	private autoRender = false;
+	private autoJump = false;
 	private rendering = false;
 	private pending = false;
 	private watchSet = new Set<string>();
+	private lastAnchor: { candidate: string; dest: string } | null = null;
+	private destCache: Map<string, string> | null = null;
 	private debouncedRender: Debouncer<[], void>;
+	private debouncedJump: Debouncer<[], void>;
 	private renderButton: HTMLButtonElement | null = null;
 	private autoToggle: ToggleComponent | null = null;
+	private jumpToggle: ToggleComponent | null = null;
 	private statusEl: HTMLElement | null = null;
 	private bodyEl: HTMLElement | null = null;
 
@@ -38,6 +59,7 @@ export class NopePreviewView extends ItemView {
 		this.plugin = plugin;
 		// Trailing debounce with reset: a burst of saves yields exactly one render after quiet time.
 		this.debouncedRender = debounce(() => this.requestRender(), RENDER_DEBOUNCE_MS, true);
+		this.debouncedJump = debounce(() => this.autoJumpToCursor(), JUMP_DEBOUNCE_MS, true);
 	}
 
 	getViewType(): string {
@@ -58,7 +80,7 @@ export class NopePreviewView extends ItemView {
 	}
 
 	getState(): Record<string, unknown> {
-		return { filePath: this.filePath, autoRender: this.autoRender };
+		return { filePath: this.filePath, autoRender: this.autoRender, autoJump: this.autoJump };
 	}
 
 	async setState(state: unknown, result: ViewStateResult): Promise<void> {
@@ -66,12 +88,16 @@ export class NopePreviewView extends ItemView {
 		const previousPath = this.filePath;
 		this.filePath = typeof s?.filePath === 'string' ? s.filePath : null;
 		this.autoRender = s?.autoRender === true;
+		this.autoJump = s?.autoJump === true;
 		// Re-binding to another note invalidates the old dependency set and its build folder.
 		if (this.filePath !== previousPath) {
 			if (previousPath) this.cleanupFor(previousPath);
 			this.watchSet = new Set(this.filePath ? [this.filePath] : []);
+			this.lastAnchor = null;
+			this.destCache = null;
 		}
 		this.autoToggle?.setValue(this.autoRender);
+		this.jumpToggle?.setValue(this.autoJump);
 		this.refreshBody();
 		await super.setState(state, result);
 	}
@@ -96,6 +122,17 @@ export class NopePreviewView extends ItemView {
 		});
 		autoWrap.createSpan({ cls: 'nope-preview-auto-label', text: 'Auto-render' });
 
+		const jumpWrap = toolbar.createDiv({ cls: 'nope-preview-auto' });
+		this.jumpToggle = new ToggleComponent(jumpWrap);
+		this.jumpToggle.setValue(this.autoJump);
+		this.jumpToggle.setTooltip('Scroll the PDF to the cursor position automatically');
+		this.jumpToggle.onChange((value) => {
+			this.autoJump = value;
+			this.app.workspace.requestSaveLayout();
+			if (value) this.debouncedJump();
+		});
+		jumpWrap.createSpan({ cls: 'nope-preview-auto-label', text: 'Follow cursor' });
+
 		this.statusEl = toolbar.createSpan({ cls: 'nope-preview-status' });
 
 		this.bodyEl = this.contentEl.createDiv({ cls: 'nope-preview-body' });
@@ -108,6 +145,10 @@ export class NopePreviewView extends ItemView {
 				this.debouncedRender();
 			}),
 		);
+		// CM6 is contenteditable, so cursor movement surfaces as document selection changes.
+		this.registerDomEvent(activeDocument, 'selectionchange', () => {
+			if (this.autoJump) this.debouncedJump();
+		});
 		// Keep the binding alive when the bound note is renamed.
 		this.registerEvent(
 			this.app.vault.on('rename', (file, oldPath) => {
@@ -122,6 +163,7 @@ export class NopePreviewView extends ItemView {
 
 	onClose(): Promise<void> {
 		this.debouncedRender.cancel();
+		this.debouncedJump.cancel();
 		this.cleanupFor(this.filePath);
 		return Promise.resolve();
 	}
@@ -157,7 +199,7 @@ export class NopePreviewView extends ItemView {
 		this.statusEl.toggleClass('nope-preview-status-error', kind === 'error');
 	}
 
-	private refreshBody(): void {
+	private refreshBody(destination?: string): void {
 		if (!this.bodyEl) return;
 		this.bodyEl.empty();
 		const file = this.getFile();
@@ -177,11 +219,73 @@ export class NopePreviewView extends ItemView {
 			return;
 		}
 		// Fresh getResourcePath per refresh: the mtime query param is the cache-bust.
-		const src = this.app.vault.adapter.getResourcePath(vaultRel);
+		let src = this.app.vault.adapter.getResourcePath(vaultRel);
+		// Chromium's PDF viewer jumps to hyperref named destinations via the fragment.
+		if (destination) src += `#nameddest=${encodeURIComponent(destination)}`;
 		this.bodyEl.createEl('embed', {
 			cls: 'nope-preview-embed',
 			attr: { type: 'application/pdf', src },
 		});
+	}
+
+	// Parse the .aux once per render; invalidated on render success and re-bind.
+	private getDestinations(file: TFile): Map<string, string> {
+		if (!this.destCache) {
+			const base = file.basename;
+			const auxPath = join(getPluginAbsoluteDir(this.plugin), 'pipeline', 'build', base, `${base}.aux`);
+			this.destCache = parseAuxDestinations(auxPath);
+		}
+		return this.destCache;
+	}
+
+	private resolveAnchor(file: TFile, candidates: string[]): { candidate: string; dest: string } | null {
+		const destinations = this.getDestinations(file);
+		for (const candidate of candidates) {
+			const dest = destinations.get(candidate);
+			if (dest) return { candidate, dest };
+		}
+		return null;
+	}
+
+	// Manual sync command: loud feedback on every outcome.
+	syncToAnchor(candidates: string[]): void {
+		const file = this.getFile();
+		if (!file) {
+			this.setStatus('No note bound to this preview.', 'error');
+			return;
+		}
+		if (this.getDestinations(file).size === 0) {
+			this.setStatus('No anchors available — render first.', 'error');
+			return;
+		}
+		const hit = this.resolveAnchor(file, candidates);
+		if (!hit) {
+			this.setStatus('No matching anchor for the cursor position.', 'error');
+			return;
+		}
+		this.lastAnchor = hit;
+		this.refreshBody(hit.dest);
+		this.setStatus(`Jumped to ${hit.candidate}`);
+	}
+
+	// Resolve the cursor position to an anchor, honoring the watch-set scope.
+	private currentCursorAnchor(): { candidate: string; dest: string } | null {
+		const file = this.getFile();
+		const md = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const cursorFile = md?.file;
+		if (!file || !md || !cursorFile) return null;
+		if (cursorFile.path !== this.filePath && !this.watchSet.has(cursorFile.path)) return null;
+		return this.resolveAnchor(file, cursorAnchorCandidates(this.app, md.editor, cursorFile));
+	}
+
+	// Auto-jump: silent no-ops, and reload the embed only when the destination actually changes.
+	private autoJumpToCursor(): void {
+		if (this.rendering) return;
+		const hit = this.currentCursorAnchor();
+		if (!hit || hit.dest === this.lastAnchor?.dest) return;
+		this.lastAnchor = hit;
+		this.refreshBody(hit.dest);
+		this.setStatus(`Following cursor — ${hit.candidate}`);
 	}
 
 	// Last good PDF stays visible; the banner sits above it and is replaced on the next attempt.
@@ -256,7 +360,17 @@ export class NopePreviewView extends ItemView {
 				this.watchSet = new Set(result.deps);
 			}
 			if (result.ok) {
-				this.refreshBody();
+				// New PDF, new .aux: drop caches, then re-anchor in the SAME reload (no flash of page 1).
+				// Re-resolve by candidate, not by destination — counter names shift between renders.
+				const previousAnchor = this.lastAnchor;
+				this.destCache = null;
+				this.lastAnchor = null;
+				let hit = this.autoJump ? this.currentCursorAnchor() : null;
+				if (!hit && previousAnchor) {
+					hit = this.resolveAnchor(file, [previousAnchor.candidate]);
+				}
+				this.lastAnchor = hit;
+				this.refreshBody(hit?.dest);
 			} else {
 				this.showErrorBanner('Render failed — showing the last successful PDF.');
 			}
@@ -292,9 +406,34 @@ export function registerPreviewCommand(plugin: NopePlugin): void {
 			await leaf.setViewState({
 				type: NOPE_PREVIEW_VIEW_TYPE,
 				active: true,
-				state: { filePath: targetPath, autoRender: existingView?.getState().autoRender === true },
+				state: {
+					filePath: targetPath,
+					autoRender: existingView?.getState().autoRender === true,
+					autoJump: existingView?.getState().autoJump === true,
+				},
 			});
 			await plugin.app.workspace.revealLeaf(leaf);
+		},
+	});
+}
+
+export function registerPreviewSyncCommand(plugin: NopePlugin): void {
+	plugin.addCommand({
+		id: 'sync-pdf-preview-to-cursor',
+		name: 'Sync PDF preview to cursor',
+		editorCallback: (editor, ctx) => {
+			const leaf = plugin.app.workspace.getLeavesOfType(NOPE_PREVIEW_VIEW_TYPE)[0];
+			const view = leaf?.view instanceof NopePreviewView ? leaf.view : null;
+			if (!view) {
+				new Notice('Open the PDF preview first.');
+				return;
+			}
+			const file = ctx.file;
+			if (!file) {
+				new Notice('Place the cursor in a note first.');
+				return;
+			}
+			view.syncToAnchor(cursorAnchorCandidates(plugin.app, editor, file));
 		},
 	});
 }

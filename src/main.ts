@@ -5,7 +5,7 @@ import { registerExportCommand } from './commands/export';
 import { registerBuildCommand, registerBuildCommandnoCache } from './commands/build';
 import { registerBrandingTemplateCommand } from './commands/branding-template';
 import { registerMaintenanceCommands } from './commands/maintenance';
-import { NOPE_PREVIEW_VIEW_TYPE, NopePreviewView, registerPreviewCommand } from './view/preview';
+import { NOPE_PREVIEW_VIEW_TYPE, NopePreviewView, registerPreviewCommand, registerPreviewSyncCommand } from './view/preview';
 import { getPluginAbsoluteDir } from './utils/paths';
 import { ensureBundledAssets } from './utils/assets';
 import { setDockerPathOverride } from './utils/docker';
@@ -31,6 +31,7 @@ export default class NopePlugin extends Plugin {
 		this.addSettingTab(new NopeSettingTab(this.app, this));
 		registerExportCommand(this);
 		registerPreviewCommand(this);
+		registerPreviewSyncCommand(this);
 		registerBuildCommand(this);
 		registerBuildCommandnoCache(this);
 		registerBrandingTemplateCommand(this);
