@@ -1,14 +1,16 @@
 # NOPE
 
-NOPE ( Not anOther Pdf Exporter ) turns Obsidian notes into publication-ready PDFs through a Docker-based Pandoc/LaTeX pipeline. You write in Obsidian, keep your notes modular, and export a polished PDF without installing a local TeX distribution.
+NOPE ( Not anOther Pdf Exporter ) turns Obsidian notes into publication-ready PDFs through a Docker-based Pandoc/LaTeX pipeline. You write in Obsidian, keep your notes modular and export a polished PDF without installing a local TeX distribution.
 
 ## What NOPE does
 
-NOPE keeps the Obsidian authoring model intact and adds the parts that are usually painful to wire up by hand: PDF export, numbering, cross-references, glossaries, branding, citation handling, and LaTeX-backed structured blocks.
+NOPE keeps the Obsidian authoring model intact and adds the parts that are usually painful to wire up by hand: PDF export, numbering, cross-references, glossaries, branding, citation handling and LaTeX-backed structured blocks.
 
 The core authoring model is **atomic**. Chapters, theorems, tables, glossary entries, diagrams and other reusable content blocks live in their own notes and are embedded into a main document.
 
 > **Under Construction**: NOPE is still in early development. The Plugin is not stable yet and there may be breaking changes. Feedback and contributions are very welcome to help shape the direction of the plugin.
+
+<video src="docs/media/AutoRenderDemo.mp4" controls preload="metadata" width="100%"></video>
 
 ***
 
@@ -55,7 +57,7 @@ A typical workflow looks like this:
 5. Refer to embedded content with normal wikilinks.
 6. Export the main document to PDF.
 
-This keeps the source material maintainable, reusable, and easy to rearrange.
+This keeps the source material maintainable, reusable and easy to rearrange.
 
 ***
 
@@ -183,7 +185,7 @@ From [[Theorem-Pythagoras]] we have ...
 
 A note with `latex-env: table` becomes a numbered table in the PDF. The note must include a `caption` in frontmatter.
 
-This makes tables first-class document objects with captions, numbering, references, and list-of-tables support.
+This makes tables first-class document objects with captions, numbering, references and list-of-tables support.
 
 #### Example
 
@@ -212,9 +214,9 @@ As shown in [[Table-Results]], the measurements indicate ...
 
 ### Equations and math environments
 
-NOPE supports math-focused environments such as `equation`, `align`, `gather`, `multline`, and `alignat`, including star variants.
+NOPE supports math-focused environments such as `equation`, `align`, `gather`, `multline` and `alignat`, including star variants.
 
-This is useful when equations should be atomic, reusable, and cross-referenceable instead of being buried inline inside long chapter notes.
+This is useful when equations should be atomic, reusable and cross-referenceable instead of being buried inline inside long chapter notes.
 
 #### Example
 
@@ -244,7 +246,7 @@ From [[Equation-Energy]] we see that ...
 
 Mermaid diagrams can be authored as atomic notes with `latex-env: mermaid`. The note body contains the Mermaid code block, while frontmatter supplies metadata such as the caption.
 
-On export, the diagram is rendered into an image, numbered like a figure, and can be referenced from the surrounding text.
+On export, the diagram is rendered into an image, numbered like a figure and can be referenced from the surrounding text.
 
 Optional frontmatter keys also let you control width and render resolution.
 
@@ -278,7 +280,7 @@ In [[Diagram-DataFlow]] we see the data flow from vault to PDF.
 
 Image embeds become figures when used with a caption.
 
-Supported width hints include percentages, pixel units, metric units, and LaTeX-style widths. This makes it possible to reuse the same image at different sizes across different documents.
+Supported width hints include percentages, pixel units, metric units and LaTeX-style widths. This makes it possible to reuse the same image at different sizes across different documents.
 
 A reference with `[[plot.png]]` becomes `Abbildung X`.
 
@@ -424,7 +426,7 @@ In this example, the document uses the `Branding-Default` note for general styli
 
 ## Table of contents and generated lists
 
-NOPE supports document metadata such as a table of contents, list of figures, and list of tables.
+NOPE supports document metadata such as a table of contents, list of figures and list of tables.
 
 That makes it practical for longer reports or formal deliverables where navigation and generated lists are expected.
 
