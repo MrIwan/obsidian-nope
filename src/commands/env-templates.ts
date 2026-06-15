@@ -89,6 +89,8 @@ Write the proof here. No headings in the body.
 		content: `---
 latex-env: mermaid
 caption: "Diagram caption"
+w: "50%"
+scale: 2
 ---
 
 ${MERMAID_FENCE}

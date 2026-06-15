@@ -18,7 +18,7 @@ import { fileURLToPath } from 'url';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_DIR = join(SCRIPT_DIR, '..');
 
-const SOURCE_DIRS = ['pipeline', 'skill'];
+const SOURCE_DIRS = ['pipeline', 'skill', 'resources'];
 
 // Files/dirs that must never be bundled.
 const EXCLUDED_BASENAMES = new Set([

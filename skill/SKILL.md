@@ -250,7 +250,7 @@ Obsidian-Callouts funktionieren auch im PDF — sie werden dort ebenfalls als Ca
 
 ## Branding-Notes
 
-Pro Kunde/Projekt eine `.md` mit Frontmatter-Overrides. Body wird beim Export ignoriert (reine Editor-Doku). Aktivierung im Doc-Frontmatter über `nope-branding`. Eine Vorlage erzeugt der Command „Create branding template".
+Pro Kunde/Projekt eine `.md` mit Frontmatter-Overrides. Body wird beim Export ignoriert (reine Editor-Doku). Aktivierung im Doc-Frontmatter über `nope-branding` — am einfachsten per Command „Set branding for this note" (Auswahldialog, schreibt den Key korrekt). Eine Vorlage erzeugt der Command „Create branding template"; die Key-Beschreibungen stehen im Body der Vorlage (ohne Einfluss aufs Branding), das Frontmatter bleibt kommentarfrei.
 
 Wikilinks im YAML **müssen quoted sein** — sonst parst YAML das als Flow-Sequence:
 
@@ -274,6 +274,7 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 - `Export active note to PDF` — Hauptkommando.
 - `Build docker image (with cache)` — manueller inkrementeller Image-Build. Initial-Build oder `--no-cache` über Settings.
 - `Create branding template` — schreibt `Branding-Template.md` ins Vault-Root.
+- `Set branding for this note` — öffnet einen Auswahldialog über die Branding-Notes im Vault und schreibt den gewählten `nope-branding`-Key korrekt ins Frontmatter der aktiven Note (kein manuelles Quoten nötig).
 - `Add table` / `Add theorem` / `Add lemma` / `Add definition` / `Add proof` / `Add mermaid diagram` / `Add equation` / `Add glossary term` / `Add abbreviation` — legen eine atomic Note mit korrektem Frontmatter und Body-Skelett (auf Englisch) neben der aktiven Note an und fügen am Cursor den passenden Link ein. `table`/`mermaid` bringen die Pflicht-`caption:` mit; `Add glossary term` setzt alle `gls-*`-Keys mit `gls-type: term`, `Add abbreviation` dieselben mit `gls-type: acronym`. Embed-Envs fügen `![[…]]` ein, Glossar/Abkürzung den Ref `[[…]]`. Nur im Editor verfügbar; die neue Note öffnet in einem neuen Tab zum Ausfüllen.
 - `Remove docker image` — löscht das Pipeline-Image. Nächster Export baut neu.
 - `Cleanup build folder` — leert `pipeline/build/`.
