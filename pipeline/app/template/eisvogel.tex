@@ -953,19 +953,29 @@ $endif$
 % Required when notes use the `latex-env:` frontmatter feature.
 \usepackage{amsthm}
 
+% Own counter per type so \autoref prints the right name (shared [theorem]
+% counter makes hyperref label every type "Theorem").
 \theoremstyle{plain}
 \newtheorem{theorem}{Theorem}[section]
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{corollary}[theorem]{Corollary}
-\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{proposition}{Proposition}[section]
 
 \theoremstyle{definition}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{example}[theorem]{Example}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{example}{Example}[section]
 
 \theoremstyle{remark}
 \newtheorem*{remark}{Remark}
 \newtheorem*{note}{Note}
+
+% Fallback \autoref names if hyperref's \newtheorem hook didn't set them.
+\providecommand{\theoremautorefname}{Theorem}
+\providecommand{\lemmaautorefname}{Lemma}
+\providecommand{\corollaryautorefname}{Corollary}
+\providecommand{\propositionautorefname}{Proposition}
+\providecommand{\definitionautorefname}{Definition}
+\providecommand{\exampleautorefname}{Example}
 
 \usepackage{needspace}
 

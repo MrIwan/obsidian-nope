@@ -4,6 +4,7 @@ import type { NopeSettings } from './types';
 import { registerExportCommand } from './commands/export';
 import { registerBuildCommand, registerBuildCommandnoCache } from './commands/build';
 import { registerBrandingTemplateCommand } from './commands/branding-template';
+import { registerEnvTemplateCommands } from './commands/env-templates';
 import { registerMaintenanceCommands } from './commands/maintenance';
 import { NOPE_PREVIEW_VIEW_TYPE, NopePreviewView, registerPreviewCommand, registerPreviewSyncCommand } from './view/preview';
 import { getPluginAbsoluteDir } from './utils/paths';
@@ -35,6 +36,7 @@ export default class NopePlugin extends Plugin {
 		registerBuildCommand(this);
 		registerBuildCommandnoCache(this);
 		registerBrandingTemplateCommand(this);
+		registerEnvTemplateCommands(this);
 		registerMaintenanceCommands(this);
 	}
 

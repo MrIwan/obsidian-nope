@@ -17,7 +17,9 @@ nope exportiert Obsidian-Notes über eine Pandoc/LaTeX-Pipeline zu PDF. Die Konv
 
 Setzt eine embedded Note in eine LaTeX-Environment.
 
-`theorem`, `lemma`, `definition`, `proof`, plus eigene amsthm-Environments → Voll-Embed wird zu `\begin{<env>}[<latex-short>]…\end{<env>}` gewrapt. `\autoref` liefert „Theorem N" etc.
+`theorem`, `lemma`, `definition`, `corollary`, `proposition`, `example`, plus eigene amsthm-Environments → Voll-Embed wird zu `\begin{<env>}[<latex-short>]…\end{<env>}` gewrapt. Jeder Typ hat einen eigenen Counter und wird pro Typ gezählt (Theorem 1.1, Lemma 1.1, Definition 1.1 — keine gemeinsame Folge). `\autoref` liefert den korrekten Namen, z.B. „Lemma 1.1".
+
+`proof` (sowie `remark`, `note`) ist **unnummeriert** — kein `\autoref`-Ziel. Ein Ref `[[Beweis-Note]]` wird zu einem klickbaren Hyperlink mit dem Notentitel statt einer Nummer. Embedden funktioniert normal.
 
 `table` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau eine Pandoc-Tabelle. Refs liefern „Tabelle N". Optional `page-break:` (Default `true`) steuert, ob die Tabelle über Seiten umbrechen darf — siehe unten.
 
@@ -272,6 +274,7 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 - `Export active note to PDF` — Hauptkommando.
 - `Build docker image (with cache)` — manueller inkrementeller Image-Build. Initial-Build oder `--no-cache` über Settings.
 - `Create branding template` — schreibt `Branding-Template.md` ins Vault-Root.
+- `Add table` / `Add theorem` / `Add lemma` / `Add definition` / `Add proof` / `Add mermaid diagram` / `Add equation` / `Add glossary term` / `Add abbreviation` — legen eine atomic Note mit korrektem Frontmatter und Body-Skelett (auf Englisch) neben der aktiven Note an und fügen am Cursor den passenden Link ein. `table`/`mermaid` bringen die Pflicht-`caption:` mit; `Add glossary term` setzt alle `gls-*`-Keys mit `gls-type: term`, `Add abbreviation` dieselben mit `gls-type: acronym`. Embed-Envs fügen `![[…]]` ein, Glossar/Abkürzung den Ref `[[…]]`. Nur im Editor verfügbar; die neue Note öffnet in einem neuen Tab zum Ausfüllen.
 - `Remove docker image` — löscht das Pipeline-Image. Nächster Export baut neu.
 - `Cleanup build folder` — leert `pipeline/build/`.
 

@@ -313,11 +313,14 @@ local MATH_ENVS = {
 }
 
 -- Register embed target with label prefix; set autoref for default-display links ("Equation N" etc.).
-local function register_target(notename, label_prefix)
+local function register_target(notename, label_prefix, no_autoref)
   local label = label_prefix .. ":" .. sanitize_label_id(notename)
   local first_embed = (available_targets[notename] == nil)
   available_targets[notename] = label
-  autoref_targets[notename] = true
+  -- Unnumbered envs (proof/remark/note) get a link anchor but no \autoref number.
+  if not no_autoref then
+    autoref_targets[notename] = true
+  end
   return label, first_embed
 end
 
@@ -471,10 +474,13 @@ local function wrap_mermaid(notename, env_name, sliced, doc_meta)
 end
 
 -- Wrap content in generic LaTeX environment with optional short title and label.
+-- amsthm environments without a counter — cannot carry a meaningful \autoref number.
+local UNNUMBERED_ENVS = { proof = true, remark = true, note = true }
+
 local function wrap_block(notename, env_name, sliced, doc_meta)
   local env_short = doc_meta["latex-short"]
     and pandoc.utils.stringify(doc_meta["latex-short"]) or nil
-  local label, first_embed = register_target(notename, "note")
+  local label, first_embed = register_target(notename, "note", UNNUMBERED_ENVS[env_name])
 
   local annotated_inner = annotate_with_labels(sliced, notename, true)
 
