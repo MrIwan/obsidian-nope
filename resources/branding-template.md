@@ -71,3 +71,49 @@ For `header-left`, `header-center`, `header-right`, `footer-left`,
 - **Mixed mode (text + logo)**: write the LaTeX snippet manually; embedded
   `[[…]]` still resolve to container paths, e.g.
   `header-left: "Draft – \\includegraphics[height=0.5cm]{[[logo.png]]}"`.
+
+### More Eisvogel keys
+
+- `titlepage-rule-color` / `titlepage-rule-height`: color (hex without `#`) and
+  height (pt) of the rule across the top of the title page.
+- `page-background`: background image for *every* page (quoted wikilink);
+  `page-background-opacity` (default `0.2`).
+- `disable-header-and-footer`: `true` removes header and footer on all pages.
+- `book`: `true` typesets as a book; `first-chapter` sets the starting chapter
+  number.
+- `logo-width`: width of the title-page logo, with a TeX unit (`35mm`, `100pt`).
+- `code-block-font-size`: LaTeX size command for code blocks, e.g.
+  `\footnotesize` or `\small` (default `\small`).
+- `caption-justification`: `raggedright` (default) or `centering` for
+  figure/table captions.
+- `float-placement-figure`: LaTeX float specifier (default `H` = exactly here;
+  e.g. `htbp` to let figures float).
+- `table-use-row-colors`: `true` enables alternating table row colors.
+- `watermark`: text shown as a watermark on every page (e.g. `Draft`,
+  `Confidential`).
+- `listings-disable-line-numbers`, `listings-no-page-break`, `footnotes-pretty`:
+  code-listing and footnote tweaks.
+
+### Pandoc passthrough keys
+
+Eisvogel forwards all standard Pandoc variables. The most useful:
+
+- Document meta: `title`, `subtitle`, `author`, `date`, `keywords`, `subject`.
+- Page: `geometry` (e.g. `geometry: margin=2.5cm`), `papersize` (`a4`,
+  `letter`), `fontsize` (`10pt`–`12pt`), `linestretch` (line spacing).
+- Links: `linkcolor`, `urlcolor`, `citecolor`, `toccolor` (named or hex);
+  `colorlinks: true` colors links instead of boxing them.
+
+> [!warning] Fonts: `mainfont` / `sansfont` / `monofont` / `mathfont` require
+> the lualatex/xelatex engine. The current pipeline uses pdflatex
+
+## Tips
+
+- Avoid underscores (`_`) in logo/background filenames — LaTeX chokes on them;
+  use hyphens (`-`) instead.
+- Store branding assets (logos, backgrounds) in one folder, e.g.
+  `/branding/customer-1/`, to keep the vault organized.
+- Full key reference: Eisvogel README → "Custom Template Variables"
+  (<https://github.com/Wandmalfarbe/pandoc-latex-template>) and the Pandoc
+  manual → "Variables for LaTeX"
+  (<https://pandoc.org/MANUAL.html#variables-for-latex>).
