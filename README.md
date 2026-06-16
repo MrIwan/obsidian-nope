@@ -149,7 +149,7 @@ This allows structured content to stay author-friendly in Obsidian while being r
 | Block | `latex-env` | `caption` | `w` / `width` | Other keys | Wikilink renders as |
 |---|---|---|---|---|---|
 | Theorem family | `theorem`, `lemma`, `definition`, `proof`, custom amsthm | — | — | `latex-short` (optional) | "Theorem N" |
-| Table | `table` | **required** | — | `page-break` (optional, default `true`) | "Table N" |
+| Table | `table` | **required** | — | `longtable` (optional, default `false`) | "Table N" |
 | Mermaid diagram | `mermaid` | **required** | optional | `scale` (1–5, default 2) | "Figure N" |
 | Math | `equation`, `align`, `gather`, `multline`, `alignat` (+ `*` variants) | — | — | — | "Equation N" |
 
@@ -186,6 +186,23 @@ From [[Theorem-Pythagoras]] we have ...
 A note with `latex-env: table` becomes a numbered table in the PDF. The note must include a `caption` in frontmatter.
 
 This makes tables first-class document objects with captions, numbering, references and list-of-tables support.
+
+#### Layout: `longtable` (long vs. wide)
+
+The optional `longtable` key (default `false`) lets you choose how a table is laid out — you pick what fits your data:
+
+- `longtable: false` (default) — the table stays on **one** page and, if it is wider than the text, the whole table is scaled down until it fits (no column overflow). Best for **wide, compact** tables. It does not break across pages, so a table taller than one page would run off the bottom — use `true` for those.
+- `longtable: true` — the table is set as a `longtable` and breaks across pages when needed, repeating the header row. Best for **long** tables. Downside: very **wide** columns with long words can overflow sideways into the next column.
+
+Rule of thumb: wide → keep the default (`false`), long → `true`. A table cannot be both wide-and-scaled and multi-page at the same time. In `false` mode, wikilinks inside cells are rendered as-is rather than resolved to references.
+
+```yaml
+---
+latex-env: table
+caption: "Long results table"
+longtable: true
+---
+```
 
 #### Example
 

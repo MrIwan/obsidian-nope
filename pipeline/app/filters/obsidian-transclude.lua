@@ -372,6 +372,62 @@ local function wrap_math(notename, env_name, sliced, doc_meta)
   return annotated
 end
 
+-- Set when a fit-table is rendered, so we can load booktabs ourselves (Pandoc's
+-- $if(tables)$ guard won't, since fit-tables leave no Table node in the AST).
+local fit_table_used = false
+
+-- Collapse a block list to a single LaTeX line (cells must not contain \par).
+local LATEX_ALIGN = { AlignLeft = "l", AlignRight = "r", AlignCenter = "c", AlignDefault = "l" }
+local function blocks_to_latex_line(blocks)
+  local s = pandoc.write(pandoc.Pandoc(blocks), "latex")
+  return (s:gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", ""))
+end
+
+-- longtable: false → render the table as a booktabs tabular wrapped in a shrink-only \resizebox (graphicx). True pandas longtable
+local function render_fit_table(table_block, caption_inlines, label, first_embed)
+  fit_table_used = true
+  local cols = {}
+  for _, spec in ipairs(table_block.colspecs) do
+    cols[#cols + 1] = LATEX_ALIGN[spec[1]] or "l"
+  end
+
+  local function render_rows(rows)
+    local out = {}
+    for _, row in ipairs(rows) do
+      local cells = {}
+      for _, cell in ipairs(row.cells) do
+        cells[#cells + 1] = blocks_to_latex_line(cell.contents)
+      end
+      out[#out + 1] = table.concat(cells, " & ") .. " \\\\"
+    end
+    return table.concat(out, "\n")
+  end
+
+  local body_rows = {}
+  for _, b in ipairs(table_block.bodies) do
+    for _, r in ipairs(b.body) do body_rows[#body_rows + 1] = r end
+  end
+
+  local label_tex = first_embed and ("\\label{" .. label .. "}") or ""
+  local tex = table.concat({
+    "\\begin{table}[H]",
+    "\\centering",
+    "\\caption{" .. blocks_to_latex_line({ pandoc.Plain(caption_inlines) }) .. label_tex .. "}",
+    "\\resizebox{\\ifdim\\width>\\linewidth \\linewidth\\else\\width\\fi}{!}{%",
+    "\\begin{tabular}{@{}" .. table.concat(cols) .. "@{}}",
+    "\\toprule",
+    render_rows(table_block.head.rows),
+    "\\midrule",
+    render_rows(body_rows),
+    "\\bottomrule",
+    "\\end{tabular}%",
+    "}",
+    "\\end{table}",
+  }, "\n")
+
+  return pandoc.RawBlock("latex", tex)
+end
+
 -- Attach frontmatter caption and label to table; caption required in frontmatter.
 local function wrap_table(notename, env_name, sliced, doc_meta)
   local caption_inlines = meta_to_inlines(doc_meta.caption)
@@ -389,26 +445,19 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
       .. "' hat latex-env: table, aber keine Tabelle im Inhalt gefunden.")
   end
 
-  -- Always set caption from frontmatter to ensure single-source truth.
-  table_block.caption = pandoc.Caption({ pandoc.Plain(caption_inlines) })
+  -- Default longtable: false → scaled tabular (one page, shrinks to fit width).
+  if not meta_bool(doc_meta, "longtable", false) then
+    annotated[idx] = render_fit_table(table_block, caption_inlines, label, first_embed)
+    return annotated
+  end
 
+  -- longtable: true (default) → Pandoc longtable; caption from frontmatter.
+  table_block.caption = pandoc.Caption({ pandoc.Plain(caption_inlines) })
   -- Label only on first embed to avoid multiply-defined warnings.
   if first_embed then
     local last = table_block.caption.long[#table_block.caption.long]
     table.insert(last.content,
       pandoc.RawInline("latex", "\\label{" .. label .. "}"))
-  end
-
-  -- Default: longtable (Seitenumbruch erlaubt). page-break: false hält die
-  -- Tabelle zusammen: \needspace reserviert genug Platz; passt sie nicht mehr
-  -- auf die Rest-Seite, beginnt LaTeX vor der Tabelle eine neue Seite. Ist die
-  -- Tabelle länger als eine Seite, bricht longtable normal um (gewolltes Fallback).
-  if not meta_bool(doc_meta, "page-break", true) then
-    local rows = #table_block.head.rows
-    for _, b in ipairs(table_block.bodies) do rows = rows + #b.body end
-    -- +4 für Caption/Regeln, *1.6 für booktabs-Padding (Schätzung der Höhe).
-    local h = string.format("%.1f\\baselineskip", (rows + 4) * 1.6)
-    table.insert(annotated, idx, pandoc.RawBlock("latex", "\\needspace{" .. h .. "}"))
   end
 
   return annotated
@@ -922,5 +971,14 @@ function Pandoc(doc)
   resolve_abstract_links(doc.meta)
   -- Phase 3: Inject glossary entries to header-includes.
   flush_glossary_entries(doc)
+  -- Phase 3b: Load booktabs for fit-tables — Pandoc's $if(tables)$ guard skips it because fit-tables are RawBlocks with no Table node left in the AST.
+  if fit_table_used then
+    local hi = doc.meta["header-includes"] or pandoc.MetaList({})
+    if hi.t ~= "MetaList" then hi = pandoc.MetaList({ hi }) end
+    table.insert(hi, pandoc.MetaBlocks({
+      pandoc.RawBlock("latex", "\\usepackage{booktabs}")
+    }))
+    doc.meta["header-includes"] = hi
+  end
   return doc
 end

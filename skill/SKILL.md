@@ -21,7 +21,7 @@ Setzt eine embedded Note in eine LaTeX-Environment.
 
 `proof` (sowie `remark`, `note`) ist **unnummeriert** — kein `\autoref`-Ziel. Ein Ref `[[Beweis-Note]]` wird zu einem klickbaren Hyperlink mit dem Notentitel statt einer Nummer. Embedden funktioniert normal.
 
-`table` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau eine Pandoc-Tabelle. Refs liefern „Tabelle N". Optional `page-break:` (Default `true`) steuert, ob die Tabelle über Seiten umbrechen darf — siehe unten.
+`table` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau eine Pandoc-Tabelle. Refs liefern „Tabelle N". Optional `longtable:` (Default `false`) steuert das Tabellen-Layout — siehe unten.
 
 `mermaid` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau einen ```mermaid-Codeblock — Obsidian rendert die Note im Live-Preview als Diagramm, der Export ruft `mmdc` (mermaid-cli) im Container auf und ersetzt den Block durch ein nummeriertes Image mit Caption. Refs liefern „Abbildung N". Optional `w:` (oder ausgeschrieben `width:`) im Frontmatter zum Skalieren der PDF-Darstellungsgröße — Prozent, px, cm, mm oder LaTeX-Längen wie `0.6\textwidth`. Optional `scale:` (1–5, Default 2) für die Render-Auflösung — höher = schärfer bei großen Diagrammen, größere PNG-Datei. Identische Diagramm-Sources werden gecacht — dasselbe Diagramm in mehreren Docs kostet nur einen Render.
 
@@ -31,23 +31,23 @@ Setzt eine embedded Note in eine LaTeX-Environment.
 
 Mandatory bei `latex-env: table` und `latex-env: mermaid`. Wird als Caption gerendert und im Tabellen- bzw. Abbildungsverzeichnis aufgeführt.
 
-### `page-break`
+### `longtable`
 
-Optional bei `latex-env: table`, Default `true`. Steuert, ob die Tabelle über einen Seitenumbruch laufen darf.
+Optional bei `latex-env: table`, Default `false`. Du entscheidest zwischen zwei Layouts:
 
-`true` (Default) → die Tabelle wird als `longtable` gesetzt und bricht bei Bedarf über Seiten um (Kopfzeile wiederholt sich).
+`false` (Default) → die Tabelle bleibt auf **einer** Seite und wird, falls sie breiter als die Textbreite ist, als Ganzes herunterskaliert, bis sie passt (kein Spalten-Overflow). Für **breite, kompakte** Tabellen. Bricht nicht über Seiten um; ist die Tabelle höher als eine Seite, läuft sie unten über → dann `longtable: true` setzen.
 
-`false` → die Tabelle soll auf einer Seite zusammenbleiben. Vor der Tabelle wird `\needspace` gesetzt; reicht der Platz auf der aktuellen Seite nicht, beginnt der Export eine neue Seite und schiebt die ganze Tabelle dorthin. Sinnvoll für kompakte Tabellen, die nicht mitten im Float zerrissen werden sollen.
+`true` → die Tabelle wird als `longtable` gesetzt und bricht bei Bedarf über Seiten um (Kopfzeile wiederholt sich). Für **lange** Tabellen. Nachteil: bei sehr **breiten** Spalten mit langen Wörtern kann Inhalt seitlich in die Nachbarspalte überlaufen.
 
 ```yaml
 ---
 latex-env: table
-caption: "Vergleich der Verfahren"
-page-break: false
+caption: "Projektphasen-Übersicht"
+longtable: true
 ---
 ```
 
-Achtung: `page-break: false` setzt voraus, dass die Tabelle auf eine Seite passt. Ist sie länger als eine Seite, greift das Fallback und sie bricht trotzdem um (longtable-Verhalten), da sonst Inhalt unten überliefe.
+Faustregel: breit → Default lassen (`false`), lang → `true`. Beides zugleich (breit *und* mehrseitig) geht nicht. Im `false`-Modus werden Wikilinks/Glossar-Refs **innerhalb** von Zellen nicht aufgelöst (Zellinhalt wird direkt gerendert).
 
 ### `latex-short`
 
