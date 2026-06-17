@@ -1,6 +1,6 @@
 // Reusable export pipeline shared by the export command and the (future) preview view.
 
-import { TFile, normalizePath } from 'obsidian';
+import { Notice, TFile, normalizePath } from 'obsidian';
 import { shell } from 'electron';
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { dirname, isAbsolute, join, relative, sep } from 'path';
@@ -10,6 +10,7 @@ import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '.
 import { parseBuildStep, parsePipelinePhase } from './progress';
 import { prepareBrandingOverride } from './branding';
 import { prepareBibliography } from './bibliography';
+import { prepareTemplate } from './template';
 import { ensureBundledAssets } from './assets';
 
 // Minimal progress surface; ProgressNotice satisfies it, the preview view brings its own.
@@ -110,6 +111,27 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
 		reporter.fail(`Bibliography prep failed. ${msg}`);
+		return { ok: false };
+	}
+
+	// Materialize a custom template if selected
+	try {
+		const tpl = prepareTemplate(plugin.app, file, workDir, vaultPath);
+		if (tpl.name) {
+			// Status goes into the progress notice; only the warning needs its own toast.
+			reporter.update(`Using custom template "${tpl.name}"…`);
+			if (tpl.missingPreamble) {
+				new Notice(
+					`Template "${tpl.name}" is missing the NOPE-IMPORTS block — ` +
+						`tables, callouts, theorems and the glossary may break. ` +
+						`Copy nope_minimal.tex as a starting point.`,
+					12000,
+				);
+			}
+		}
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		reporter.fail(`Template prep failed. ${msg}`);
 		return { ok: false };
 	}
 

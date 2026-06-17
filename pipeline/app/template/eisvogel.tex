@@ -499,9 +499,86 @@ $endfor$
 \def\languageshorthands#1{}
 $endif$
 
-%--- Glossar ---
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% NOPE-IMPORTS — DO NOT CHANGE unless you know what you are doing.        %%%
+%%% Everything NOPE's pipeline needs: tables, callouts, theorems, glossary, %%%
+%%% cross-reference names. Keep this block verbatim in any custom template. %%%
+%%% Must sit after hyperref and BEFORE header-includes.                     %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{graphicx}
+\usepackage{longtable,booktabs,array}
+
+% Callouts (callouts.lua → awesomebox) and highlights (==text== → soul \hl).
+\usepackage{awesomebox}
+\usepackage{soul}
+
+% SVG logos/images.
+\usepackage{svg}
+
+% Theorem-family environments (latex-env: theorem/lemma/...). Own counter per
+% type so \autoref prints the right name instead of always "Theorem".
+\usepackage{amsthm}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{proposition}{Proposition}[section]
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{example}{Example}[section]
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+\newtheorem*{note}{Note}
+
+% Fallback \autoref names if hyperref's \newtheorem hook didn't set them.
+\providecommand{\theoremautorefname}{Theorem}
+\providecommand{\lemmaautorefname}{Lemma}
+\providecommand{\corollaryautorefname}{Corollary}
+\providecommand{\propositionautorefname}{Proposition}
+\providecommand{\definitionautorefname}{Definition}
+\providecommand{\exampleautorefname}{Example}
+
+% Glossary + acronyms (gls-* notes). Must precede the injected entries.
 \usepackage[acronym, toc, nonumberlist]{glossaries}
 \makeglossaries
+
+% Language-aware \autoref names (figure/table/equation/... per babel language).
+\AtBeginDocument{%
+  \IfPackageLoadedTF{babel}{%
+    \iflanguage{ngerman}{%
+      \renewcommand{\figureautorefname}{Abbildung}%
+      \renewcommand{\tableautorefname}{Tabelle}%
+      \renewcommand{\equationautorefname}{Gleichung}%
+      \renewcommand{\sectionautorefname}{Abschnitt}%
+      \renewcommand{\subsectionautorefname}{Unterabschnitt}%
+      \renewcommand{\subsubsectionautorefname}{Unterunterabschnitt}%
+      \renewcommand{\paragraphautorefname}{Absatz}%
+      \renewcommand{\itemautorefname}{Punkt}%
+      \renewcommand{\footnoteautorefname}{Fu\ss note}%
+      \renewcommand{\contentsname}{Inhaltsverzeichnis}%
+      \renewcommand{\listfigurename}{Abbildungsverzeichnis}%
+      \renewcommand{\listtablename}{Tabellenverzeichnis}%
+    }{}%
+    \iflanguage{english}{%
+      \renewcommand{\figureautorefname}{Figure}%
+      \renewcommand{\tableautorefname}{Table}%
+      \renewcommand{\equationautorefname}{Equation}%
+      \renewcommand{\sectionautorefname}{Section}%
+      \renewcommand{\subsectionautorefname}{Subsection}%
+      \renewcommand{\subsubsectionautorefname}{Subsubsection}%
+      \renewcommand{\paragraphautorefname}{Paragraph}%
+      \renewcommand{\itemautorefname}{Item}%
+      \renewcommand{\footnoteautorefname}{Footnote}%
+      \renewcommand{\contentsname}{Table of Contents}%
+      \renewcommand{\listfigurename}{List of Figures}%
+      \renewcommand{\listtablename}{List of Tables}%
+    }{}%
+    % --- Add further \iflanguage{<lang>}{...} blocks below if needed ---
+  }{}%
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% END NOPE-IMPORTS                                                        %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 $for(header-includes)$
 $header-includes$
@@ -942,87 +1019,6 @@ $endif$
 \usepackage{graphicx}
 \usepackage{ragged2e}
 
-
-% --- Obsi Print Imports ---
-\usepackage{awesomebox}
-\usepackage{svg}
-\usepackage{soul}
-\usepackage{amsthm}
-
-% --- Obsi Print: Standard theorem-like environments ----------------------
-% Required when notes use the `latex-env:` frontmatter feature.
-\usepackage{amsthm}
-
-% Own counter per type so \autoref prints the right name (shared [theorem]
-% counter makes hyperref label every type "Theorem").
-\theoremstyle{plain}
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{lemma}{Lemma}[section]
-\newtheorem{corollary}{Corollary}[section]
-\newtheorem{proposition}{Proposition}[section]
-
-\theoremstyle{definition}
-\newtheorem{definition}{Definition}[section]
-\newtheorem{example}{Example}[section]
-
-\theoremstyle{remark}
-\newtheorem*{remark}{Remark}
-\newtheorem*{note}{Note}
-
-% Fallback \autoref names if hyperref's \newtheorem hook didn't set them.
-\providecommand{\theoremautorefname}{Theorem}
-\providecommand{\lemmaautorefname}{Lemma}
-\providecommand{\corollaryautorefname}{Corollary}
-\providecommand{\propositionautorefname}{Proposition}
-\providecommand{\definitionautorefname}{Definition}
-\providecommand{\exampleautorefname}{Example}
-
-\usepackage{needspace}
-
-% Optional: customize the "Theorem N (Name)" prefix rendered by \autoref.
-% Without these overrides hyperref shows "Theorem N" by default which is
-% what most users want.
-% --------------------------------------------------------------------------
-
-
-% --- Obsi Print: language-aware \autoref names --------------------------
-% hyperref's \autoref{} uses its own naming table (\figureautorefname etc.).
-% \IfPackageLoadedTF is a LaTeX2e kernel macro (2020+) — no \makeatletter
-% wrap needed, unlike the internal \@ifpackageloaded form.
-\AtBeginDocument{%
-  \IfPackageLoadedTF{babel}{%
-    \iflanguage{ngerman}{%
-      \renewcommand{\figureautorefname}{Abbildung}%
-      \renewcommand{\tableautorefname}{Tabelle}%
-      \renewcommand{\equationautorefname}{Gleichung}%
-      \renewcommand{\sectionautorefname}{Abschnitt}%
-      \renewcommand{\subsectionautorefname}{Unterabschnitt}%
-      \renewcommand{\subsubsectionautorefname}{Unterunterabschnitt}%
-      \renewcommand{\paragraphautorefname}{Absatz}%
-      \renewcommand{\itemautorefname}{Punkt}%
-      \renewcommand{\footnoteautorefname}{Fu\ss note}%
-      \renewcommand{\contentsname}{Inhaltsverzeichnis}%
-      \renewcommand{\listfigurename}{Abbildungsverzeichnis}%
-      \renewcommand{\listtablename}{Tabellenverzeichnis}%
-    }{}%
-    \iflanguage{english}{%
-      \renewcommand{\figureautorefname}{Figure}%
-      \renewcommand{\tableautorefname}{Table}%
-      \renewcommand{\equationautorefname}{Equation}%
-      \renewcommand{\sectionautorefname}{Section}%
-      \renewcommand{\subsectionautorefname}{Subsection}%
-      \renewcommand{\subsubsectionautorefname}{Subsubsection}%
-      \renewcommand{\paragraphautorefname}{Paragraph}%
-      \renewcommand{\itemautorefname}{Item}%
-      \renewcommand{\footnoteautorefname}{Footnote}%
-      \renewcommand{\contentsname}{Table of Contents}%
-      \renewcommand{\listfigurename}{List of Figures}%
-      \renewcommand{\listtablename}{List of Tables}%
-    }{}%
-    % --- Add further \iflanguage{<lang>}{...} blocks below if needed ---
-  }{}%
-}
-% ------------------------------------------------------------------------
 
 \begin{document}
 

@@ -20,6 +20,13 @@ INPUT_DIR=$(dirname "$INPUT_ABS")
 WORK="/build/$BASE"
 mkdir -p "$WORK"
 
+# Template: custom-template.tex (materialized by the plugin) wins, else Eisvogel.
+TEMPLATE="/app/template/eisvogel.tex"
+if [[ -f "$WORK/custom-template.tex" ]]; then
+  echo ">>> Custom template: $WORK/custom-template.tex"
+  TEMPLATE="$WORK/custom-template.tex"
+fi
+
 # Passive-Embed-Syntax `+[[Note]]` → `![[Note]]`.
 PROCESSED_INPUT="$WORK/$BASE.md"
 sed 's/+\[\[/![[/g' "$INPUT_ABS" > "$PROCESSED_INPUT"
@@ -65,7 +72,7 @@ pandoc \
   "${EXTRA_METADATA_FILES[@]}" \
   --resource-path="$INPUT_DIR:$VAULT_PATHS/app/assets" \
   --extract-media="$WORK/media" \
-  --template=/app/template/eisvogel.tex \
+  --template="$TEMPLATE" \
   --lua-filter=/app/filters/obsidian-transclude.lua \
   --lua-filter=/app/filters/obsidian-inline.lua \
   --lua-filter=/app/filters/callouts.lua \
@@ -81,7 +88,7 @@ echo ">>> latexmk (pdflatex + makeglossaries, so oft bis stabil)"
 latexmk -pdf -interaction=nonstopmode -r /app/scripts/latexmkrc "$BASE.tex"
 
 # Cleanup intermediates, keep media and .tex for debugging.
-rm -f "$WORK/branding-override.yml" "$WORK/references.bib" "$WORK/citation-style.csl"
+rm -f "$WORK/branding-override.yml" "$WORK/references.bib" "$WORK/citation-style.csl" "$WORK/custom-template.tex"
 rm -rf "$WORK/branding"
 
 echo ""

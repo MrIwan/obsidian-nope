@@ -441,6 +441,32 @@ In this example, the document uses the `Branding-Default` note for general styli
 
 ***
 
+## Custom LaTeX template
+
+By default NOPE renders with the bundled Eisvogel template. Power users can supply their own `.tex` Pandoc template instead — selected via frontmatter on the document or the branding note:
+
+```yaml
+---
+nope-template: "[[my-template]]"
+---
+```
+
+If unset, Eisvogel is always the fallback. When a custom template is used, NOPE shows a notice.
+
+A custom template must pull in the packages and definitions NOPE depends on (tables, callouts, theorems, glossary, cross-reference names). These live in a clearly marked block inside the template:
+
+```latex
+%%% NOPE-IMPORTS — DO NOT CHANGE … %%%
+…
+%%% END NOPE-IMPORTS %%%
+```
+
+Keep that block verbatim. Besides the NOPE features, a template also needs a Pandoc baseline (image scaling, code highlighting, table-width macros, float placement) that Pandoc's default template would normally provide. The easiest start is therefore the shipped **`nope_minimal.tex`** — a no-overhead starter that already has the Pandoc baseline, and the required slots (`$body$`, header-includes, title, table of contents, glossary). The command **Create custom LaTeX template** drops it into your vault; then point `nope-template:` at it and customize freely. 
+
+> **Editing `.tex` files inside Obsidian:** Obsidian hides non-markdown files by default. Enable Settings → Files & Links → *Detect all file extensions* to see them, and install the [Custom File Extensions](obsidian://show-plugin?id=obsidian-custom-file-extensions-plugin) plugin to open and edit `.tex` files (it handles the `.tex` extension out of the box). Otherwise, right-click the file → *Open in default app* to edit it in your usual LaTeX editor.
+
+***
+
 ## Table of contents and generated lists
 
 NOPE supports document metadata such as a table of contents, list of figures and list of tables.
@@ -474,6 +500,11 @@ This command builds the Docker image used by the export pipeline. You typically 
 ### Create branding template
 
 This command creates a branding template note in the vault. It is a quick way to start a new brand configuration without copying old project files by hand.
+
+
+### Create custom template
+
+This command drops the `nope_minimal.tex` starter into the vault as a base for your own LaTeX template. Point a document at it via `nope-template` to use it instead of Eisvogel.
 
 
 ### Create example main document

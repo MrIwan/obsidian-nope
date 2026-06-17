@@ -252,6 +252,8 @@ Obsidian-Callouts funktionieren auch im PDF — sie werden dort ebenfalls als Ca
 
 Pro Kunde/Projekt eine `.md` mit Frontmatter-Overrides. Body wird beim Export ignoriert (reine Editor-Doku). Aktivierung im Doc-Frontmatter über `nope-branding`. Eine Vorlage erzeugt der Command „Create branding template"; die Key-Beschreibungen stehen im Body der Vorlage (ohne Einfluss aufs Branding), das Frontmatter bleibt kommentarfrei. Wikilink-Werte immer quoten (`"[[logo.png]]"`).
 
+**Custom-LaTeX-Template (optional, fortgeschritten).** Mit `nope-template: "[[mein-template]]"` im Doc- oder Branding-Frontmatter wird ein eigenes `.tex`-Pandoc-Template statt Eisvogel benutzt (ohne Key → immer Eisvogel). Das Template **muss** den markierten `%%% NOPE-IMPORTS %%%`-Block enthalten (alle NOPE-Pflichtpakete), sonst brechen Tabellen/Callouts/Theoreme/Glossar — fehlt der Block, warnt der Export per Notice. Startpunkt: Command „Create custom template" legt `nope_minimal.tex` im Vault an; dann `nope-template:` darauf zeigen lassen.
+
 Wikilinks im YAML **müssen quoted sein** — sonst parst YAML das als Flow-Sequence:
 
 ```yaml
@@ -274,6 +276,7 @@ Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfad
 - `Export active note to PDF` — Hauptkommando.
 - `Build docker image (with cache)` — manueller inkrementeller Image-Build. Initial-Build oder `--no-cache` über Settings.
 - `Create branding template` — schreibt `Branding-Template.md` ins Vault-Root.
+- `Create custom template` — legt `nope_minimal.tex` als Custom-Template-Starter ins Vault-Root; per `nope-template:` aktivieren.
 - `Add table` / `Add theorem` / `Add lemma` / `Add definition` / `Add proof` / `Add mermaid diagram` / `Add equation` / `Add glossary term` / `Add abbreviation` — legen eine atomic Note mit korrektem Frontmatter und Body-Skelett (auf Englisch) neben der aktiven Note an und fügen am Cursor den passenden Link ein. `table`/`mermaid` bringen die Pflicht-`caption:` mit; `Add glossary term` setzt alle `gls-*`-Keys mit `gls-type: term`, `Add abbreviation` dieselben mit `gls-type: acronym`. Embed-Envs fügen `![[…]]` ein, Glossar/Abkürzung den Ref `[[…]]`. Nur im Editor verfügbar; die neue Note öffnet in einem neuen Tab zum Ausfüllen.
 - `Remove docker image` — löscht das Pipeline-Image. Nächster Export baut neu.
 - `Cleanup build folder` — leert `pipeline/build/`.
