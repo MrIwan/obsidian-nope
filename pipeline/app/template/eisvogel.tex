@@ -1206,6 +1206,7 @@ $if(toc-title)$
 \renewcommand*\contentsname{$toc-title$}
 $endif$
 $endif$
+$if(toc)$
 $if(beamer)$
 \begin{frame}[allowframebreaks]
 $if(toc-title)$
@@ -1221,8 +1222,11 @@ $if(colorlinks)$
 $endif$
 \setcounter{tocdepth}{$toc-depth$}
 \tableofcontents
+$if(toc-own-page)$
 \newpage
+$endif$
 }
+$endif$
 $endif$
 $endif$
 $if(lof)$
@@ -1242,9 +1246,11 @@ $endif$
 $body$
 
 
+$if(has-glossary)$
 \clearpage
 \printglossary[type=\acronymtype, title={Abkürzungen}]
 \printglossary[title={Glossar}]
+$endif$
 
 
 $if(has-frontmatter)$

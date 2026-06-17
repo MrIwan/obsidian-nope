@@ -77,7 +77,6 @@ pandoc \
   --lua-filter=/app/filters/obsidian-inline.lua \
   --lua-filter=/app/filters/callouts.lua \
   "${EXTRA_BIB_ARGS[@]}" \
-  --toc \
   -s \
   -t latex \
   -o "$WORK/$BASE.tex" \
