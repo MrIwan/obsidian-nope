@@ -341,10 +341,10 @@ $highlighting-macros$
 \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,fontsize=$if(code-block-font-size)$$code-block-font-size$$else$\small$endif$,commandchars=\\\{\}}
 
 $endif$
-$if(tables)$
 \usepackage{longtable,booktabs,array}
-\usepackage{needspace} % für page-break: false (Tabelle auf einer Seite halten)
-\newcounter{none} % für unnumbered Tabellen, vermeidet "No counter 'none'"
+$if(tables)$
+\usepackage{needspace} 
+\newcounter{none}
 $if(multirow)$
 \usepackage{multirow}
 $endif$

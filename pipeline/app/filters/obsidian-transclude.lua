@@ -372,10 +372,6 @@ local function wrap_math(notename, env_name, sliced, doc_meta)
   return annotated
 end
 
--- Set when a fit-table is rendered, so we can load booktabs ourselves (Pandoc's
--- $if(tables)$ guard won't, since fit-tables leave no Table node in the AST).
-local fit_table_used = false
-
 -- Collapse a block list to a single LaTeX line (cells must not contain \par).
 local LATEX_ALIGN = { AlignLeft = "l", AlignRight = "r", AlignCenter = "c", AlignDefault = "l" }
 local function blocks_to_latex_line(blocks)
@@ -385,7 +381,6 @@ end
 
 -- longtable: false → render the table as a booktabs tabular wrapped in a shrink-only \resizebox (graphicx). True pandas longtable
 local function render_fit_table(table_block, caption_inlines, label, first_embed)
-  fit_table_used = true
   local cols = {}
   for _, spec in ipairs(table_block.colspecs) do
     cols[#cols + 1] = LATEX_ALIGN[spec[1]] or "l"
@@ -971,14 +966,5 @@ function Pandoc(doc)
   resolve_abstract_links(doc.meta)
   -- Phase 3: Inject glossary entries to header-includes.
   flush_glossary_entries(doc)
-  -- Phase 3b: Load booktabs for fit-tables — Pandoc's $if(tables)$ guard skips it because fit-tables are RawBlocks with no Table node left in the AST.
-  if fit_table_used then
-    local hi = doc.meta["header-includes"] or pandoc.MetaList({})
-    if hi.t ~= "MetaList" then hi = pandoc.MetaList({ hi }) end
-    table.insert(hi, pandoc.MetaBlocks({
-      pandoc.RawBlock("latex", "\\usepackage{booktabs}")
-    }))
-    doc.meta["header-includes"] = hi
-  end
   return doc
 end
