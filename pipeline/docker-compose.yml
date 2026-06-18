@@ -1,6 +1,9 @@
 services:
   pipeline:
-    build: .
+    build:
+      context: .
+      labels:
+        nope.image-hash: "${NOPE_IMAGE_HASH:-}"
     image: nope
     entrypoint: /app/scripts/build.sh
     volumes:

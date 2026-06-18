@@ -5,7 +5,7 @@ import { shell } from 'electron';
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { dirname, isAbsolute, join, relative, sep } from 'path';
 import type NopePlugin from '../main';
-import { buildImage, checkDockerReady, cleanupIntermediates, imageExists, runPipeline } from './docker';
+import { buildImage, checkDockerReady, cleanupIntermediates, imageStatus, runPipeline } from './docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from './paths';
 import { parseBuildStep, parsePipelinePhase } from './progress';
 import { prepareBrandingOverride } from './branding';
@@ -59,15 +59,23 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		return { ok: false };
 	}
 
-	// Image must be built
-	if (!(await imageExists())) {
-		reporter.update('Docker image not found — building it now (first run, 5–15 min)…');
+	// Image must be present AND built from the current Dockerfile (rebuild after updates).
+	const status = await imageStatus(pluginDir);
+	if (status !== 'current') {
+		const firstRun = status === 'missing';
+		reporter.update(
+			firstRun
+				? 'Docker image not found — building it now (first run, 5–15 min)…'
+				: 'Pipeline updated — rebuilding the Docker image…',
+		);
 		try {
 			await buildImage(pluginDir, false, (chunk) => {
 				const step = parseBuildStep(chunk);
-				if (step) reporter.update(`Building Docker image (first run, 5–15 min) — ${step}`);
+				if (step) {
+					reporter.update(`${firstRun ? 'Building' : 'Rebuilding'} Docker image — ${step}`);
+				}
 			});
-			reporter.update(`Docker image built — exporting "${file.basename}"…`);
+			reporter.update(`Docker image ready — exporting "${file.basename}"…`);
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
 			reporter.fail(`Failed to build Docker image. Try to build in the plugin settings. ${msg}`);

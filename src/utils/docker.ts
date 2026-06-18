@@ -1,10 +1,13 @@
 // Docker CLI wrapper and configuration.
 
 import { execFile, spawn } from 'child_process';
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs';
+import { createHash } from 'crypto';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { delimiter, join } from 'path';
 
 export const DOCKER_IMAGE_NAME = 'nope';
+// Label carrying the Dockerfile hash the image was built from (freshness check).
+export const IMAGE_HASH_LABEL = 'nope.image-hash';
 function dockerSearchDirs(): string[] {
 	switch (process.platform) {
 		case 'win32':
@@ -100,6 +103,43 @@ export async function imageExists(): Promise<boolean> {
 	});
 }
 
+// Short hash of the Dockerfile — the image-relevant input
+export function pipelineImageHash(pluginDir: string): string {
+	try {
+		const dockerfile = readFileSync(join(pluginDir, 'pipeline', 'Dockerfile'));
+		return createHash('sha256').update(dockerfile).digest('hex').slice(0, 12);
+	} catch {
+		return '';
+	}
+}
+
+// Hash the existing image was built from (its label), or null if no image at all.
+function builtImageHash(): Promise<string | null> {
+	return new Promise((resolve) => {
+		execFile(
+			getDockerBin(),
+			[
+				'image',
+				'inspect',
+				DOCKER_IMAGE_NAME,
+				'--format',
+				`{{ index .Config.Labels "${IMAGE_HASH_LABEL}" }}`,
+			],
+			{ timeout: 5000, windowsHide: true, env: getDockerEnv() },
+			(err, stdout) => resolve(err ? null : stdout.trim()),
+		);
+	});
+}
+
+export type ImageStatus = 'missing' | 'stale' | 'current';
+
+// Present and built from the current Dockerfile? 'stale' also covers pre-label images.
+export async function imageStatus(pluginDir: string): Promise<ImageStatus> {
+	const built = await builtImageHash();
+	if (built === null) return 'missing';
+	return built === pipelineImageHash(pluginDir) ? 'current' : 'stale';
+}
+
 // Remove the Docker image.
 export async function removeImage(): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
@@ -152,7 +192,8 @@ export async function buildImage(
 			// VAULT_PATH is only mounted at runtime (compose run), but compose still
 			// validates the volume spec at build time — so give it a valid existing
 			// path here to avoid an "empty section between colons" error.
-			env: { ...getDockerEnv(), VAULT_PATH: pipelineDir },
+			// NOPE_IMAGE_HASH is stamped onto the image as a label (freshness check).
+			env: { ...getDockerEnv(), VAULT_PATH: pipelineDir, NOPE_IMAGE_HASH: pipelineImageHash(pluginDir) },
 			windowsHide: true,
 		});
 
