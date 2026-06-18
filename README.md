@@ -512,6 +512,11 @@ This command drops the `nope_minimal.tex` starter into the vault as a base for y
 This command creates an example main document in the vault. It is a quick way to see the atomic authoring model in action: a short file with frontmatter plus wikilink embeds of chapters and structured notes.
 
 
+### Add … (structured note scaffolds)
+
+A set of commands — `Add table`, `Add theorem`, `Add lemma`, `Add definition`, `Add proof`, `Add mermaid diagram`, `Add equation`, `Add glossary term` and `Add abbreviation` — each create a new atomic note next to the current one with the correct frontmatter (`latex-env`, required keys like `caption`, `gls-*`) and a ready-to-fill body, then insert the embed (`![[…]]`) or reference (`[[…]]`) at your cursor and open the note in a new tab. They are available while editing a note.
+
+
 ### Remove Docker image
 
 This command removes the pipeline image. The next export can then rebuild the environment from scratch.

@@ -1,333 +1,153 @@
 ---
 name: nope
-description: "Use when authoring or editing Obsidian notes that will be exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, gls-*, nope-branding), wikilink embed/ref semantics, image figures, inline filters, callouts, glossary, mermaid diagrams, and branding."
+description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, nope-branding, nope-template, abstract), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts and branding."
 nope-version: "0.x"
-last-updated: 2026-06-12
+last-updated: 2026-06-18
 ---
 
-# nope — Schreibkonvention
+# nope — authoring conventions
 
-nope exportiert Obsidian-Notes über eine Pandoc/LaTeX-Pipeline zu PDF. Die Konvention ist atomic: jedes Konzept (Theorem, Tabelle, Glossar-Eintrag, größere Definition) **und jedes Kapitel** bekommt eine eigene `.md`-Datei und wird per Wikilink-Embed in Hauptdokumente eingebunden. Hauptdokumente sind kurz und bestehen primär aus Frontmatter und `![[Embeds]]` (`+[[Embeds2]]`). Cross-Refs zeigen automatisch auf die richtige Nummer („Theorem 3", „Tabelle 5", „Abbildung 2", „Gleichung 1"), wenn das Embedd in der Datei gerendert wird und mit [[Embeds]] darauf verwiesen wird. Referenzen auf nicht-embedded Notes fallen auf Plain-Text zurück, damit du während des Schreibens flexibel bleiben kannst.
+nope exports Obsidian notes to PDF through a Pandoc/LaTeX pipeline. The model is **atomic**: every concept (theorem, table, equation, glossary entry, larger definition) **and every chapter** lives in its own `.md` file and is pulled into a short main document via wikilink embeds. A main document is mostly frontmatter plus `![[embeds]]`.
 
-**Atomic Notes starten immer mit H1** (`# Titel`). Der Auto-Heading-Shift verschiebt H1 beim Embed automatisch auf die passende Tiefe relativ zum Host-Heading. Du musst Header in Embeds nie von Hand anpassen. **Ausnahme:** Notes mit `latex-env` (Theorem-Family, `table`, `mermaid`, Math-Envs) enthalten **keine Überschriften** — der Body wird in eine LaTeX-Environment gewrapt, Titel bzw. Caption kommen aus dem Frontmatter (`latex-short`, `caption`).
+**Cross-references auto-number.** If a note is embedded in the document, `[[Note]]` resolves to its number ("Theorem 1.1", "Table 5", "Figure 2", "Equation 1"). A ref to a note that is *not* embedded falls back to plain text — no crash, so you can link freely while drafting.
 
-## Frontmatter-Keys
+**Every atomic note starts with `# Title` (H1).** Auto-heading-shift moves that H1 to the right depth for wherever it is embedded — never adjust heading levels by hand. **Exception:** `latex-env` notes (theorem family, `table`, `mermaid`, math) contain **no headings**; their body is wrapped in a LaTeX environment and the title/caption come from frontmatter.
 
-### `latex-env` — strukturierte Blöcke
+## Embeds and refs
 
-Setzt eine embedded Note in eine LaTeX-Environment.
+Embeds (`![[…]]`):
 
-`theorem`, `lemma`, `definition`, `corollary`, `proposition`, `example`, plus eigene amsthm-Environments → Voll-Embed wird zu `\begin{<env>}[<latex-short>]…\end{<env>}` gewrapt. Jeder Typ hat einen eigenen Counter und wird pro Typ gezählt (Theorem 1.1, Lemma 1.1, Definition 1.1 — keine gemeinsame Folge). `\autoref` liefert den korrekten Namen, z.B. „Lemma 1.1".
+- `![[Note]]` — whole note (`.md` optional).
+- `![[Note#Heading]]` — slice from a heading to the next heading of equal/higher level.
+- `![[Note#^block-id]]` — slice from a block id.
+- `![[image.png|Caption]]` — image **figure**; a caption is **required** for numbering and the list of figures. `|w=<value>` (at the caption end) scales per embed: percent, `px`, `cm`, `mm` or LaTeX lengths like `0.5\textwidth`.
 
-`proof` (sowie `remark`, `note`) ist **unnummeriert** — kein `\autoref`-Ziel. Ein Ref `[[Beweis-Note]]` wird zu einem klickbaren Hyperlink mit dem Notentitel statt einer Nummer. Embedden funktioniert normal.
+Passive embed `+[[…]]` behaves **identically on export** to `![[…]]` (all variants work: `+[[Note#Heading]]`, `+[[image.png|Caption|w=60%]]`). The only difference is Obsidian's editor/reader view does **not** render it as an embed — handy to keep a main document with many embeds readable.
 
-`table` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau eine Pandoc-Tabelle. Refs liefern „Tabelle N". Optional `longtable:` (Default `false`) steuert das Tabellen-Layout — siehe unten.
+Refs (`[[…]]`):
 
-`mermaid` → erfordert zusätzlich `caption:` im Frontmatter (sonst harter Filter-Error). Body enthält genau einen ```mermaid-Codeblock — Obsidian rendert die Note im Live-Preview als Diagramm, der Export ruft `mmdc` (mermaid-cli) im Container auf und ersetzt den Block durch ein nummeriertes Image mit Caption. Refs liefern „Abbildung N". Optional `w:` (oder ausgeschrieben `width:`) im Frontmatter zum Skalieren der PDF-Darstellungsgröße — Prozent, px, cm, mm oder LaTeX-Längen wie `0.6\textwidth`. Optional `scale:` (1–5, Default 2) für die Render-Auflösung — höher = schärfer bei großen Diagrammen, größere PNG-Datei. Identische Diagramm-Sources werden gecacht — dasselbe Diagramm in mehreren Docs kostet nur einen Render.
+- `[[Note]]` → `\autoref` → the typed name + number.
+- `[[Note|Custom text]]` → hyperlink with your text.
+- `[[GlossaryNote]]` → `\gls{<gls-id>}` when the target has a `gls-id` (glossary wins over an embed target of the same name).
+- Multiple embeds of one note: refs point to the first occurrence (counters still advance).
 
-`equation`, `align`, `gather`, `multline`, `alignat` und deren Stern-Varianten → Voll-Embed mit genau einem `$$…$$`-Block im Body. `align`/`gather` dürfen `&` und `\\` enthalten (eine Nummer pro Zeile). `equation` kann via inneres `aligned` mehrzeilig sein (eine Nummer für den ganzen Block). Fehlender Math-Block → harter Filter-Error. Refs liefern „Gleichung N".
+## `latex-env` — structured blocks
 
-### `caption`
+Set on an atomic note (no headings in the body):
 
-Mandatory bei `latex-env: table` und `latex-env: mermaid`. Wird als Caption gerendert und im Tabellen- bzw. Abbildungsverzeichnis aufgeführt.
+- **Theorem family** — `theorem`, `lemma`, `definition`, `corollary`, `proposition`, `example` (and custom amsthm envs). Each type has its own counter ("Lemma 1.1", "Definition 1.2"). Optional `latex-short:` becomes the bracket title (`\begin{theorem}[<short>]`).
+- **`proof`, `remark`, `note`** — unnumbered; a ref to them is a clickable hyperlink showing the note title, not a number. Embedding works normally.
+- **`table`** — requires `caption:`; body is exactly one Pandoc table. Refs give "Table N". Layout via `longtable:` (see below).
+- **`mermaid`** — requires `caption:`; body is exactly one ` ```mermaid ` block (Obsidian renders it live; export rasterises it to a numbered figure). Optional `w:`/`width:` (like image `|w=`) and `scale:` (1–5, default 2 ≈ 1600px; raise for large/sharp diagrams, bigger PNG). Identical diagram sources are cached. Inline ` ```mermaid ` blocks in notes *without* `latex-env: mermaid` are **not** rendered (they stay as a code fence).
+- **Math** — `equation`, `align`, `gather`, `multline`, `alignat` (+ `*` variants); body is exactly one `$$…$$` block. `align`/`gather` may use `&` and `\\` (one number per line); `equation` with an inner `aligned` is multi-line with one number. Refs give "Equation N".
 
-### `longtable`
+A missing required block (table/math) or missing `caption` (table/mermaid) is a hard export error.
 
-Optional bei `latex-env: table`, Default `false`. Du entscheidest zwischen zwei Layouts:
+### `longtable` (table layout, default `false`)
 
-`false` (Default) → die Tabelle bleibt auf **einer** Seite und wird, falls sie breiter als die Textbreite ist, als Ganzes herunterskaliert, bis sie passt (kein Spalten-Overflow). Für **breite, kompakte** Tabellen. Bricht nicht über Seiten um; ist die Tabelle höher als eine Seite, läuft sie unten über → dann `longtable: true` setzen.
+- `false` — table stays on **one page** and, if wider than the text, is scaled down to fit (no column overflow). Best for **wide, compact** tables. It does not break across pages; in this mode wikilinks **inside cells are not resolved**.
+- `true` — set as a `longtable` that breaks across pages with a repeating header. Best for **long** tables; very wide columns with long words can overflow sideways.
 
-`true` → die Tabelle wird als `longtable` gesetzt und bricht bei Bedarf über Seiten um (Kopfzeile wiederholt sich). Für **lange** Tabellen. Nachteil: bei sehr **breiten** Spalten mit langen Wörtern kann Inhalt seitlich in die Nachbarspalte überlaufen.
-
-```yaml
----
-latex-env: table
-caption: "Projektphasen-Übersicht"
-longtable: true
----
-```
-
-Faustregel: breit → Default lassen (`false`), lang → `true`. Beides zugleich (breit *und* mehrseitig) geht nicht. Im `false`-Modus werden Wikilinks/Glossar-Refs **innerhalb** von Zellen nicht aufgelöst (Zellinhalt wird direkt gerendert).
-
-### `latex-short`
-
-Optional bei Theorem-Family-Envs. Wird als optionales Argument an die Environment übergeben (`\begin{theorem}[<latex-short>]…`). Praktisch für Kurz-Bezeichner im Theorem-Header.
-
-### Glossary-Atoms
-
-Eine Glossar-Note ist eine `.md` mit folgenden Frontmatter-Keys:
-
-```yaml
----
-gls-id: ki                          # eindeutige LaTeX-ID
-gls-short: KI                       # Kurzform
-gls-long: Künstliche Intelligenz    # Langform
-gls-description: ""                 # optional
-gls-type: acronym                   # acronym | term
----
-```
-
-`acronym` landet im Abkürzungsverzeichnis, `term` im Glossar. Wikilinks auf die Note (`[[KI]]`) werden zu `\gls{ki}`.
-
-### `nope-branding`
-
-Optional. Wikilink (quoted!) auf eine Branding-Note. Ohne den Key gelten die Plugin-Defaults aus `_base.yml`.
-
-```yaml
-nope-branding: "[[Branding-Kunde1]]"
-```
-
-### `abstract` — Kurzfassung (optional)
-
-Optional. Fehlt der Key, wird keine Abstract-Seite gerendert. Zwei Schreibweisen:
-
-```yaml
-# Variante 1: Text direkt im Frontmatter
-abstract: |
-  Kurzfassung des Berichts als Fließtext.
-
-# Variante 2: Wikilink (quoted!) — der Body der Note wird als Abstract eingesetzt
-abstract: "[[Meine-Kurzfassung]]"
-```
-
-Beim Wikilink wird das Frontmatter der Ziel-Note gestrippt; Heading-Slices (`[[Note#Abschnitt]]`) und Embeds innerhalb der Note funktionieren. Wikilinks im Abstract-Text (z.B. `[[KI]]`) werden wie im Body aufgelöst (Glossar, Refs, Plain-Text-Fallback). Mit `abstract-title: "Kurzfassung"` lässt sich die Überschrift der Abstract-Seite ändern (Default: „Abstract").
-
-### Pandoc-/Eisvogel-Keys
-
-Übliche Pandoc- und Eisvogel-Keys (`lang`, `toc`, `toc-depth`, `lof`, `lot`, `titlepage`, `titlepage-logo`, `header-left`, …) funktionieren wie gewohnt im Doc-Frontmatter, in der Branding-Datei oder als Plugin-Default. Die Keys können im Doc-Frontmatter, in der Branding-Datei oder als Plugin-Default definiert werden. Die Reihenfolge der Priorität ist: Doc-Frontmatter > Branding > `_base.yml`.
-
-## Wikilink-Embeds (`![[…]]`)
-
-`![[Note]]` — vollständige Note embedden. `.md`-Extension ist optional.
-
-`![[Note#Heading]]` — Slice ab Heading bis zum nächsten Heading gleicher oder höherer Ebene.
-
-`![[Note#^block-id]]` — Slice ab Block-ID.
-
-Im Host-Dokument den Embed unter dem gewünschten Heading platzieren — der Auto-Heading-Shift macht den Rest.
-
-### Passiver Embed (`+[[…]]`)
-
-`+[[Note]]` verhält sich beim PDF-Export **identisch** zu `![[Note]]` (gleiche Slices, gleiche Wraps, gleiche Auto-Heading-Shift-Logik, gleiche Refs). Der Unterschied ist nur Obsidians Editor-/Reader-Ansicht: `+[[…]]` wird in Obsidian **nicht** als Embed gerendert — du siehst nur ein `+` gefolgt vom Wikilink. Praktisch, wenn das Hauptdokument viele Embeds enthält und du beim Schreiben die Übersicht behalten willst (z.B. TOC-artige Listen aus Kapitel-Embeds), aber im PDF-Export trotzdem den vollen Inhalt brauchst.
-
-Alle Varianten von `![[…]]` funktionieren analog mit `+`: `+[[Note#Heading]]`, `+[[Note#^block-id]]`, `+[[bild.png|Caption]]`, `+[[bild.png|Caption|w=60%]]`.
-
-```markdown
-+[[Kapitel-Einleitung]]
-+[[Kapitel-Theorie]]
-+[[Kapitel-Daten]]
-```
-
-Im Editor siehst du drei Wikilinks zu den Kapiteln, im PDF erscheinen sie voll expandiert.
-
-### Image-Embeds
-
-Bilder werden **immer mit Caption** embedded. Ohne Caption keine Figure-Nummerierung und kein Eintrag im Abbildungsverzeichnis.
-
-```markdown
-![[bild.png|Caption]]                    # Standard: nummerierte Figure mit Caption
-![[bild.png|Mein Diagramm|w=60%]]        # mit Width-Hint
-```
-
-`|w=<wert>` akzeptiert Prozent, `px`, `cm`, `mm`, oder LaTeX-Längen wie `0.5\textwidth`. Width gilt pro Embed — dasselbe Bild kann mehrfach in verschiedenen Größen embedded werden. Der Width-Marker muss am Caption-Ende stehen.
-
-## Wikilink-Refs (`[[…]]`)
-
-`[[Note]]` (Default-Display) → `\autoref{label}`, ergibt „Theorem N" / „Tabelle N" / „Abbildung N" / „Gleichung N".
-
-`[[Note|Mein Text]]` (Custom-Display) → `\hyperref[label]{Mein Text}`.
-
-`[[GlossaryNote]]` → `\gls{<gls-id>}`, wenn die Target-Note ein `gls-id`-Frontmatter hat. Glossary gewinnt bei Konflikt mit Embed-Targets.
-
-Refs auf Notes, die im Dokument nicht embedded sind, fallen auf Plain-Text zurück — der Linktext erscheint normal, kein Crash. Praktisch für Denk-Verweise während des Schreibens.
-
-Bei Mehrfach-Embed derselben Note zeigt der Ref auf das erste Vorkommen (Label wird nur beim ersten Embed gesetzt; Counter zählen aber durch).
-
-## Mermaid-Diagramme
-
-Mermaid-Diagramme sind atomic Notes mit `latex-env: mermaid` — eine `.md` pro Diagramm. Caption ist Pflicht. Beispiel `Diagramm-Datenfluss.md`:
-
-````markdown
----
-latex-env: mermaid
-caption: "Datenfluss von Vault zu PDF"
----
-
-```mermaid
-graph TD
-  A[Vault] --> B[Pandoc]
-  B --> C[PDF]
-```
-````
-
-Im Hauptdokument einbinden wie jedes andere Atomic-Diagramm:
-
-```markdown
-![[Diagramm-Datenfluss]]
-```
-
-Refs ergeben „Abbildung N":
-
-```markdown
-Wie in [[Diagramm-Datenfluss]] gezeigt …
-```
-
-Optional `w:` im Frontmatter zum Skalieren der PDF-Darstellungsgröße — Prozent, px, cm, mm oder LaTeX-Längen wie `0.6\textwidth` (konsistent mit `|w=…` bei Image-Embeds). Alternativ ausgeschrieben `width:`; `w:` gewinnt bei Konflikt.
+Rule of thumb: wide → keep `false`, long → `true`. A table cannot be both.
 
 ```yaml
 ---
 latex-env: mermaid
-caption: "Architektur-Übersicht"
+caption: "Architecture overview"
 w: "60%"
+scale: 3
 ---
 ```
 
-Wenn das Diagramm im PDF unscharf wirkt — typisch bei großen Darstellungen — `scale:` höher setzen. Default ist `2` (~1600px-Render, scharf für die meisten Fälle). Für ganzseitige oder sehr detailreiche Diagramme `scale: 3` oder `4`. Range 1–5; höher = schärfer, aber spürbar größere PNG-Datei.
+## Glossary atoms
+
+One `.md` per term/acronym; referenced anywhere with `[[Note]]` → `\gls{<gls-id>}`. `acronym` goes to the acronym list, `term` to the glossary.
 
 ```yaml
 ---
-latex-env: mermaid
-caption: "Vollseitiger Architektur-Plan"
-w: "0.9\\textwidth"
-scale: 4
+gls-id: ai                # unique LaTeX id
+gls-short: AI
+gls-long: Artificial Intelligence
+gls-description: ""        # used for terms
+gls-type: acronym          # acronym | term
 ---
 ```
 
-Identische Diagramm-Sources werden gecacht (Hash-basiert) — ein Diagramm in mehreren Docs verwenden kostet nur einen Render. Vorteil gegenüber Inline-`mermaid`-Blöcken: Obsidian zeigt das Diagramm beim Editieren der Atomic Note live in der Preview, Caption und Cross-Ref kommen aus dem Frontmatter wie bei Tabellen, und das Diagramm ist im Vault wiederverwendbar.
+## Document and branding frontmatter
 
-Inline-`mermaid`-Blöcke direkt im Hauptdokument oder in einer beliebigen Note ohne `latex-env: mermaid`-Frontmatter werden NICHT gerendert — sie bleiben als Code-Fence im PDF. Wenn das Diagramm im PDF erscheinen soll, gehört es in eine eigene atomic Note.
+Standard Pandoc/Eisvogel keys (`lang`, `toc`, `toc-depth`, `lof`, `lot`, `geometry`, `fontsize`, `titlepage`, `titlepage-logo`, `header-left`, link colors, …) work as usual. Precedence: **doc frontmatter > branding note > plugin `_base.yml`**.
 
-## Zitationen
+- **`abstract`** — text block, or a quoted wikilink whose note body becomes the abstract (frontmatter stripped; heading slices and embeds work). `abstract-title:` overrides the heading. No key → no abstract page.
+- **`nope-branding: "[[Branding-Note]]"`** — apply a branding note (see below). Without it the `_base.yml` defaults apply.
+- **`nope-template: "[[my-template]]"`** — use a custom `.tex` Pandoc template instead of Eisvogel (doc or branding frontmatter; without it Eisvogel is used). The template **must keep the marked `%%% NOPE-IMPORTS %%%` block** (all required packages) or tables/callouts/theorems/glossary break — the export warns if it is missing. Start from the `Create custom LaTeX template` command (`nope_minimal.tex`).
 
-Citations laufen über Pandoc-citeproc gegen eine `.bib`-Datei im Vault. Die Resolution arbeitet wie bei `nope-branding` — das Plugin sucht die Datei via Obsidian's Link-Index, du kannst Plain-Pfad oder Wikilink schreiben.
+### Citations
 
-Im Doc-Frontmatter:
+Pandoc-citeproc against a `.bib` in the vault; the file is resolved via Obsidian's link index, so a plain path or wikilink both work and folders with spaces are fine.
 
 ```yaml
----
-title: "Mein Bericht"
-bibliography: "references.bib"      # Plain-Pfad
-# bibliography: "[[references.bib]]" # ODER als Wikilink (gleicher Effekt)
-csl: chicago-author-date            # optional; ohne Angabe greift Pandoc-Default
----
+bibliography: "references.bib"   # or "[[references.bib]]"
+csl: chicago-author-date         # optional; default style otherwise
 ```
 
-Folder mit Leerzeichen ist egal — der Resolver matcht über den Vault-Index, nicht über String-Vergleich.
+In-text (standard Pandoc): `[@key]`, `[-@key]` (suppress author), `@key` (author in text), `[@key, p. 42]` (locator), `[@a; @b]` (multiple). The bibliography is appended automatically; place it explicitly with a `::: {#refs}\n:::` placeholder. Recommended source-of-truth workflow: Zotero + Better BibTeX (auto-export `.bib` into the vault).
 
-In-Text-Syntax (Standard-Pandoc):
+### Branding notes
 
-```markdown
-Die These ist belegt [@schmidt2020].
-Wie [-@schmidt2020] zeigt, ...           # Author unterdrückt
-@schmidt2020 argumentiert, dass ...       # Author im Fließtext
-Siehe [@schmidt2020, p. 42].              # Locator
-Mehrere [@a; @b, p. 12].                  # Multi
-```
+One `.md` per customer/project with frontmatter overrides; the body is ignored on export. **Quote every wikilink value** (`"[[logo.png]]"`) — unquoted, YAML parses it as a list and fails. Logo wikilinks in header/footer slots (`header-left/center/right`, `footer-left/center/right`) auto-expand to an `\includegraphics` raisebox; default height `0.7cm`, override with `"[[logo.png|h=1.2cm]]"`. `titlepage-logo`/`titlepage-background` take a plain path (substitution only). SVG logos are unsupported under pdflatex — use PNG/PDF.
 
-Bibliography landet automatisch am Doc-Ende. Wenn du den genauen Platz selbst bestimmen willst (z.B. vor Anhängen), Placeholder einfügen:
+## Inline markup
 
-```markdown
-## Literaturverzeichnis
+- `%%text%%` → comment, invisible in the PDF (works across blank lines).
+- `==text==` → highlight (paragraph-scoped; unbalanced `==` kept literally).
+- Obsidian callouts render as callout boxes; all types (`[!note]`, `[!warning]`, `[!tip]`, …) are supported.
 
-::: {#refs}
-:::
-```
+## Unsupported characters
 
-Empfohlener Authoring-Workflow für größere Quell-Mengen: Zotero als Source-of-Truth + Better-BibTeX-Plugin (auto-exportiert die Library als `.bib` in den Vault auf jede Änderung) + Obsidian Citations-Plugin oder Zotero Integration (Quick-Insert von `[@key]`-Markern). Damit ist der Vault self-contained und das `.bib` immer aktuell.
+The pdflatex engine cannot typeset emoji/pictographs (✅, 😀, flags, …). Such characters are **stripped** from the PDF and the export shows a notice with the count — the build no longer crashes. Accents, `€`, dashes etc. are kept. (Real emoji rendering would need a different engine + font.)
 
-## Inline-Syntax
+## Commands
 
-`%%text%%` → Kommentar. Im PDF unsichtbar. Funktioniert über Leerzeilen hinweg (multi-block).
+- `Export active note to PDF` — main command.
+- `Open PDF preview` / `Sync PDF preview to cursor` — live PDF preview pane; sync scrolls it to the cursor's anchor.
+- `Add table / theorem / lemma / definition / proof / mermaid diagram / equation / glossary term / abbreviation` — create an atomic note with the correct frontmatter + body skeleton next to the current note and insert its embed (`![[…]]`) or, for glossary/abbreviation, its ref (`[[…]]`) at the cursor.
+- `Create branding template` / `Create custom LaTeX template` / `Create example main document` — scaffold helper files in the vault.
+- `Build docker image (with cache)` / `Remove docker image` / `Cleanup build folder` — pipeline maintenance (the image also rebuilds itself after a plugin update changes the pipeline).
 
-`==text==` → Highlight. Paragraph-scoped. Unbalanciertes `==` wird literal beibehalten.
+## Do / don't
 
-Obsidian-Callouts funktionieren auch im PDF — sie werden dort ebenfalls als Callout-Box gerendert. Alle Callout-Typen (`[!note]`, `[!abstract]`, `[!warning]`, `[!tip]`, …) werden unterstützt.
+DO:
 
-```markdown
-> [!abstract]
-> Inhalt des Callouts
-```
+- One concept or chapter per atomic note; pull it in with `![[…]]`.
+- Start every atomic note with `# Title` — except `latex-env` notes.
+- Exactly one Pandoc table per `table` note; exactly one `$$…$$` per math note.
+- Quote wikilink values in YAML: `"[[logo.png]]"`.
 
-## Branding-Notes
+DON'T:
 
-Pro Kunde/Projekt eine `.md` mit Frontmatter-Overrides. Body wird beim Export ignoriert (reine Editor-Doku). Aktivierung im Doc-Frontmatter über `nope-branding`. Eine Vorlage erzeugt der Command „Create branding template"; die Key-Beschreibungen stehen im Body der Vorlage (ohne Einfluss aufs Branding), das Frontmatter bleibt kommentarfrei. Wikilink-Werte immer quoten (`"[[logo.png]]"`).
+- No headings inside `latex-env` notes.
+- Don't omit `caption` on `table`/`mermaid` notes — hard error.
+- Don't embed an image without a caption — no figure, no number.
+- Don't put a ` ```mermaid ` block in a note without `latex-env: mermaid` — it stays a code fence.
+- Don't set `\label{}` or adjust embed heading levels by hand — both are automatic.
+- Don't use SVG logos — pdflatex can't render them; use PNG/PDF.
 
-**Custom-LaTeX-Template (optional, fortgeschritten).** Mit `nope-template: "[[mein-template]]"` im Doc- oder Branding-Frontmatter wird ein eigenes `.tex`-Pandoc-Template statt Eisvogel benutzt (ohne Key → immer Eisvogel). Das Template **muss** den markierten `%%% NOPE-IMPORTS %%%`-Block enthalten (alle NOPE-Pflichtpakete), sonst brechen Tabellen/Callouts/Theoreme/Glossar — fehlt der Block, warnt der Export per Notice. Startpunkt: Command „Create custom template" legt `nope_minimal.tex` im Vault an; dann `nope-template:` darauf zeigen lassen.
-
-Wikilinks im YAML **müssen quoted sein** — sonst parst YAML das als Flow-Sequence:
-
-```yaml
-titlepage-logo: "[[logo.png]]"     # richtig
-titlepage-logo: [[logo.png]]       # FALSCH — YAML-Parse-Error
-```
-
-Logo-Wikilinks in Header-/Footer-Slots (`header-left`, `header-center`, `header-right`, `footer-left`, `footer-center`, `footer-right`) werden automatisch zu `\raisebox{}{\includegraphics{…}}` expandiert. Default-Höhe `0.7cm`, übersteuerbar:
-
-```yaml
-header-left: "[[logo.png|h=1.2cm]]"
-```
-
-Andere Image-Keys (`titlepage-logo`, `titlepage-background`) erwarten reine Pfade — nur Pfad-Substitution, kein `\includegraphics`-Wrap. Mixed-Mode (Text und Logo in einer Header-Zelle) bleibt manuell: User schreibt LaTeX, `[[…]]` dient als Pfad-Platzhalter.
-
-`pdflatex` kann SVGs nicht direkt einbinden — Logos als PDF oder PNG ablegen.
-
-## Commands (Command-Palette)
-
-- `Export active note to PDF` — Hauptkommando.
-- `Build docker image (with cache)` — manueller inkrementeller Image-Build. Initial-Build oder `--no-cache` über Settings.
-- `Create branding template` — schreibt `Branding-Template.md` ins Vault-Root.
-- `Create custom template` — legt `nope_minimal.tex` als Custom-Template-Starter ins Vault-Root; per `nope-template:` aktivieren.
-- `Add table` / `Add theorem` / `Add lemma` / `Add definition` / `Add proof` / `Add mermaid diagram` / `Add equation` / `Add glossary term` / `Add abbreviation` — legen eine atomic Note mit korrektem Frontmatter und Body-Skelett (auf Englisch) neben der aktiven Note an und fügen am Cursor den passenden Link ein. `table`/`mermaid` bringen die Pflicht-`caption:` mit; `Add glossary term` setzt alle `gls-*`-Keys mit `gls-type: term`, `Add abbreviation` dieselben mit `gls-type: acronym`. Embed-Envs fügen `![[…]]` ein, Glossar/Abkürzung den Ref `[[…]]`. Nur im Editor verfügbar; die neue Note öffnet in einem neuen Tab zum Ausfüllen.
-- `Remove docker image` — löscht das Pipeline-Image. Nächster Export baut neu.
-- `Cleanup build folder` — leert `pipeline/build/`.
-
-## DO / DON'T
-
-**DO** atomic schreiben: ein Konzept = eine Note. Theoreme, Tabellen, Glossar-Einträge, größere Definitionen — jeweils eigene Datei, im Hauptdokument embedden.
-
-**DO** jedes Kapitel in einer eigenen Note ablegen und im Hauptdokument nur per `![[…]]` einbinden.
-
-**DO** jede atomic Note mit `# Titel` (H1) starten — der Auto-Heading-Shift verschiebt das beim Embed automatisch. Ausnahme: `latex-env`-Notes (siehe unten).
-
-**DO** Bilder immer mit Caption embedden (`![[bild.png|Caption]]`).
-
-**DO** Mermaid-Diagramme als atomic Note mit `latex-env: mermaid` + `caption:` ablegen — eine Note pro Diagramm, im Hauptdokument per `![[…]]` embedden.
-
-**DO** Wikilinks im YAML quoten: `"[[logo.png]]"`.
-
-**DO** Caption an Tabellen-Notes setzen (mandatory).
-
-**DO** für Math-Notes genau einen `$$…$$`-Block im Body verwenden.
-
-**DON'T** Überschriften in `latex-env`-Notes verwenden (Theorem-Family, `table`, `mermaid`, Math-Envs) — der Body wird in die Environment gewrapt, Titel/Caption kommen aus dem Frontmatter.
-
-**DON'T** Headings im Hauptdokument manuell ans Embed anpassen — der Auto-Heading-Shift erledigt das.
-
-**DON'T** Labels manuell setzen (`\label{}`) — das Plugin labelt Embeds automatisch.
-
-**DON'T** SVG für Logos benutzen — pdflatex kann sie nicht. PDF/PNG.
-
-**DON'T** Caption an Tabellen-Notes weglassen — harter Filter-Error.
-
-**DON'T** Mermaid-Diagramme inline in eine Note kippen, die kein `latex-env: mermaid` hat — der Block bleibt dann als Code-Fence im PDF, statt gerendert zu werden.
-
-**DON'T** Bilder ohne Caption embedden — keine Nummerierung, kein Eintrag im Abbildungsverzeichnis.
-
-## Typisches Hauptdokument
+## Example main document
 
 ```markdown
 ---
-title: "Mein Bericht"
-nope-branding: "[[Branding-Kunde1]]"
+title: "My Report"
+nope-branding: "[[Branding-Customer1]]"
 toc: true
-abstract: "[[Meine-Kurzfassung]]" # optional; alternativ Text direkt, ohne Key keine Abstract-Seite
+abstract: "[[My-Abstract]]"
 ---
 
-![[Kapitel-Einleitung]]
+![[Chapter-Introduction]]
 
-![[Kapitel-Theorie]]
+![[Chapter-Theory]]
 
-![[Kapitel-Daten]]
+![[Chapter-Results]]
 ```
 
-Jedes Kapitel-Atom (`Kapitel-Einleitung.md`, …) startet mit `# Titel` (H1) und enthält seinen eigenen Fließtext, weitere Embeds (`![[Theorem-Pythagoras]]`, `![[Tabelle-Vergleich]]`, `![[diagramm.png|Caption]]`) und Refs (`[[KI]]`, `[[Tabelle-Vergleich]]`). Der Auto-Heading-Shift verschiebt das H1 im Embed-Kontext auf das passende Level — am Hauptdokument musst du nichts manuell anpassen.
+Each chapter atom starts with `# Title` and holds its own prose plus further embeds (`![[Theorem-Pythagoras]]`, `![[Table-Comparison]]`, `![[plot.png|Caption]]`) and refs (`[[AI]]`, `[[Table-Comparison]]`). Auto-heading-shift handles the levels.
+
