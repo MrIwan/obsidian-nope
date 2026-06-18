@@ -492,7 +492,6 @@ export class NopePreviewView extends ItemView {
 		const md = this.app.workspace.getActiveViewOfType(MarkdownView);
 		const cursorFile = md?.file;
 		if (!file || !md || !cursorFile) return null;
-		if (cursorFile.path !== this.filePath && !this.watchSet.has(cursorFile.path)) return null;
 		return this.resolveAnchor(file, cursorAnchorCandidates(this.app, md.editor, cursorFile));
 	}
 
@@ -617,7 +616,7 @@ export class NopePreviewView extends ItemView {
 	private schedulePageUpdate(): void {
 		if (this.pageTick) return;
 		this.pageTick = true;
-		activeWindow.requestAnimationFrame(() => {
+		window.requestAnimationFrame(() => {
 			this.pageTick = false;
 			this.updatePageIndicator();
 		});

@@ -147,12 +147,11 @@
 	transform-origin: 0 0;
 }
 
-/* Translucent highlight so the canvas text shows through; !important overrides
-   Obsidian's opaque global ::selection. */
-.textLayer ::selection,
-.textLayer span::selection {
-	background: rgba(125, 95, 255, 0.3) !important;
-	color: transparent !important;
+/* Translucent highlight so the canvas text shows through*/
+.nope-preview-content .textLayer ::selection,
+.nope-preview-content .textLayer span::selection {
+	background: rgba(125, 95, 255, 0.3);
+	color: transparent;
 }
 
 /* Clickable link overlay — container passes events through so text stays selectable;
