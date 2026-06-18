@@ -297,7 +297,7 @@ In [[Diagram-DataFlow]] we see the data flow from vault to PDF.
 
 Image embeds become figures when used with a caption.
 
-Supported width hints include percentages, pixel units, metric units and LaTeX-style widths. This makes it possible to reuse the same image at different sizes across different documents.
+Supported width hints are percentages, pixel units and metric units (`cm`, `mm`). This makes it possible to reuse the same image at different sizes across different documents.
 
 A reference with `[[plot.png]]` becomes `Abbildung X`.
 

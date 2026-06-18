@@ -20,7 +20,7 @@ Embeds (`![[…]]`):
 - `![[Note]]` — whole note (`.md` optional).
 - `![[Note#Heading]]` — slice from a heading to the next heading of equal/higher level.
 - `![[Note#^block-id]]` — slice from a block id.
-- `![[image.png|Caption]]` — image **figure**; a caption is **required** for numbering and the list of figures. `|w=<value>` (at the caption end) scales per embed: percent, `px`, `cm`, `mm` or LaTeX lengths like `0.5\textwidth`.
+- `![[image.png|Caption]]` — image **figure**; a caption is **required** for numbering and the list of figures. `|w=<value>` (at the caption end) scales per embed: percent, `px`, `cm` or `mm`.
 
 Passive embed `+[[…]]` behaves **identically on export** to `![[…]]` (all variants work: `+[[Note#Heading]]`, `+[[image.png|Caption|w=60%]]`). The only difference is Obsidian's editor/reader view does **not** render it as an embed — handy to keep a main document with many embeds readable.
 
