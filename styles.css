@@ -57,11 +57,21 @@
 }
 
 .nope-preview-status {
+	flex: 1;
 	color: var(--text-muted);
 	font-size: var(--font-smaller);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.nope-preview-right {
+	margin-left: auto;
+}
+
+.nope-preview-busy {
+	opacity: 0.5;
+	pointer-events: none;
 }
 
 .nope-preview-status-error {
@@ -99,17 +109,6 @@
 	text-align: center;
 	color: var(--text-muted);
 	padding: var(--size-4-4);
-}
-
-.nope-preview-auto {
-	display: flex;
-	align-items: center;
-	gap: var(--size-2-2);
-}
-
-.nope-preview-auto-label {
-	color: var(--text-muted);
-	font-size: var(--font-smaller);
 }
 
 .nope-preview-banner {

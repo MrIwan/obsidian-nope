@@ -1,9 +1,10 @@
 // PDF preview view: renders the active note via the export pipeline and shows the build PDF inline.
 // Auto mode watches the dependency set from the last render and re-renders on changes.
 
-import { ItemView, MarkdownView, Notice, TFile, ToggleComponent, WorkspaceLeaf, debounce } from 'obsidian';
+import { ItemView, MarkdownView, Menu, Notice, TFile, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
 import type { App, Debouncer, Editor, ViewStateResult } from 'obsidian';
-import { existsSync, readFileSync, statSync } from 'fs';
+import { remote } from 'electron';
+import { copyFileSync, existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import * as pdfjsLib from 'pdfjs-dist';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
@@ -69,9 +70,7 @@ export class NopePreviewView extends ItemView {
 	private destCache: Map<string, string> | null = null;
 	private debouncedRender: Debouncer<[], void>;
 	private debouncedJump: Debouncer<[], void>;
-	private renderButton: HTMLButtonElement | null = null;
-	private autoToggle: ToggleComponent | null = null;
-	private jumpToggle: ToggleComponent | null = null;
+	private renderButton: HTMLElement | null = null;
 	private statusEl: HTMLElement | null = null;
 	private bodyEl: HTMLElement | null = null;
 	private pagesEl: HTMLElement | null = null;
@@ -121,8 +120,6 @@ export class NopePreviewView extends ItemView {
 			this.lastAnchor = null;
 			this.destCache = null;
 		}
-		this.autoToggle?.setValue(this.autoRender);
-		this.jumpToggle?.setValue(this.autoJump);
 		this.refreshBody();
 		await super.setState(state, result);
 	}
@@ -132,33 +129,25 @@ export class NopePreviewView extends ItemView {
 		this.contentEl.addClass('nope-preview-content');
 
 		const toolbar = this.contentEl.createDiv({ cls: 'nope-preview-toolbar' });
-		this.renderButton = toolbar.createEl('button', { text: 'Render now' });
+
+		// Left: render + Overleaf-style dropdown for the render modes.
+		this.renderButton = toolbar.createDiv({ cls: 'clickable-icon nope-preview-action' });
+		setIcon(this.renderButton, 'refresh-cw');
+		this.renderButton.setAttribute('aria-label', 'Render now');
 		this.renderButton.addEventListener('click', () => this.requestRender());
 
-		const autoWrap = toolbar.createDiv({ cls: 'nope-preview-auto' });
-		this.autoToggle = new ToggleComponent(autoWrap);
-		this.autoToggle.setValue(this.autoRender);
-		this.autoToggle.setTooltip('Re-render automatically when an included note changes');
-		this.autoToggle.onChange((value) => {
-			this.autoRender = value;
-			this.app.workspace.requestSaveLayout();
-			// Render on enable so the watch set reflects the current document.
-			if (value) this.requestRender();
-		});
-		autoWrap.createSpan({ cls: 'nope-preview-auto-label', text: 'Auto-render' });
-
-		const jumpWrap = toolbar.createDiv({ cls: 'nope-preview-auto' });
-		this.jumpToggle = new ToggleComponent(jumpWrap);
-		this.jumpToggle.setValue(this.autoJump);
-		this.jumpToggle.setTooltip('Scroll the PDF to the cursor position automatically');
-		this.jumpToggle.onChange((value) => {
-			this.autoJump = value;
-			this.app.workspace.requestSaveLayout();
-			if (value) this.debouncedJump();
-		});
-		jumpWrap.createSpan({ cls: 'nope-preview-auto-label', text: 'Follow cursor' });
+		const caret = toolbar.createDiv({ cls: 'clickable-icon nope-preview-action' });
+		setIcon(caret, 'chevron-down');
+		caret.setAttribute('aria-label', 'Render options');
+		caret.addEventListener('click', (evt) => this.openRenderMenu(evt));
 
 		this.statusEl = toolbar.createSpan({ cls: 'nope-preview-status' });
+
+		// Right: download the current PDF to a location of the user's choosing.
+		const download = toolbar.createDiv({ cls: 'clickable-icon nope-preview-action nope-preview-right' });
+		setIcon(download, 'download');
+		download.setAttribute('aria-label', 'Save PDF as…');
+		download.addEventListener('click', () => void this.downloadPdf());
 
 		this.bodyEl = this.contentEl.createDiv({ cls: 'nope-preview-body' });
 		this.refreshBody();
@@ -441,6 +430,60 @@ export class NopePreviewView extends ItemView {
 		}
 	}
 
+	// Overleaf-style dropdown: render modes as checkable menu items.
+	private openRenderMenu(evt: MouseEvent): void {
+		const menu = new Menu();
+		menu.addItem((item) =>
+			item
+				.setTitle('Auto-render')
+				.setChecked(this.autoRender)
+				.onClick(() => {
+					this.autoRender = !this.autoRender;
+					this.app.workspace.requestSaveLayout();
+					// Render on enable so the watch set reflects the current document.
+					if (this.autoRender) this.requestRender();
+				}),
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle('Follow cursor')
+				.setChecked(this.autoJump)
+				.onClick(() => {
+					this.autoJump = !this.autoJump;
+					this.app.workspace.requestSaveLayout();
+					if (this.autoJump) this.debouncedJump();
+				}),
+		);
+		menu.showAtMouseEvent(evt);
+	}
+
+	// Save the current build PDF to a user-chosen location (outside the vault by default).
+	private async downloadPdf(): Promise<void> {
+		const file = this.getFile();
+		if (!file) {
+			new Notice('No note bound to this preview.');
+			return;
+		}
+		const abs = this.pdfPath(file);
+		if (!existsSync(abs)) {
+			new Notice('No PDF yet — render first.');
+			return;
+		}
+		try {
+			const result = await remote.dialog.showSaveDialog({
+				title: 'Save PDF',
+				defaultPath: `${file.basename}.pdf`,
+				filters: [{ name: 'PDF', extensions: ['pdf'] }],
+			});
+			if (result.canceled || !result.filePath) return;
+			copyFileSync(abs, result.filePath);
+			new Notice(`Saved PDF to ${result.filePath}`);
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			new Notice(`Could not save PDF: ${msg}`, 10000);
+		}
+	}
+
 	// Single entry point for manual clicks, auto triggers, and toggle-on renders.
 	private requestRender(): void {
 		if (this.rendering) {
@@ -458,7 +501,7 @@ export class NopePreviewView extends ItemView {
 			return;
 		}
 		this.rendering = true;
-		if (this.renderButton) this.renderButton.disabled = true;
+		this.renderButton?.toggleClass('nope-preview-busy', true);
 		// Status line doubles as the progress reporter; no notices in the preview.
 		const reporter: ProgressReporter = {
 			update: (m) => this.setStatus(m),
@@ -492,7 +535,7 @@ export class NopePreviewView extends ItemView {
 			}
 		} finally {
 			this.rendering = false;
-			if (this.renderButton) this.renderButton.disabled = false;
+			this.renderButton?.toggleClass('nope-preview-busy', false);
 			// Exactly one queued re-render coalesces everything that arrived meanwhile.
 			if (this.pending) {
 				this.pending = false;

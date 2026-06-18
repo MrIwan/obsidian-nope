@@ -13,6 +13,11 @@ declare module 'electron' {
 				defaultPath?: string;
 				properties?: string[];
 			}): Promise<{ canceled: boolean; filePaths: string[] }>;
+			showSaveDialog(options: {
+				title?: string;
+				defaultPath?: string;
+				filters?: { name: string; extensions: string[] }[];
+			}): Promise<{ canceled: boolean; filePath?: string }>;
 		};
 	};
 }
