@@ -31,6 +31,7 @@ interface PreviewState {
 	filePath: string | null;
 	autoRender: boolean;
 	autoJump: boolean;
+	zoom: number;
 }
 
 // Anchor candidates for the cursor position, most specific first; shared by command and auto-jump.
@@ -77,6 +78,13 @@ export class NopePreviewView extends ItemView {
 	private pdfDoc: PDFDocumentProxy | null = null;
 	private loadedKey: string | null = null;
 	private renderToken = 0;
+	private zoom = 1;
+	private numPages = 0;
+	private scrollToPageAfterRender: number | null = null;
+	private pageTick = false;
+	private pageInput: HTMLInputElement | null = null;
+	private pageTotalEl: HTMLElement | null = null;
+	private zoomLabel: HTMLElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: NopePlugin) {
 		super(leaf);
@@ -104,7 +112,12 @@ export class NopePreviewView extends ItemView {
 	}
 
 	getState(): Record<string, unknown> {
-		return { filePath: this.filePath, autoRender: this.autoRender, autoJump: this.autoJump };
+		return {
+			filePath: this.filePath,
+			autoRender: this.autoRender,
+			autoJump: this.autoJump,
+			zoom: this.zoom,
+		};
 	}
 
 	async setState(state: unknown, result: ViewStateResult): Promise<void> {
@@ -113,6 +126,8 @@ export class NopePreviewView extends ItemView {
 		this.filePath = typeof s?.filePath === 'string' ? s.filePath : null;
 		this.autoRender = s?.autoRender === true;
 		this.autoJump = s?.autoJump === true;
+		this.zoom = typeof s?.zoom === 'number' && s.zoom > 0 ? s.zoom : 1;
+		this.updateZoomLabel();
 		// Re-binding to another note invalidates the old dependency set and its build folder.
 		if (this.filePath !== previousPath) {
 			if (previousPath) this.cleanupFor(previousPath);
@@ -141,7 +156,34 @@ export class NopePreviewView extends ItemView {
 		caret.setAttribute('aria-label', 'Render options');
 		caret.addEventListener('click', (evt) => this.openRenderMenu(evt));
 
+		// Zoom controls; the label resets to fit-width on click.
+		const zoomOut = toolbar.createDiv({ cls: 'clickable-icon nope-preview-action' });
+		setIcon(zoomOut, 'zoom-out');
+		zoomOut.setAttribute('aria-label', 'Zoom out');
+		zoomOut.addEventListener('click', () => this.setZoom(this.zoom / 1.25));
+
+		this.zoomLabel = toolbar.createSpan({ cls: 'nope-preview-zoom clickable-icon' });
+		this.zoomLabel.setAttribute('aria-label', 'Reset zoom to fit width');
+		this.zoomLabel.addEventListener('click', () => this.setZoom(1));
+
+		const zoomIn = toolbar.createDiv({ cls: 'clickable-icon nope-preview-action' });
+		setIcon(zoomIn, 'zoom-in');
+		zoomIn.setAttribute('aria-label', 'Zoom in');
+		zoomIn.addEventListener('click', () => this.setZoom(this.zoom * 1.25));
+
+		// Page indicator: editable current page + total.
+		this.pageInput = toolbar.createEl('input', {
+			cls: 'nope-preview-page-input',
+			attr: { type: 'text' },
+		});
+		this.pageInput.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') this.jumpToPageInput();
+		});
+		this.pageInput.addEventListener('blur', () => this.jumpToPageInput());
+		this.pageTotalEl = toolbar.createSpan({ cls: 'nope-preview-page-total', text: '/ –' });
+
 		this.statusEl = toolbar.createSpan({ cls: 'nope-preview-status' });
+		this.updateZoomLabel();
 
 		// Right: download the current PDF to a location of the user's choosing.
 		const download = toolbar.createDiv({ cls: 'clickable-icon nope-preview-action nope-preview-right' });
@@ -159,6 +201,8 @@ export class NopePreviewView extends ItemView {
 				this.debouncedRender();
 			}),
 		);
+		// Scroll fires on the inner page container; capture phase catches it on contentEl.
+		this.registerDomEvent(this.contentEl, 'scroll', () => this.schedulePageUpdate(), true);
 		// CM6 is contenteditable, so cursor movement surfaces as document selection changes.
 		this.registerDomEvent(activeDocument, 'selectionchange', () => {
 			if (this.autoJump) this.debouncedJump();
@@ -242,6 +286,8 @@ export class NopePreviewView extends ItemView {
 		this.bodyEl.empty();
 		this.pagesEl = null;
 		this.loadedKey = null;
+		this.numPages = 0;
+		this.updatePageIndicator();
 		void this.destroyDoc();
 		this.bodyEl.createDiv({ cls: 'nope-preview-empty', text });
 	}
@@ -273,8 +319,9 @@ export class NopePreviewView extends ItemView {
 				return;
 			}
 			this.pdfDoc = doc;
+			this.numPages = doc.numPages;
 			container.empty();
-			const width = Math.max(container.clientWidth - 16, 200);
+			const width = Math.max((container.clientWidth - 16) * this.zoom, 200);
 			// Render at device pixel ratio so it stays crisp on HiDPI / Windows display scaling.
 			const outputScale = Math.min(activeWindow.devicePixelRatio || 1, 3);
 			for (let i = 1; i <= doc.numPages; i++) {
@@ -308,9 +355,17 @@ export class NopePreviewView extends ItemView {
 
 				await this.buildLinkLayer(wrap, page, viewport);
 			}
+			this.updatePageIndicator();
 			if (destination) await this.scrollToDest(destination);
+			// Restore the page the user was on before a zoom re-render.
+			if (this.scrollToPageAfterRender !== null) {
+				this.scrollToPage(this.scrollToPageAfterRender);
+				this.scrollToPageAfterRender = null;
+			}
 		} catch {
-			this.showErrorBanner('Could not render the PDF.');
+			// A newer render (e.g. from zoom) tears down this one's doc mid-flight, which
+			// rejects the pending tasks — only surface an error if we're still the current render.
+			if (token === this.renderToken) this.showErrorBanner('Could not render the PDF.');
 		}
 	}
 
@@ -540,6 +595,75 @@ export class NopePreviewView extends ItemView {
 			const msg = e instanceof Error ? e.message : String(e);
 			new Notice(`Could not save PDF: ${msg}`, 10000);
 		}
+	}
+
+	private updateZoomLabel(): void {
+		this.zoomLabel?.setText(`${Math.round(this.zoom * 100)}%`);
+	}
+
+	// Zoom = multiplier on the fit-width scale; re-render and keep the current page.
+	private setZoom(value: number): void {
+		const clamped = Math.min(Math.max(value, 0.25), 5);
+		if (Math.abs(clamped - this.zoom) < 0.001) return;
+		this.zoom = clamped;
+		this.updateZoomLabel();
+		this.app.workspace.requestSaveLayout();
+		this.scrollToPageAfterRender = this.currentVisiblePage();
+		this.loadedKey = null;
+		this.refreshBody();
+	}
+
+	// rAF-throttle the (per-page) scroll computation.
+	private schedulePageUpdate(): void {
+		if (this.pageTick) return;
+		this.pageTick = true;
+		activeWindow.requestAnimationFrame(() => {
+			this.pageTick = false;
+			this.updatePageIndicator();
+		});
+	}
+
+	private updatePageIndicator(): void {
+		if (!this.pageInput || !this.pageTotalEl) return;
+		this.pageTotalEl.setText(this.numPages ? `/ ${this.numPages}` : '/ –');
+		if (this.numPages === 0) {
+			this.pageInput.value = '';
+			return;
+		}
+		// Don't fight the user while they're typing a page number.
+		if (this.pageInput !== this.pageInput.ownerDocument.activeElement) {
+			this.pageInput.value = String(this.currentVisiblePage());
+		}
+	}
+
+	// The page whose box crosses the vertical center of the viewport.
+	private currentVisiblePage(): number {
+		const c = this.pagesEl;
+		if (!c || c.children.length === 0) return 1;
+		const mid = c.getBoundingClientRect().top + c.clientHeight / 2;
+		for (let i = 0; i < c.children.length; i++) {
+			const w = c.children.item(i);
+			if (w instanceof HTMLElement && w.getBoundingClientRect().bottom >= mid) return i + 1;
+		}
+		return c.children.length;
+	}
+
+	private jumpToPageInput(): void {
+		if (!this.pageInput) return;
+		const n = parseInt(this.pageInput.value, 10);
+		if (!Number.isFinite(n)) {
+			this.updatePageIndicator();
+			return;
+		}
+		this.scrollToPage(n);
+	}
+
+	private scrollToPage(n: number): void {
+		const c = this.pagesEl;
+		if (!c || c.children.length === 0) return;
+		const clamped = Math.min(Math.max(n, 1), c.children.length);
+		const w = c.children.item(clamped - 1);
+		if (w instanceof HTMLElement) w.scrollIntoView({ block: 'start' });
 	}
 
 	// Single entry point for manual clicks, auto triggers, and toggle-on renders.

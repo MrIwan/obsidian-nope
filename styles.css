@@ -69,6 +69,24 @@
 	margin-left: auto;
 }
 
+.nope-preview-zoom {
+	min-width: 3.5em;
+	text-align: center;
+	font-size: var(--font-smaller);
+	color: var(--text-muted);
+}
+
+.nope-preview-page-input {
+	width: 3ch;
+	text-align: center;
+	padding: var(--size-2-1) var(--size-2-2);
+}
+
+.nope-preview-page-total {
+	color: var(--text-muted);
+	font-size: var(--font-smaller);
+}
+
 .nope-preview-busy {
 	opacity: 0.5;
 	pointer-events: none;
@@ -115,6 +133,8 @@
 	line-height: 1;
 	text-align: initial;
 	forced-color-adjust: none;
+	user-select: text;
+	-webkit-user-select: text;
 	z-index: 2;
 }
 
@@ -127,20 +147,27 @@
 	transform-origin: 0 0;
 }
 
-.textLayer ::selection {
-	background: rgba(0, 100, 255, 0.3);
+/* Translucent highlight so the canvas text shows through; !important overrides
+   Obsidian's opaque global ::selection. */
+.textLayer ::selection,
+.textLayer span::selection {
+	background: rgba(125, 95, 255, 0.3) !important;
+	color: transparent !important;
 }
 
-/* Clickable link overlay. */
+/* Clickable link overlay — container passes events through so text stays selectable;
+   only the actual links capture clicks. */
 .nope-preview-annotations {
 	position: absolute;
 	inset: 0;
 	z-index: 3;
+	pointer-events: none;
 }
 
 .nope-preview-link {
 	position: absolute;
 	cursor: pointer;
+	pointer-events: auto;
 }
 
 .nope-preview-empty {
