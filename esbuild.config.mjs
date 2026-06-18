@@ -1,6 +1,22 @@
 import esbuild from "esbuild";
 import process from "process";
 import { builtinModules } from 'node:module';
+import { readFileSync } from 'fs';
+
+// Inline the pdf.js worker source as a string module so it ships inside main.js (no separate worker file). preview.ts turns it into a blob-URL worker.
+const pdfWorkerInline = {
+	name: 'pdf-worker-inline',
+	setup(build) {
+		build.onResolve({ filter: /^pdfjs-worker-inline$/ }, () => ({
+			path: 'pdfjs-worker-inline',
+			namespace: 'pdf-worker-inline',
+		}));
+		build.onLoad({ filter: /.*/, namespace: 'pdf-worker-inline' }, () => {
+			const code = readFileSync('node_modules/pdfjs-dist/build/pdf.worker.min.js', 'utf8');
+			return { contents: `export default ${JSON.stringify(code)};`, loader: 'js' };
+		});
+	},
+};
 
 const banner =
 `/*
@@ -35,6 +51,7 @@ const context = await esbuild.context({
 		...builtinModules],
 	format: "cjs",
 	target: "es2018",
+	plugins: [pdfWorkerInline],
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,

@@ -75,11 +75,20 @@
 	flex-direction: column;
 }
 
-.nope-preview-embed {
-	width: 100%;
+/* pdf.js canvas viewer: scrollable column of page canvases. */
+.nope-preview-pages {
 	flex: 1;
 	min-height: 0;
-	border: none;
+	overflow: auto;
+	padding: var(--size-4-2);
+	background-color: var(--background-secondary);
+}
+
+.nope-preview-page {
+	display: block;
+	margin: 0 auto var(--size-4-2);
+	max-width: 100%;
+	box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
 }
 
 .nope-preview-empty {

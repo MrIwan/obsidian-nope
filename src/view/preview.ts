@@ -1,16 +1,25 @@
 // PDF preview view: renders the active note via the export pipeline and shows the build PDF inline.
 // Auto mode watches the dependency set from the last render and re-renders on changes.
 
-import { ItemView, MarkdownView, Notice, TFile, ToggleComponent, WorkspaceLeaf, debounce, normalizePath } from 'obsidian';
+import { ItemView, MarkdownView, Notice, TFile, ToggleComponent, WorkspaceLeaf, debounce } from 'obsidian';
 import type { App, Debouncer, Editor, ViewStateResult } from 'obsidian';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
+import * as pdfjsLib from 'pdfjs-dist';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
+import pdfWorkerSrc from 'pdfjs-worker-inline';
 import type NopePlugin from '../main';
 import { runExport } from '../utils/export';
 import type { ProgressReporter } from '../utils/export';
 import { getPluginAbsoluteDir } from '../utils/paths';
 import { cleanupIntermediates } from '../utils/docker';
 import { pandocAutoIdentifier, parseAuxDestinations, sanitizeLabelId } from '../utils/pdf-anchors';
+
+// Ship the worker inside main.js: turn the inlined source into a blob-URL worker.
+// pdf.js renders to canvas, so the PDF shows on every platform ( Fix White in Windows )
+pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(
+	new Blob([pdfWorkerSrc], { type: 'text/javascript' }),
+);
 
 export const NOPE_PREVIEW_VIEW_TYPE = 'nope-pdf-preview';
 
@@ -36,6 +45,18 @@ function cursorAnchorCandidates(app: App, editor: Editor, file: TFile): string[]
 	return [...(slug ? [slug] : []), `note:${base}`, `tab:${base}`, `eq:${base}`, `fig:${base}`];
 }
 
+// Vertical target (PDF user-space, from page bottom) of an explicit destination,
+// or null when the fit type carries none. hyperref anchors are XYZ → top in [3].
+function destTop(dest: unknown[]): number | null {
+	const fit = dest[1] as { name?: string } | undefined;
+	let v: unknown;
+	if (fit?.name === 'XYZ') v = dest[3];
+	else if (fit?.name === 'FitH' || fit?.name === 'FitBH') v = dest[2];
+	else if (fit?.name === 'FitR') v = dest[5];
+	else return null;
+	return typeof v === 'number' ? v : null;
+}
+
 export class NopePreviewView extends ItemView {
 	private plugin: NopePlugin;
 	private filePath: string | null = null;
@@ -53,6 +74,10 @@ export class NopePreviewView extends ItemView {
 	private jumpToggle: ToggleComponent | null = null;
 	private statusEl: HTMLElement | null = null;
 	private bodyEl: HTMLElement | null = null;
+	private pagesEl: HTMLElement | null = null;
+	private pdfDoc: PDFDocumentProxy | null = null;
+	private loadedKey: string | null = null;
+	private renderToken = 0;
 
 	constructor(leaf: WorkspaceLeaf, plugin: NopePlugin) {
 		super(leaf);
@@ -164,6 +189,7 @@ export class NopePreviewView extends ItemView {
 	onClose(): Promise<void> {
 		this.debouncedRender.cancel();
 		this.debouncedJump.cancel();
+		void this.destroyDoc();
 		this.cleanupFor(this.filePath);
 		return Promise.resolve();
 	}
@@ -182,15 +208,10 @@ export class NopePreviewView extends ItemView {
 		return this.app.vault.getFileByPath(this.filePath);
 	}
 
-	// Build PDF lives inside the plugin dir, hence vault-relative and servable via getResourcePath.
-	private pdfPaths(file: TFile): { abs: string; vaultRel: string } {
+	// Absolute path of the build PDF inside the plugin dir.
+	private pdfPath(file: TFile): string {
 		const base = file.basename;
-		const abs = join(getPluginAbsoluteDir(this.plugin), 'pipeline', 'build', base, `${base}.pdf`);
-		const relDir =
-			this.plugin.manifest.dir ??
-			`${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}`;
-		const vaultRel = normalizePath(`${relDir}/pipeline/build/${base}/${base}.pdf`);
-		return { abs, vaultRel };
+		return join(getPluginAbsoluteDir(this.plugin), 'pipeline', 'build', base, `${base}.pdf`);
 	}
 
 	private setStatus(message: string, kind: 'info' | 'error' = 'info'): void {
@@ -201,31 +222,126 @@ export class NopePreviewView extends ItemView {
 
 	private refreshBody(destination?: string): void {
 		if (!this.bodyEl) return;
-		this.bodyEl.empty();
 		const file = this.getFile();
 		if (!file) {
-			this.bodyEl.createDiv({
-				cls: 'nope-preview-empty',
-				text: 'No note bound — run "Open PDF preview" from a note.',
-			});
+			this.showPlaceholder('No note bound — run "Open PDF preview" from a note.');
 			return;
 		}
-		const { abs, vaultRel } = this.pdfPaths(file);
+		const abs = this.pdfPath(file);
 		if (!existsSync(abs)) {
-			this.bodyEl.createDiv({
-				cls: 'nope-preview-empty',
-				text: `No PDF yet for "${file.basename}" — click "Render now".`,
-			});
+			this.showPlaceholder(`No PDF yet for "${file.basename}" — click "Render now".`);
 			return;
 		}
-		// Fresh getResourcePath per refresh: the mtime query param is the cache-bust.
-		let src = this.app.vault.adapter.getResourcePath(vaultRel);
-		// Chromium's PDF viewer jumps to hyperref named destinations via the fragment.
-		if (destination) src += `#nameddest=${encodeURIComponent(destination)}`;
-		this.bodyEl.createEl('embed', {
-			cls: 'nope-preview-embed',
-			attr: { type: 'application/pdf', src },
-		});
+		// Page container persists across jumps so we don't re-parse the PDF on every scroll.
+		if (!this.pagesEl || !this.bodyEl.contains(this.pagesEl)) {
+			this.bodyEl.empty();
+			this.pagesEl = this.bodyEl.createDiv({ cls: 'nope-preview-pages' });
+			this.loadedKey = null;
+		}
+		// Reload only when the PDF actually changed (mtime); otherwise just scroll.
+		const key = `${abs}:${statSync(abs).mtimeMs}`;
+		if (key !== this.loadedKey) {
+			this.loadedKey = key;
+			void this.renderPdf(abs, destination);
+		} else if (destination) {
+			void this.scrollToDest(destination);
+		}
+	}
+
+	private showPlaceholder(text: string): void {
+		if (!this.bodyEl) return;
+		this.bodyEl.empty();
+		this.pagesEl = null;
+		this.loadedKey = null;
+		void this.destroyDoc();
+		this.bodyEl.createDiv({ cls: 'nope-preview-empty', text });
+	}
+
+	private async destroyDoc(): Promise<void> {
+		const doc = this.pdfDoc;
+		this.pdfDoc = null;
+		if (doc) {
+			try {
+				await doc.destroy();
+			} catch {
+				// Ignore teardown errors.
+			}
+		}
+	}
+
+	// Render every page to its own canvas (pdf.js), then optionally scroll to a destination.
+	private async renderPdf(abs: string, destination?: string): Promise<void> {
+		const container = this.pagesEl;
+		if (!container) return;
+		const token = ++this.renderToken;
+		this.clearErrorBanner();
+		try {
+			await this.destroyDoc();
+			const data = new Uint8Array(readFileSync(abs));
+			const doc = await pdfjsLib.getDocument({ data }).promise;
+			if (token !== this.renderToken) {
+				await doc.destroy();
+				return;
+			}
+			this.pdfDoc = doc;
+			container.empty();
+			const width = Math.max(container.clientWidth - 16, 200);
+			// Render at device pixel ratio so it stays crisp on HiDPI / Windows display scaling.
+			const outputScale = Math.min(activeWindow.devicePixelRatio || 1, 3);
+			for (let i = 1; i <= doc.numPages; i++) {
+				if (token !== this.renderToken) return;
+				const page = await doc.getPage(i);
+				const base = page.getViewport({ scale: 1 });
+				const viewport = page.getViewport({ scale: width / base.width });
+				const canvas = container.createEl('canvas', { cls: 'nope-preview-page' });
+				// Backing store scaled up; CSS size stays logical so layout/anchors are unchanged.
+				canvas.width = Math.floor(viewport.width * outputScale);
+				canvas.height = Math.floor(viewport.height * outputScale);
+				canvas.style.width = `${Math.floor(viewport.width)}px`;
+				canvas.style.height = `${Math.floor(viewport.height)}px`;
+				const ctx = canvas.getContext('2d');
+				if (!ctx) continue;
+				const transform = outputScale === 1 ? undefined : [outputScale, 0, 0, outputScale, 0, 0];
+				await page.render({ canvasContext: ctx, viewport, transform }).promise;
+			}
+			if (destination) await this.scrollToDest(destination);
+		} catch {
+			this.showErrorBanner('Could not render the PDF.');
+		}
+	}
+
+	// Resolve a hyperref named destination to its page + vertical position and scroll there.
+	private async scrollToDest(name: string): Promise<void> {
+		const doc = this.pdfDoc;
+		const container = this.pagesEl;
+		if (!doc || !container) return;
+		try {
+			const dest = await doc.getDestination(name);
+			if (!Array.isArray(dest) || dest.length === 0) return;
+			const ref = dest[0] as Parameters<PDFDocumentProxy['getPageIndex']>[0];
+			const pageIndex = await doc.getPageIndex(ref);
+			const canvas = container.children.item(pageIndex);
+			if (!(canvas instanceof HTMLCanvasElement)) return;
+
+			const top = destTop(dest as unknown[]);
+			if (top === null) {
+				canvas.scrollIntoView({ block: 'start' });
+				return;
+			}
+			// Map the PDF y-coordinate to a pixel offset using this canvas's actual scale.
+			const page = await doc.getPage(pageIndex + 1);
+			const scale = canvas.height / page.getViewport({ scale: 1 }).height;
+			const point = page.getViewport({ scale }).convertToViewportPoint(0, top) as number[];
+			const vy = point[1] ?? 0;
+			const displayScale = canvas.clientHeight / canvas.height || 1;
+			const delta =
+				canvas.getBoundingClientRect().top -
+				container.getBoundingClientRect().top +
+				vy * displayScale;
+			container.scrollTop += delta - 8;
+		} catch {
+			// Destination not found — leave the view where it is.
+		}
 	}
 
 	// Parse the .aux once per render; invalidated on render success and re-bind.
