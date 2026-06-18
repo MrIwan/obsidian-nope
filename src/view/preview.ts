@@ -7,7 +7,7 @@ import { remote } from 'electron';
 import { copyFileSync, existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import * as pdfjsLib from 'pdfjs-dist';
-import type { PDFDocumentProxy } from 'pdfjs-dist';
+import type { PDFDocumentProxy, PDFPageProxy, PageViewport } from 'pdfjs-dist';
 import pdfWorkerSrc from 'pdfjs-worker-inline';
 import type NopePlugin from '../main';
 import { runExport } from '../utils/export';
@@ -258,7 +258,7 @@ export class NopePreviewView extends ItemView {
 		}
 	}
 
-	// Render every page to its own canvas (pdf.js), then optionally scroll to a destination.
+	// Render every page: canvas (image) + text layer (selection) + link layer (hyperlinks).
 	private async renderPdf(abs: string, destination?: string): Promise<void> {
 		const container = this.pagesEl;
 		if (!container) return;
@@ -282,8 +282,10 @@ export class NopePreviewView extends ItemView {
 				const page = await doc.getPage(i);
 				const base = page.getViewport({ scale: 1 });
 				const viewport = page.getViewport({ scale: width / base.width });
-				const canvas = container.createEl('canvas', { cls: 'nope-preview-page' });
-				// Backing store scaled up; CSS size stays logical so layout/anchors are unchanged.
+
+				const wrap = container.createDiv({ cls: 'nope-preview-page-wrap' });
+				const canvas = wrap.createEl('canvas', { cls: 'nope-preview-page' });
+				// Backing store scaled up; CSS size stays logical so the overlays line up.
 				canvas.width = Math.floor(viewport.width * outputScale);
 				canvas.height = Math.floor(viewport.height * outputScale);
 				canvas.style.width = `${Math.floor(viewport.width)}px`;
@@ -292,6 +294,19 @@ export class NopePreviewView extends ItemView {
 				if (!ctx) continue;
 				const transform = outputScale === 1 ? undefined : [outputScale, 0, 0, outputScale, 0, 0];
 				await page.render({ canvasContext: ctx, viewport, transform }).promise;
+				if (token !== this.renderToken) return;
+
+				// Selectable text overlay.
+				const textLayer = wrap.createDiv({ cls: 'textLayer' });
+				textLayer.style.setProperty('--scale-factor', String(viewport.scale));
+				await pdfjsLib.renderTextLayer({
+					textContentSource: await page.getTextContent(),
+					container: textLayer,
+					viewport,
+				}).promise;
+				if (token !== this.renderToken) return;
+
+				await this.buildLinkLayer(wrap, page, viewport);
 			}
 			if (destination) await this.scrollToDest(destination);
 		} catch {
@@ -299,22 +314,65 @@ export class NopePreviewView extends ItemView {
 		}
 	}
 
-	// Resolve a hyperref named destination to its page + vertical position and scroll there.
+	// Clickable link overlay: external links open, internal links scroll the preview.
+	private async buildLinkLayer(wrap: HTMLElement, page: PDFPageProxy, viewport: PageViewport): Promise<void> {
+		const annotations = await page.getAnnotations();
+		if (!Array.isArray(annotations) || annotations.length === 0) return;
+		const layer = wrap.createDiv({ cls: 'nope-preview-annotations' });
+		for (const raw of annotations) {
+			const a = raw as { subtype?: string; rect?: number[]; url?: string; dest?: unknown };
+			if (a.subtype !== 'Link' || !Array.isArray(a.rect)) continue;
+			const r = viewport.convertToViewportRectangle(a.rect) as number[];
+			const x1 = r[0] ?? 0;
+			const y1 = r[1] ?? 0;
+			const x2 = r[2] ?? 0;
+			const y2 = r[3] ?? 0;
+			const link = layer.createEl('a', { cls: 'nope-preview-link' });
+			link.style.left = `${Math.min(x1, x2)}px`;
+			link.style.top = `${Math.min(y1, y2)}px`;
+			link.style.width = `${Math.abs(x2 - x1)}px`;
+			link.style.height = `${Math.abs(y2 - y1)}px`;
+			if (typeof a.url === 'string' && a.url !== '') {
+				link.href = a.url;
+				link.setAttribute('target', '_blank');
+				link.setAttribute('rel', 'noopener');
+			} else if (a.dest !== undefined && a.dest !== null) {
+				const dest = a.dest;
+				link.addEventListener('click', (e) => {
+					e.preventDefault();
+					if (typeof dest === 'string') void this.scrollToDest(dest);
+					else if (Array.isArray(dest)) void this.scrollToResolvedDest(dest);
+				});
+			}
+		}
+	}
+
+	// Resolve a named destination, then scroll to its page + vertical position.
 	private async scrollToDest(name: string): Promise<void> {
 		const doc = this.pdfDoc;
-		const container = this.pagesEl;
-		if (!doc || !container) return;
+		if (!doc) return;
 		try {
 			const dest = await doc.getDestination(name);
-			if (!Array.isArray(dest) || dest.length === 0) return;
+			if (Array.isArray(dest)) await this.scrollToResolvedDest(dest);
+		} catch {
+			// Destination not found — leave the view where it is.
+		}
+	}
+
+	// Scroll to an explicit destination array ([pageRef, fitType, …coords]).
+	private async scrollToResolvedDest(dest: unknown[]): Promise<void> {
+		const doc = this.pdfDoc;
+		const container = this.pagesEl;
+		if (!doc || !container || dest.length === 0) return;
+		try {
 			const ref = dest[0] as Parameters<PDFDocumentProxy['getPageIndex']>[0];
 			const pageIndex = await doc.getPageIndex(ref);
-			const canvas = container.children.item(pageIndex);
-			if (!(canvas instanceof HTMLCanvasElement)) return;
-
-			const top = destTop(dest as unknown[]);
-			if (top === null) {
-				canvas.scrollIntoView({ block: 'start' });
+			const wrap = container.children.item(pageIndex);
+			if (!(wrap instanceof HTMLElement)) return;
+			const canvas = wrap.querySelector('canvas');
+			const top = destTop(dest);
+			if (top === null || !(canvas instanceof HTMLCanvasElement)) {
+				wrap.scrollIntoView({ block: 'start' });
 				return;
 			}
 			// Map the PDF y-coordinate to a pixel offset using this canvas's actual scale.
@@ -324,12 +382,12 @@ export class NopePreviewView extends ItemView {
 			const vy = point[1] ?? 0;
 			const displayScale = canvas.clientHeight / canvas.height || 1;
 			const delta =
-				canvas.getBoundingClientRect().top -
+				wrap.getBoundingClientRect().top -
 				container.getBoundingClientRect().top +
 				vy * displayScale;
 			container.scrollTop += delta - 8;
 		} catch {
-			// Destination not found — leave the view where it is.
+			// Page/destination unavailable — leave the view where it is.
 		}
 	}
 
