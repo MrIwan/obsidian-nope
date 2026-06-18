@@ -74,6 +74,7 @@ pandoc \
   --extract-media="$WORK/media" \
   --template="$TEMPLATE" \
   --lua-filter=/app/filters/obsidian-transclude.lua \
+  --lua-filter=/app/filters/strip-unsupported.lua \
   --lua-filter=/app/filters/obsidian-inline.lua \
   --lua-filter=/app/filters/callouts.lua \
   "${EXTRA_BIB_ARGS[@]}" \

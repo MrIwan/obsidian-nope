@@ -137,10 +137,14 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 
 	// Run export pipeline
 	let producedPdf: string;
+	let strippedChars = 0;
 	try {
 		producedPdf = await runPipeline(pluginDir, vaultPath, file.path, (chunk) => {
 			const phase = parsePipelinePhase(chunk);
 			if (phase) reporter.update(`Exporting "${file.basename}" — ${phase}`);
+			// strip-unsupported.lua reports removed emoji/pictograph chars.
+			const m = /NOPE-STRIPPED (\d+)/.exec(chunk);
+			if (m) strippedChars = parseInt(m[1] ?? '0', 10);
 		});
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
@@ -151,6 +155,14 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 
 	// Read the dependency manifest before any cleanup can remove it.
 	const deps = readDepsManifest(workDir, file.path);
+
+	if (strippedChars > 0) {
+		new Notice(
+			`Removed ${strippedChars} unsupported character(s) (e.g. emoji) — ` +
+				`the pdflatex engine can't render them, so they were dropped from the PDF.`,
+			10000,
+		);
+	}
 
 	// Copy PDF to destination.
 	let finalDest: string | null = null;
