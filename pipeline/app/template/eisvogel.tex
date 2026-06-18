@@ -507,6 +507,8 @@ $endif$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{graphicx}
 \usepackage{longtable,booktabs,array}
+\usepackage{float}  % [H] placement: fit-tables (filter emits table[H]) + figures
+\floatplacement{figure}{$if(float-placement-figure)$$float-placement-figure$$else$H$endif$}
 
 % Callouts (callouts.lua → awesomebox) and highlights (==text== → soul \hl).
 \usepackage{awesomebox}

@@ -19,8 +19,6 @@
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{calc}   % \real{} factors in table column widths
-\usepackage{float}  % [H] float placement (figures + scaled tables)
-\floatplacement{figure}{H}
 \usepackage{fancyvrb}
 \usepackage{fvextra}
 \usepackage{hyperref}
@@ -88,6 +86,8 @@ $endif$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{graphicx}
 \usepackage{longtable,booktabs,array}
+\usepackage{float}  % [H] placement: fit-tables (filter emits table[H]) + figures
+\floatplacement{figure}{$if(float-placement-figure)$$float-placement-figure$$else$H$endif$}
 
 % Callouts (callouts.lua → awesomebox) and highlights (==text== → soul \hl).
 \usepackage{awesomebox}
