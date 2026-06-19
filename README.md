@@ -196,6 +196,10 @@ The optional `longtable` key (default `false`) lets you choose how a table is la
 
 Rule of thumb: wide → keep the default (`false`), long → `true`. A table cannot be both wide-and-scaled and multi-page at the same time. In `false` mode, wikilinks inside cells are rendered as-is rather than resolved to references.
 
+#### Alignment: `align`
+
+The optional `align` key (default `center`, or `left`) sets the table's horizontal placement. It works in both layouts.
+
 ```yaml
 ---
 latex-env: table

@@ -380,7 +380,7 @@ local function blocks_to_latex_line(blocks)
 end
 
 -- longtable: false → render the table as a booktabs tabular wrapped in a shrink-only \resizebox (graphicx). True pandas longtable
-local function render_fit_table(table_block, caption_inlines, label, first_embed)
+local function render_fit_table(table_block, caption_inlines, label, first_embed, align)
   local cols = {}
   for _, spec in ipairs(table_block.colspecs) do
     cols[#cols + 1] = LATEX_ALIGN[spec[1]] or "l"
@@ -406,7 +406,7 @@ local function render_fit_table(table_block, caption_inlines, label, first_embed
   local label_tex = first_embed and ("\\label{" .. label .. "}") or ""
   local tex = table.concat({
     "\\begin{table}[H]",
-    "\\centering",
+    (align == "left") and "\\raggedright" or "\\centering",
     "\\caption{" .. blocks_to_latex_line({ pandoc.Plain(caption_inlines) }) .. label_tex .. "}",
     "\\resizebox{\\ifdim\\width>\\linewidth \\linewidth\\else\\width\\fi}{!}{%",
     "\\begin{tabular}{@{}" .. table.concat(cols) .. "@{}}",
@@ -440,9 +440,13 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
       .. "' hat latex-env: table, aber keine Tabelle im Inhalt gefunden.")
   end
 
+  -- align: left → left-aligned, else centered (default). Applies to both layouts.
+  local align = doc_meta["align"] and pandoc.utils.stringify(doc_meta["align"]):lower() == "left"
+    and "left" or "center"
+
   -- Default longtable: false → scaled tabular (one page, shrinks to fit width).
   if not meta_bool(doc_meta, "longtable", false) then
-    annotated[idx] = render_fit_table(table_block, caption_inlines, label, first_embed)
+    annotated[idx] = render_fit_table(table_block, caption_inlines, label, first_embed, align)
     return annotated
   end
 
@@ -453,6 +457,14 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
     local last = table_block.caption.long[#table_block.caption.long]
     table.insert(last.content,
       pandoc.RawInline("latex", "\\label{" .. label .. "}"))
+  end
+
+  -- longtable centers via \LTleft/\LTright=\fill; flush left, then reset after.
+  if align == "left" then
+    table.insert(annotated, idx,
+      pandoc.RawBlock("latex", "\\setlength{\\LTleft}{0pt}\\setlength{\\LTright}{\\fill}"))
+    table.insert(annotated, idx + 2,
+      pandoc.RawBlock("latex", "\\setlength{\\LTleft}{\\fill}\\setlength{\\LTright}{\\fill}"))
   end
 
   return annotated

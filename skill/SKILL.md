@@ -50,6 +50,8 @@ A missing required block (table/math) or missing `caption` (table/mermaid) is a 
 
 Rule of thumb: wide → keep `false`, long → `true`. A table cannot be both.
 
+`align:` (on the table note, `center` default or `left`) sets horizontal placement; works in both layouts.
+
 ```yaml
 ---
 latex-env: mermaid
