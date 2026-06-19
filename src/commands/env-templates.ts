@@ -26,6 +26,7 @@ const TEMPLATES: EnvTemplate[] = [
 		content: `---
 latex-env: table
 caption: "Table caption"
+longtable: false
 ---
 
 | Column A | Column B |
