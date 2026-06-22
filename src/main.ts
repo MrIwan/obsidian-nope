@@ -11,6 +11,7 @@ import { NOPE_PREVIEW_VIEW_TYPE, NopePreviewView, registerPreviewCommand, regist
 import { getPluginAbsoluteDir } from './utils/paths';
 import { ensureBundledAssets } from './utils/assets';
 import { setDockerPathOverride } from './utils/docker';
+import { registerBasesExportView } from './utils/bases';
 
 export default class NopePlugin extends Plugin {
 	settings!: NopeSettings;
@@ -40,6 +41,7 @@ export default class NopePlugin extends Plugin {
 		registerCustomTemplateCommand(this);
 		registerEnvTemplateCommands(this);
 		registerMaintenanceCommands(this);
+		registerBasesExportView(this);
 	}
 
 	onunload() {

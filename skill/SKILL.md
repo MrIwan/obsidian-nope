@@ -1,8 +1,8 @@
 ---
 name: nope
-description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, nope-branding, nope-template, abstract), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts and branding."
+description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, nope-branding, nope-template, abstract), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
-last-updated: 2026-06-18
+last-updated: 2026-06-22
 ---
 
 # nope — authoring conventions
@@ -61,6 +61,33 @@ scale: 3
 ---
 ```
 
+## Bases
+
+Embed an Obsidian base view with `![[Base.base#View]]`. What it produces depends on the **surrounding note's `latex-env`**:
+
+- **No `latex-env` (default)** — every file the view returns is **transcluded**, in the view's order. Use it as a document spine / table of contents and put the embed straight into the document.
+- **`latex-env: table` + `caption:`** — the view is rendered as a **table** with exactly the columns, order and sort of that view. A table needs a caption, so this lives in an atomic wrapper note whose body is just the base embed; pull the wrapper in with `![[…]]`. `longtable:` and `align:` work as for any table.
+
+The query (filters, formulas, sort, columns) is evaluated by Obsidian's real Bases engine at export — what the view shows is what you get. `#View` is optional (first view otherwise). Requires the core **Bases** plugin enabled (Obsidian ≥ 1.10).
+
+Transclude (spine) — straight in the document:
+
+```markdown
+## Chapters
+
+![[Thesis-Chapters.base#Reading order]]
+```
+
+Table — atomic wrapper note, embedded via `![[Project-Overview]]`:
+
+```markdown
+---
+latex-env: table
+caption: "Project overview"
+---
+![[Projects.base#Table]]
+```
+
 ## Glossary atoms
 
 One `.md` per term/acronym; referenced anywhere with `[[Note]]` → `\gls{<gls-id>}`. `acronym` goes to the acronym list, `term` to the glossary.
@@ -112,7 +139,7 @@ The pdflatex engine cannot typeset emoji/pictographs (✅, 😀, flags, …). Su
 
 - `Export active note to PDF` — main command.
 - `Open PDF preview` / `Sync PDF preview to cursor` — live PDF preview pane; sync scrolls it to the cursor's anchor.
-- `Add table / theorem / lemma / definition / proof / mermaid diagram / equation / glossary term / abbreviation` — create an atomic note with the correct frontmatter + body skeleton next to the current note and insert its embed (`![[…]]`) or, for glossary/abbreviation, its ref (`[[…]]`) at the cursor.
+- `Add table / base table / theorem / lemma / definition / proof / mermaid diagram / equation / glossary term / abbreviation` — create an atomic note with the correct frontmatter + body skeleton next to the current note and insert its embed (`![[…]]`) or, for glossary/abbreviation, its ref (`[[…]]`) at the cursor.
 - `Create branding template` / `Create custom LaTeX template` / `Create example main document` — scaffold helper files in the vault.
 - `Build docker image (with cache)` / `Remove docker image` / `Cleanup build folder` — pipeline maintenance (the image also rebuilds itself after a plugin update changes the pipeline).
 
@@ -124,6 +151,7 @@ DO:
 - Start every atomic note with `# Title` — except `latex-env` notes.
 - Exactly one Pandoc table per `table` note; exactly one `$$…$$` per math note.
 - Quote wikilink values in YAML: `"[[logo.png]]"`.
+- A base embed transcludes by default; wrap it in a `latex-env: table` note to get a table.
 
 DON'T:
 
@@ -133,6 +161,7 @@ DON'T:
 - Don't put a ` ```mermaid ` block in a note without `latex-env: mermaid` — it stays a code fence.
 - Don't set `\label{}` or adjust embed heading levels by hand — both are automatic.
 - Don't use SVG logos — pdflatex can't render them; use PNG/PDF.
+- Don't put more than one base embed — or a base embed plus a literal table — in one `table` wrapper.
 
 ## Example main document
 

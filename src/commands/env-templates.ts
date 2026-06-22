@@ -27,11 +27,27 @@ const TEMPLATES: EnvTemplate[] = [
 latex-env: table
 caption: "Table caption"
 longtable: false
+align: center
 ---
 
 | Column A | Column B |
 | --- | --- |
 |  |  |
+`,
+	},
+	{
+		id: 'add-base-table',
+		name: 'Add base table',
+		defaultName: 'New base table',
+		embed: true,
+		content: `---
+latex-env: table
+caption: "Base table caption"
+longtable: false
+align: center
+---
+
+![[Base.base#View]]
 `,
 	},
 	{

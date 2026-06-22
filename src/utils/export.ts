@@ -11,6 +11,7 @@ import { parseBuildStep, parsePipelinePhase } from './progress';
 import { prepareBrandingOverride } from './branding';
 import { prepareBibliography } from './bibliography';
 import { prepareTemplate } from './template';
+import { prepareBases } from './bases';
 import { ensureBundledAssets } from './assets';
 
 // Minimal progress surface; ProgressNotice satisfies it, the preview view brings its own.
@@ -143,6 +144,16 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		return { ok: false };
 	}
 
+	// Resolve embedded Bases and materialize shadows for the transclude filter.
+	let baseDeps: string[] = [];
+	try {
+		baseDeps = await prepareBases(plugin.app, file, workDir);
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		reporter.fail(`Bases export failed. ${msg}`);
+		return { ok: false };
+	}
+
 	// Run export pipeline
 	let producedPdf: string;
 	let strippedChars = 0;
@@ -158,11 +169,11 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		const msg = e instanceof Error ? e.message : String(e);
 		reporter.fail(`Export failed. ${msg}`);
 		// build.sh re-seeds the manifest before pandoc runs, so it is fresh even on LaTeX failure.
-		return { ok: false, deps: readDepsManifest(workDir, file.path) };
+		return { ok: false, deps: [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps])] };
 	}
 
 	// Read the dependency manifest before any cleanup can remove it.
-	const deps = readDepsManifest(workDir, file.path);
+	const deps = [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps])];
 
 	if (strippedChars > 0) {
 		new Notice(

@@ -27,9 +27,12 @@ if [[ -f "$WORK/custom-template.tex" ]]; then
   TEMPLATE="$WORK/custom-template.tex"
 fi
 
-# Passive-Embed-Syntax `+[[Note]]` → `![[Note]]`.
+# Passive-Embed-Syntax `+[[Note]]` → `![[Note]]`. Top-Level mit Base-Embeds löst das Plugin
+# vorab zu $BASE.src.md auf — die als sed-Quelle bevorzugen, sonst das Vault-Original.
 PROCESSED_INPUT="$WORK/$BASE.md"
-sed 's/+\[\[/![[/g' "$INPUT_ABS" > "$PROCESSED_INPUT"
+SRC_INPUT="$INPUT_ABS"
+[[ -f "$WORK/$BASE.src.md" ]] && SRC_INPUT="$WORK/$BASE.src.md"
+sed 's/+\[\[/![[/g' "$SRC_INPUT" > "$PROCESSED_INPUT"
 
 # Dependency manifest for plugin watch mode
 export NOPE_DEPS_FILE="$WORK/deps.txt"
@@ -70,7 +73,7 @@ pandoc \
   -f markdown+wikilinks_title_after_pipe \
   --metadata-file=/app/branding/_base.yml \
   "${EXTRA_METADATA_FILES[@]}" \
-  --resource-path="$INPUT_DIR:$VAULT_PATHS/app/assets" \
+  --resource-path="$WORK:$INPUT_DIR:$VAULT_PATHS/app/assets" \
   --extract-media="$WORK/media" \
   --template="$TEMPLATE" \
   --lua-filter=/app/filters/obsidian-transclude.lua \

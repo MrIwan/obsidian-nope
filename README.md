@@ -112,6 +112,7 @@ Supported patterns:
 - `![[Note]]` embeds a full note.
 - `![[Note#Heading]]` embeds a section starting at a heading.
 - `![[Note#^block-id]]` embeds a block slice.
+- `![[Base.base#View]]` embeds an Obsidian base view — see [Bases](#bases).
 
 
 ### Auto heading shift
@@ -310,6 +311,47 @@ A reference with `[[plot.png]]` becomes `Abbildung X`.
 ```markdown
 ![[plot.png|My plot]]
 ![[plot.png|My plot|w=60%]]
+```
+
+***
+
+## Bases
+
+NOPE can embed an Obsidian [base](https://help.obsidian.md/bases) view into a document with `![[Base.base#View]]`. What it produces depends on the **`latex-env` of the surrounding note**:
+
+- **No `latex-env` (default)** — every note the view returns is **transcluded**, in the view's order. Embed the base straight into a document to use it as a spine or table of contents.
+- **`latex-env: table` + `caption`** — the view is rendered as a numbered **table** with exactly the columns, order and sort configured in that view. Table needs a caption, this lives in a small wrapper note whose body is just the base embed. Embed that wrapper with `![[…]]`. `longtable` and `align` work like any other table.
+
+The query (filters, formulas, sort, column selection) is evaluated by Obsidian's real Bases engine at export time — what the view shows is what you get. Add `#View` to pick a view. Without it the first view of the base is used. This requires the core **Bases** plugin to be enabled (Obsidian 1.10+).
+
+> **Note — a base view briefly opens during export.** To read a base with Obsidian's real engine, NOPE opens the referenced base view in a tab for a moment while it renders, then closes it again and returns focus to the preview or your current note. You may see it flash open and closed once per base during export. A base only produces data once Obsidian actually renders it, so it cannot be resolved fully invisibly.
+
+### Example
+
+Transclude every note in a base (document spine), straight in the document:
+
+```markdown
+## Chapters
+
+![[Thesis-Chapters.base#Reading order]]
+```
+
+Render a base as a table — a wrapper note `Project-Overview.md`:
+
+```markdown
+---
+latex-env: table
+caption: "Project overview"
+---
+![[Projects.base#Table]]
+```
+
+Embedded elsewhere:
+
+```markdown
+![[Project-Overview]]
+
+As shown in [[Project-Overview]], the project is on track.
 ```
 
 ***
@@ -518,7 +560,7 @@ This command creates an example main document in the vault. It is a quick way to
 
 ### Add … (structured note scaffolds)
 
-A set of commands — `Add table`, `Add theorem`, `Add lemma`, `Add definition`, `Add proof`, `Add mermaid diagram`, `Add equation`, `Add glossary term` and `Add abbreviation` — each create a new atomic note next to the current one with the correct frontmatter (`latex-env`, required keys like `caption`, `gls-*`) and a ready-to-fill body, then insert the embed (`![[…]]`) or reference (`[[…]]`) at your cursor and open the note in a new tab. They are available while editing a note.
+A set of commands — `Add table`, `Add base table`, `Add theorem`, `Add lemma`, `Add definition`, `Add proof`, `Add mermaid diagram`, `Add equation`, `Add glossary term` and `Add abbreviation` — each create a new atomic note next to the current one with the correct frontmatter (`latex-env`, required keys like `caption`, `gls-*`) and a ready-to-fill body, then insert the embed (`![[…]]`) or reference (`[[…]]`) at your cursor and open the note in a new tab. They are available while editing a note.
 
 
 ### Remove Docker image
