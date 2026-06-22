@@ -148,9 +148,8 @@ async function resolveBaseView(app: App, baseFile: TFile, viewName: string | und
 			}
 		}
 		try {
-			// Temp file must be permanently removed, not trashed into the user's vault.
-			// eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file
-			await app.vault.delete(tempFile, true);
+			// Clean up the temporary base created for the headless mount.
+			await app.fileManager.trashFile(tempFile);
 		} catch {
 			/* ignore */
 		}
