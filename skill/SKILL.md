@@ -1,8 +1,8 @@
 ---
 name: nope
-description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, nope-branding, nope-template, abstract), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
+description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
-last-updated: 2026-06-22
+last-updated: 2026-06-23
 ---
 
 # nope — authoring conventions
@@ -29,6 +29,7 @@ Refs (`[[…]]`):
 - `[[Note]]` → `\autoref` → the typed name + number.
 - `[[Note|Custom text]]` → hyperlink with your text.
 - `[[GlossaryNote]]` → `\gls{<gls-id>}` when the target has a `gls-id` (glossary wins over an embed target of the same name).
+- `[[CitationNote]]` → a citation when the target has a `citekey` (see Citation atoms); resolved after glossary, before embed targets.
 - Multiple embeds of one note: refs point to the first occurrence (counters still advance).
 
 ## `latex-env` — structured blocks
@@ -120,6 +121,26 @@ csl: chicago-author-date         # optional; default style otherwise
 ```
 
 In-text (standard Pandoc): `[@key]`, `[-@key]` (suppress author), `@key` (author in text), `[@key, p. 42]` (locator), `[@a; @b]` (multiple). The bibliography is appended automatically; place it explicitly with a `::: {#refs}\n:::` placeholder. Recommended source-of-truth workflow: Zotero + Better BibTeX (auto-export `.bib` into the vault).
+
+#### Citation atoms (`citekey`)
+
+Like glossary atoms, but for sources: one `.md` per reference with a `citekey` plus the bibliographic fields. A `[[Note]]` wikilink to it becomes a citation (`[@citekey]`); the plugin generates the matching BibTeX entry automatically, so no `.bib` file is needed. Works on its own or alongside a `bibliography:` `.bib` — both feed the same reference list.
+
+```yaml
+---
+citekey: smith2020          # the cite key used in the bibliography
+bibtype: article            # optional BibTeX type (default: misc)
+author: [Smith, Jane; Doe, John]   # list → joined with " and "
+title: A Study of Things
+year: 2020
+journal: Journal of Things
+volume: 12
+pages: 33-58
+doi: 10.1000/xyz
+---
+```
+
+Recognized fields: `author`, `editor`, `title`, `year`, `month`, `journal`, `booktitle`, `publisher`, `institution`, `school`, `organization`, `volume`, `number`, `pages`, `series`, `chapter`, `edition`, `address`, `doi`, `url`, `isbn`, `issn`, `howpublished`, `note`, `keywords`, `abstract`. Reference it with `[[Smith 2020]]` anywhere in the document or in an embedded note. To set a CSL style for a citation-notes-only document, add a `bibliography:` `.bib` (even an empty one) so the `csl:` key takes effect.
 
 ### Branding notes
 

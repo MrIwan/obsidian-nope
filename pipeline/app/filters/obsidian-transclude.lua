@@ -582,27 +582,21 @@ local function tex_escape(s)
   return s:gsub("([&%%$#_{}])", "\\%1")
 end
 
+-- Parsed frontmatter for a target note (cached); false sentinel = looked up, none found.
+local function get_frontmatter(target)
+  local cached = frontmatter_cache[target]
+  if cached == false then return nil end
+  if cached then return cached end
+  local path = find_note_path(target)
+  local fm = path and read_frontmatter(path) or nil
+  frontmatter_cache[target] = fm or false
+  return fm
+end
+
 -- Try to resolve wikilink target as glossary term; return \gls{id} or nil.
 local function try_resolve_glossary(target)
-  local cached = frontmatter_cache[target]
-  local fm
-  if cached == false then
-    return nil  -- Already checked, no gls-id.
-  elseif cached then
-    fm = cached
-  else
-    local path = find_note_path(target)
-    if not path then
-      frontmatter_cache[target] = false
-      return nil
-    end
-    fm = read_frontmatter(path)
-    if not fm or not fm["gls-id"] then
-      frontmatter_cache[target] = false
-      return nil
-    end
-    frontmatter_cache[target] = fm
-  end
+  local fm = get_frontmatter(target)
+  if not fm or not fm["gls-id"] then return nil end
 
   local id = fm["gls-id"]
   if not glossary_entries[id] then
@@ -614,6 +608,16 @@ local function try_resolve_glossary(target)
     }
   end
   return pandoc.RawInline("latex", "\\gls{" .. id .. "}")
+end
+
+-- Try to resolve wikilink target as a citation note; return a Pandoc Cite or nil.
+-- The note's citekey frontmatter ties it to a BibTeX entry the plugin generates
+-- into references-notes.bib; citeproc (run after this filter) formats the Cite.
+local function try_resolve_citation(target)
+  local fm = get_frontmatter(target)
+  if not fm or not fm["citekey"] then return nil end
+  local key = fm["citekey"]
+  return pandoc.Cite({ pandoc.Str("@" .. key) }, { pandoc.Citation(key, "NormalCitation") })
 end
 
 -- Flush collected glossary entries to header-includes; set has-glossary meta flag.
@@ -889,6 +893,10 @@ local function resolve_wikilink(link)
   -- Try glossary first.
   local gls = try_resolve_glossary(target)
   if gls then return gls end
+
+  -- Then citation notes (citekey frontmatter) → \cite via a Cite node.
+  local cite = try_resolve_citation(target)
+  if cite then return cite end
 
   -- Try embed target; use \autoref for default display, \hyperref for custom text.
   local label = available_targets[target]

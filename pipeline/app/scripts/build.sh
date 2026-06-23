@@ -61,11 +61,18 @@ fi
 # Mermaid rendering in obsidian-transclude.lua (wrap_mermaid for latex-env: mermaid) places PNGs in $WORK/mermaid/; the .tex file references them using the relative path "mermaid/<sha1>.png", which resolves correctly given that latexmk runs in $WORK.
 export MERMAID_WORK_DIR="$WORK"
 
-# Check if bibliography exists
+# Check if bibliography exists. Two sources, both via citeproc references.bib
 EXTRA_BIB_ARGS=()
-if [[ -f "$WORK/references.bib" ]]; then
-  echo ">>> Bibliography: $WORK/references.bib"
-  EXTRA_BIB_ARGS+=(--citeproc --bibliography="$WORK/references.bib")
+if [[ -f "$WORK/references.bib" || -f "$WORK/references-notes.bib" ]]; then
+  EXTRA_BIB_ARGS+=(--citeproc)
+  if [[ -f "$WORK/references.bib" ]]; then
+    echo ">>> Bibliography: $WORK/references.bib"
+    EXTRA_BIB_ARGS+=(--bibliography="$WORK/references.bib")
+  fi
+  if [[ -f "$WORK/references-notes.bib" ]]; then
+    echo ">>> Citation notes: $WORK/references-notes.bib"
+    EXTRA_BIB_ARGS+=(--bibliography="$WORK/references-notes.bib")
+  fi
   if [[ -f "$WORK/citation-style.csl" ]]; then
     echo ">>> CSL: $WORK/citation-style.csl"
     EXTRA_BIB_ARGS+=(--csl="$WORK/citation-style.csl")
@@ -100,7 +107,7 @@ latexmk -pdf -interaction=nonstopmode -r /app/scripts/latexmkrc "$BASE.tex"
 timer_end latexmk
 
 # Cleanup intermediates, keep media and .tex for debugging.
-rm -f "$WORK/branding-override.yml" "$WORK/references.bib" "$WORK/citation-style.csl" "$WORK/custom-template.tex"
+rm -f "$WORK/branding-override.yml" "$WORK/references.bib" "$WORK/references-notes.bib" "$WORK/citation-style.csl" "$WORK/custom-template.tex"
 rm -rf "$WORK/branding"
 
 echo ""

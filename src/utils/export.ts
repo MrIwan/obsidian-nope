@@ -10,6 +10,7 @@ import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from '.
 import { PhaseTimer, appendTimerCsv, parseBuildStep, parsePipelinePhase, parsePipelineTimings } from './progress';
 import { prepareBrandingOverride } from './branding';
 import { prepareBibliography } from './bibliography';
+import { prepareCitations } from './citations';
 import { prepareTemplate } from './template';
 import { prepareBases } from './bases';
 import { ensureBundledAssets } from './assets';
@@ -130,6 +131,17 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 	}
 	timer.lap('bib');
 
+	// Generate references-notes.bib from citekey notes; runs alongside the .bib system.
+	let citeDeps: string[] = [];
+	try {
+		citeDeps = prepareCitations(plugin.app, file, workDir);
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		reporter.fail(`Citation notes prep failed. ${msg}`);
+		return { ok: false };
+	}
+	timer.lap('citations');
+
 	// Materialize a custom template if selected
 	try {
 		const tpl = prepareTemplate(plugin.app, file, workDir, vaultPath);
@@ -186,7 +198,7 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		const msg = e instanceof Error ? e.message : String(e);
 		reporter.fail(`Export failed. ${msg}`);
 		// build.sh re-seeds the manifest before pandoc runs, so it is fresh even on LaTeX failure.
-		return { ok: false, deps: [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps])] };
+		return { ok: false, deps: [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps, ...citeDeps])] };
 	}
 	timer.add('pandoc', pandocMs);
 	timer.add('latexmk', latexmkMs);
@@ -194,7 +206,7 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 	timer.add('overhead', Math.max(0, Date.now() - pipelineStart - pandocMs - latexmkMs));
 
 	// Read the dependency manifest before any cleanup can remove it.
-	const deps = [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps])];
+	const deps = [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps, ...citeDeps])];
 
 	if (strippedChars > 0) {
 		new Notice(

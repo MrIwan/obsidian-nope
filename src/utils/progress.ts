@@ -121,6 +121,7 @@ const TIMER_CSV_PHASES = [
 	'docker',
 	'branding',
 	'bib',
+	'citations',
 	'template',
 	'bases',
 	'pandoc',
