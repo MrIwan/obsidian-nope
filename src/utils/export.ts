@@ -237,7 +237,7 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 	if (!keepIntermediates) {
 		cleanupIntermediates(workDir);
 	}
-.
+
 	try {
 		appendTimerCsv(join(pluginDir, 'pipeline', 'build'), baseName, timer);
 	} catch {

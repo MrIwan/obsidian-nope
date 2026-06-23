@@ -328,6 +328,8 @@ The query (filters, formulas, sort, column selection) is evaluated by Obsidian's
 
 > **Note — a base view briefly opens during export.** To read a base with Obsidian's real engine, NOPE opens the referenced base view in a tab for a moment while it renders, then closes it again and returns focus to the preview or your current note. You may see it flash open and closed once per base during export. A base only produces data once Obsidian actually renders it, so it cannot be resolved fully invisibly.
 
+> **Note — a `_nope-temp-base.base` file in your vault root.** Obsidian can only query a base by mounting a real file, so NOPE keeps a single scratch base named `_nope-temp-base.base` at the vault root and overwrites it on every export. It is safe to ignore or delete — if you remove it, it is recreated on the next export. NOPE keeps one reused file rather than creating a new one each run so your vault doesn't fill up with temp bases.
+
 ### Example
 
 Transclude every note in a base (document spine), straight in the document:

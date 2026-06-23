@@ -120,8 +120,7 @@ async function resolveBaseView(app: App, baseFile: TFile, viewName: string | und
 	}
 
 	const tempCfg = { ...cfg, views: [{ ...userView, type: VIEW_ID }] };
-	const tempName = `_nope-base-${Date.now()}-${Math.floor(Math.random() * 1e6)}.base`;
-	const tempFile = await app.vault.create(tempName, stringifyYaml(tempCfg));
+	const tempFile = await ensureTempBase(app, stringifyYaml(tempCfg));
 
 	// A fresh foreground leaf per base — reusing one leaf breaks the second mount
 	// (onDataUpdated never fires); a backgrounded leaf is deferred and never renders.
@@ -147,13 +146,20 @@ async function resolveBaseView(app: App, baseFile: TFile, viewName: string | und
 				/* ignore */
 			}
 		}
-		try {
-			// Clean up the temporary base created for the headless mount.
-			await app.fileManager.trashFile(tempFile);
-		} catch {
-			/* ignore */
-		}
+		// Note: we deliberately do NOT delete the scratch base here — see TEMP_BASE_PATH.
 	}
+}
+
+// Single, reused scratch base for the headless mount. 
+const TEMP_BASE_PATH = '_nope-temp-base.base';
+
+async function ensureTempBase(app: App, content: string): Promise<TFile> {
+	const existing = app.vault.getAbstractFileByPath(TEMP_BASE_PATH);
+	if (existing instanceof TFile) {
+		await app.vault.modify(existing, content);
+		return existing;
+	}
+	return app.vault.create(TEMP_BASE_PATH, content);
 }
 
 // Walk the embed graph from the export file
