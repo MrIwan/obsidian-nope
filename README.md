@@ -121,6 +121,8 @@ Embedded notes should start with a normal `# Heading`. NOPE automatically shifts
 
 That means embedded content can keep a clean, local structure without forcing you to manually rewrite heading levels for every context.
 
+`latex-env` notes (theorems, tables, math, Mermaid) should not contain headings, since their body is wrapped in a LaTeX environment and the title/caption come from frontmatter.
+
 ### Cross-references from normal wikilinks
 
 Normal wikilinks are turned into PDF references when the target is embedded in the exported document.
@@ -149,16 +151,19 @@ This allows structured content to stay author-friendly in Obsidian while being r
 
 | Block | `latex-env` | `caption` | `w` / `width` | Other keys | Wikilink renders as |
 |---|---|---|---|---|---|
-| Theorem family | `theorem`, `lemma`, `definition`, `proof`, custom amsthm | — | — | `latex-short` (optional) | "Theorem N" |
-| Table | `table` | **required** | — | `longtable` (optional, default `false`) | "Table N" |
+| Theorem family (numbered) | `theorem`, `lemma`, `definition`, `corollary`, `proposition`, `example` (+ custom amsthm) | — | — | `latex-short` (optional) | typed name + number, e.g. "Theorem 1.1", "Lemma 1.2" |
+| Unnumbered blocks | `proof`, `remark`, `note` | — | — | — | hyperlink with the note title (no number) |
+| Table | `table` | **required** | — | `longtable` (optional, default `false`), `align` | "Table N" |
 | Mermaid diagram | `mermaid` | **required** | optional | `scale` (1–5, default 2) | "Figure N" |
 | Math | `equation`, `align`, `gather`, `multline`, `alignat` (+ `*` variants) | — | — | — | "Equation N" |
 
 ### Theorems, lemmas, definitions, proofs
 
-Use `latex-env` to wrap a note in a theorem-like environment.
+Use `latex-env` to wrap a note in a theorem-like environment. The numbered family like `theorem`, `lemma`, `definition`, `corollary`, `proposition` and `example` (plus any custom amsthm environment) has its **own counter**, so a wikilink resolves to the typed name and number ("Theorem 1.1", "Lemma 1.2", "Definition 2.1"). `proof`, `remark` and `note` are **unnumbered**. A wikilink to them is a clickable hyperlink showing the note title instead of a number.
 
 This is ideal for mathematical or technical writing where reusable theorem-style blocks should be referenced from the surrounding text.
+
+A `latex-env` note contains **no headings** — its body is wrapped directly in the LaTeX environment and an optional bracket title comes from `latex-short` in the frontmatter.
 
 #### Example
 
@@ -169,7 +174,6 @@ This is ideal for mathematical or technical writing where reusable theorem-style
 latex-env: theorem
 latex-short: Pythagoras
 ---
-# Pythagoras
 
 $a^2 + b^2 = c^2$
 ```
@@ -218,7 +222,6 @@ longtable: true
 latex-env: table
 caption: "Measurement results"
 ---
-# Results
 
 | x | y |
 |---|---|
@@ -248,7 +251,6 @@ This is useful when equations should be atomic, reusable and cross-referenceable
 ---
 latex-env: align
 ---
-# Energy
 
 $$
 E &= mc^2 \\
@@ -304,7 +306,7 @@ Image embeds become figures when used with a caption.
 
 Supported width hints are percentages, pixel units and metric units (`cm`, `mm`). This makes it possible to reuse the same image at different sizes across different documents.
 
-A reference with `[[plot.png]]` becomes `Abbildung X`.
+A reference with `[[plot.png]]` becomes a figure reference such as "Figure N" (localised to the document language, e.g. "Abbildung N" with `lang: de`).
 
 ### Example
 
@@ -366,21 +368,25 @@ When you link such a note with a normal wikilink like `[[GLS]]` or `[[ACN]]`, NO
 `GLS.md`:
 
 ```yaml
+---
 gls-id: gls
 gls-short: GLS
 gls-long: Glossary
 gls-description: A glossary entry is a note that defines a term. It can be referenced from the text and will appear in the generated glossary section of the PDF with the hyperlinked description.
 gls-type: term
+---
 ```
 
 `ACN.md`:
 
 ```yaml
+---
 gls-id: acn
 gls-short: ACN
 gls-long: Acronym
-gls-description: An acronym entry is listed in the acronym section and can be referenced from the text.
+gls-description: ""
 gls-type: acronym
+---
 ```
 
 ***
@@ -538,9 +544,14 @@ The plugin exposes several commands through the Obsidian command palette.
 This is the main command. It runs the document through the containerized export pipeline and writes the resulting PDF.
 
 
-### Build Docker image
+### Open PDF preview / Sync PDF preview to cursor
 
-This command builds the Docker image used by the export pipeline. You typically need it for the first run and after environment-related changes.
+`Open PDF preview` opens a live preview pane that re-renders the PDF as you edit. `Sync PDF preview to cursor` scrolls the preview to the part of the document your cursor is in.
+
+
+### Build docker image (with cache) / (no cache)
+
+These commands build the Docker image used by the export pipeline. You typically need it for the first run and after environment-related changes. The cached variant reuses existing layers (faster). The no-cache variant rebuilds from scratch. The image also rebuilds itself automatically after a plugin update changes the pipeline.
 
 
 ### Create branding template
@@ -548,14 +559,9 @@ This command builds the Docker image used by the export pipeline. You typically 
 This command creates a branding template note in the vault. It is a quick way to start a new brand configuration without copying old project files by hand.
 
 
-### Create custom template
+### Create custom LaTeX template
 
 This command drops the `nope_minimal.tex` starter into the vault as a base for your own LaTeX template. Point a document at it via `nope-template` to use it instead of Eisvogel.
-
-
-### Create example main document
-
-This command creates an example main document in the vault. It is a quick way to see the atomic authoring model in action: a short file with frontmatter plus wikilink embeds of chapters and structured notes.
 
 
 ### Add … (structured note scaffolds)
@@ -563,7 +569,7 @@ This command creates an example main document in the vault. It is a quick way to
 A set of commands — `Add table`, `Add base table`, `Add theorem`, `Add lemma`, `Add definition`, `Add proof`, `Add mermaid diagram`, `Add equation`, `Add glossary term` and `Add abbreviation` — each create a new atomic note next to the current one with the correct frontmatter (`latex-env`, required keys like `caption`, `gls-*`) and a ready-to-fill body, then insert the embed (`![[…]]`) or reference (`[[…]]`) at your cursor and open the note in a new tab. They are available while editing a note.
 
 
-### Remove Docker image
+### Remove docker image
 
 This command removes the pipeline image. The next export can then rebuild the environment from scratch.
 
@@ -577,7 +583,7 @@ This command clears the build folder used during export. It is mainly useful for
 
 ## AI skill integration
 
-NOPE can install a skill into the vault, where thie NOPE conventions are defined. The goal is to help AI tools follow the plugin's writing conventions when generating or editing exportable notes.
+NOPE can install a skill into the vault, where the NOPE conventions are defined. The `Install AI conventions skill` command copies the skill into the vault. The goal is to help AI tools follow the plugin's writing conventions when generating or editing exportable notes.
 
 This is particularly useful when AI is used for report drafting, technical writing, or vault-assisted authoring.
 
