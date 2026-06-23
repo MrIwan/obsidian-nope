@@ -552,6 +552,9 @@ export class NopePreviewView extends ItemView {
 				.onClick(() => {
 					this.autoRender = !this.autoRender;
 					this.app.workspace.requestSaveLayout();
+					// Persist so the choice survives closing and reopening the preview.
+					this.plugin.settings.previewAutoRender = this.autoRender;
+					void this.plugin.saveSettings();
 					// Render on enable so the watch set reflects the current document.
 					if (this.autoRender) this.requestRender();
 				}),
@@ -563,6 +566,8 @@ export class NopePreviewView extends ItemView {
 				.onClick(() => {
 					this.autoJump = !this.autoJump;
 					this.app.workspace.requestSaveLayout();
+					this.plugin.settings.previewAutoJump = this.autoJump;
+					void this.plugin.saveSettings();
 					if (this.autoJump) this.debouncedJump();
 				}),
 		);
@@ -746,10 +751,11 @@ export function registerPreviewCommand(plugin: NopePlugin): void {
 			await leaf.setViewState({
 				type: NOPE_PREVIEW_VIEW_TYPE,
 				active: true,
+				// Fall back to the persisted settings when no preview is open (state is otherwise lost on close).
 				state: {
 					filePath: targetPath,
-					autoRender: existingView?.getState().autoRender === true,
-					autoJump: existingView?.getState().autoJump === true,
+					autoRender: existingView?.getState().autoRender ?? plugin.settings.previewAutoRender,
+					autoJump: existingView?.getState().autoJump ?? plugin.settings.previewAutoJump,
 				},
 			});
 			await plugin.app.workspace.revealLeaf(leaf);

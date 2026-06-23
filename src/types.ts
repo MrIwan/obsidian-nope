@@ -5,6 +5,8 @@ export interface NopeSettings {
 	autoOpenPdf: boolean;
 	keepLatexIntermediates: boolean;
 	dockerPath: string;
+	previewAutoRender: boolean;
+	previewAutoJump: boolean;
 }
 
 export interface PreflightCheckResult {

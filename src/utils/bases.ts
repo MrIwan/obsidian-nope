@@ -146,7 +146,7 @@ async function resolveBaseView(app: App, baseFile: TFile, viewName: string | und
 				/* ignore */
 			}
 		}
-		// Note: we deliberately do NOT delete the scratch base here — see TEMP_BASE_PATH.
+		// we do NOT delete the scratch base here
 	}
 }
 

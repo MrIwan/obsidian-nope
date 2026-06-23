@@ -14,6 +14,8 @@ export const DEFAULT_SETTINGS: NopeSettings = {
 	autoOpenPdf: false,
 	keepLatexIntermediates: false,
 	dockerPath: '',
+	previewAutoRender: false,
+	previewAutoJump: false,
 };
 
 export class NopeSettingTab extends PluginSettingTab {
