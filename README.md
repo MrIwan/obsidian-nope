@@ -513,9 +513,9 @@ A custom template must pull in the packages and definitions NOPE depends on (tab
 %%% END NOPE-IMPORTS %%%
 ```
 
-Keep that block verbatim. Besides the NOPE features, a template also needs a Pandoc baseline (image scaling, code highlighting, table-width macros, float placement) that Pandoc's default template would normally provide. The easiest start is therefore the shipped **`nope_minimal.tex`** — a no-overhead starter that already has the Pandoc baseline, and the required slots (`$body$`, header-includes, title, table of contents, glossary). The command **Create custom LaTeX template** drops it into your vault; then point `nope-template:` at it and customize freely. 
+Keep that block verbatim. Besides the NOPE features, a template also needs a Pandoc baseline (image scaling, code highlighting, table-width macros, float placement) that Pandoc's default template would normally provide. The easiest start is therefore the shipped **`nope_minimal.tex`** — a no-overhead starter that already has the Pandoc baseline and the required slots (`$body$`, header-includes, title, table of contents, glossary). The command **Create custom LaTeX template** drops it into your vault; then point `nope-template:` at it and customize freely. 
 
-> **Editing `.tex` files inside Obsidian:** Obsidian hides non-markdown files by default. Enable Settings → Files & Links → *Detect all file extensions* to see them, and install the [Custom File Extensions](obsidian://show-plugin?id=obsidian-custom-file-extensions-plugin) plugin to open and edit `.tex` files (it handles the `.tex` extension out of the box). Otherwise, right-click the file → *Open in default app* to edit it in your usual LaTeX editor.
+> **Editing `.tex` files inside Obsidian:** Obsidian hides non-markdown files by default. Enable Settings → Files & Links → *Detect all file extensions* to see them and install the [Custom File Extensions](obsidian://show-plugin?id=obsidian-custom-file-extensions-plugin) plugin to open and edit `.tex` files (it handles the `.tex` extension out of the box). Otherwise, right-click the file → *Open in default app* to edit it in your usual LaTeX editor.
 
 ***
 

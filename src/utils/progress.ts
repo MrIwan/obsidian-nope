@@ -1,6 +1,8 @@
 // Persistent, updatable notice
 
 import { Notice } from 'obsidian';
+import { appendFileSync, existsSync } from 'fs';
+import { join } from 'path';
 
 export class ProgressNotice {
 	private notice: Notice;
@@ -62,6 +64,90 @@ export function parsePipelinePhase(chunk: string): string | null {
 		}
 	}
 	return phase;
+}
+
+// Parse ">>> NOPE-TIMING <label> <ms>" lines (emitted by build.sh) into per-phase durations.
+export function parsePipelineTimings(chunk: string): { label: string; ms: number }[] {
+	const out: { label: string; ms: number }[] = [];
+	for (const line of chunk.split('\n')) {
+		const m = line.match(/NOPE-TIMING (\S+) (\d+)ms/);
+		if (m) {
+			const label = m[1] ?? '';
+			if (label) out.push({ label, ms: parseInt(m[2] ?? '0', 10) });
+		}
+	}
+	return out;
+}
+
+// Collects per-phase durations across one export and formats a compact one-line summary.
+export class PhaseTimer {
+	private readonly start = Date.now();
+	private last = this.start;
+	private readonly marks: { label: string; ms: number }[] = [];
+
+	// Record the time elapsed since the previous lap (or start) under `label`.
+	lap(label: string): void {
+		const now = Date.now();
+		this.marks.push({ label, ms: now - this.last });
+		this.last = now;
+	}
+
+	// Record an externally measured duration (e.g. parsed from the container output).
+	add(label: string, ms: number): void {
+		this.marks.push({ label, ms });
+	}
+
+	totalMs(): number {
+		return Date.now() - this.start;
+	}
+
+	// Snapshot of the recorded phase durations plus the running total (for logging).
+	snapshot(): { marks: { label: string; ms: number }[]; totalMs: number } {
+		return { marks: [...this.marks], totalMs: this.totalMs() };
+	}
+
+	// e.g. "bases 1.4s · pandoc 1.1s · latexmk 7.0s · overhead 2.1s · total 12.0s" (phases < 50ms hidden).
+	format(): string {
+		const fmt = (ms: number): string => `${(ms / 1000).toFixed(1)}s`;
+		const parts = this.marks.filter((m) => m.ms >= 50).map((m) => `${m.label} ${fmt(m.ms)}`);
+		parts.push(`total ${fmt(this.totalMs())}`);
+		return parts.join(' · ');
+	}
+}
+
+// Canonical phase order so timer.csv keeps a stable column layout across runs.
+const TIMER_CSV_PHASES = [
+	'assets',
+	'docker',
+	'branding',
+	'bib',
+	'template',
+	'bases',
+	'pandoc',
+	'latexmk',
+	'overhead',
+] as const;
+
+// Append one row of per-phase timings to <buildDir>/timer.csv, writing the header on first use.
+export function appendTimerCsv(buildDir: string, document: string, timer: PhaseTimer): void {
+	const { marks, totalMs } = timer.snapshot();
+	const byLabel = new Map(marks.map((m) => [m.label, m.ms]));
+	const csvFile = join(buildDir, 'timer.csv');
+	const escape = (v: string): string => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+
+	const lines: string[] = [];
+	if (!existsSync(csvFile)) {
+		lines.push(['timestamp', 'document', ...TIMER_CSV_PHASES, 'total'].join(','));
+	}
+	lines.push(
+		[
+			new Date().toISOString(),
+			escape(document),
+			...TIMER_CSV_PHASES.map((p) => String(byLabel.get(p) ?? '')),
+			String(totalMs),
+		].join(','),
+	);
+	appendFileSync(csvFile, lines.join('\n') + '\n');
 }
 
 // Map docker BuildKit output to a short build-step label ("step 5/6: tlmgr …").

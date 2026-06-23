@@ -20,6 +20,11 @@ INPUT_DIR=$(dirname "$INPUT_ABS")
 WORK="/build/$BASE"
 mkdir -p "$WORK"
 
+# Phase timer: emits ">>> NOPE-TIMING <label> <ms>" lines the plugin parses for the export summary.
+_timer_t0=0
+timer_start() { _timer_t0=$(date +%s%3N); }
+timer_end() { echo ">>> NOPE-TIMING $1 $(( $(date +%s%3N) - _timer_t0 ))ms"; }
+
 # Template: custom-template.tex (materialized by the plugin) wins, else Eisvogel.
 TEMPLATE="/app/template/eisvogel.tex"
 if [[ -f "$WORK/custom-template.tex" ]]; then
@@ -67,8 +72,9 @@ if [[ -f "$WORK/references.bib" ]]; then
   fi
 fi
 
-# Pandoc: Markdown -> LaTeX
+# Pandoc: Markdown -> LaTeX (incl. Lua filters, mermaid render and citeproc)
 echo ">>> Pandoc: $BASE.md → $BASE.tex"
+timer_start
 pandoc \
   -f markdown+wikilinks_title_after_pipe \
   --metadata-file=/app/branding/_base.yml \
@@ -85,10 +91,13 @@ pandoc \
   -t latex \
   -o "$WORK/$BASE.tex" \
   "$PROCESSED_INPUT"
+timer_end pandoc
 
 cd "$WORK"
 echo ">>> latexmk (pdflatex + makeglossaries, so oft bis stabil)"
+timer_start
 latexmk -pdf -interaction=nonstopmode -r /app/scripts/latexmkrc "$BASE.tex"
+timer_end latexmk
 
 # Cleanup intermediates, keep media and .tex for debugging.
 rm -f "$WORK/branding-override.yml" "$WORK/references.bib" "$WORK/citation-style.csl" "$WORK/custom-template.tex"

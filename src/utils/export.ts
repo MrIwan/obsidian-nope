@@ -7,7 +7,7 @@ import { dirname, isAbsolute, join, relative, sep } from 'path';
 import type NopePlugin from '../main';
 import { buildImage, checkDockerReady, cleanupIntermediates, imageStatus, runPipeline } from './docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from './paths';
-import { parseBuildStep, parsePipelinePhase } from './progress';
+import { PhaseTimer, appendTimerCsv, parseBuildStep, parsePipelinePhase, parsePipelineTimings } from './progress';
 import { prepareBrandingOverride } from './branding';
 import { prepareBibliography } from './bibliography';
 import { prepareTemplate } from './template';
@@ -44,6 +44,9 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 	const pluginDir = getPluginAbsoluteDir(plugin);
 	const vaultPath = getVaultAbsolutePath(plugin.app);
 
+	// Per-phase timer; surfaced as a one-line summary in the success notice.
+	const timer = new PhaseTimer();
+
 	// Ensure the bundled pipeline/ + skill/ are present
 	try {
 		ensureBundledAssets(pluginDir, plugin.manifest.version);
@@ -52,6 +55,7 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		reporter.fail(`Pipeline files missing and could not be created. ${msg}`);
 		return { ok: false };
 	}
+	timer.lap('assets');
 
 	// Verify Docker is ready
 	const dockerReady = await checkDockerReady();
@@ -83,6 +87,7 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 			return { ok: false };
 		}
 	}
+	timer.lap('docker');
 
 	// Resolve source and destination paths.
 	const sourceAbs = join(vaultPath, file.path);
@@ -107,6 +112,7 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		reporter.fail(`Branding override failed. ${msg}`);
 		return { ok: false };
 	}
+	timer.lap('branding');
 
 	// Materialize bibliography; copy to work directory with fixed filenames for build.sh.
 	try {
@@ -122,6 +128,7 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		reporter.fail(`Bibliography prep failed. ${msg}`);
 		return { ok: false };
 	}
+	timer.lap('bib');
 
 	// Materialize a custom template if selected
 	try {
@@ -143,6 +150,7 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		reporter.fail(`Template prep failed. ${msg}`);
 		return { ok: false };
 	}
+	timer.lap('template');
 
 	// Resolve embedded Bases and materialize shadows for the transclude filter.
 	let baseDeps: string[] = [];
@@ -153,14 +161,23 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		reporter.fail(`Bases export failed. ${msg}`);
 		return { ok: false };
 	}
+	timer.lap('bases');
 
 	// Run export pipeline
 	let producedPdf: string;
 	let strippedChars = 0;
+	// pandoc/latexmk durations come from build.sh's ">>> NOPE-TIMING" lines; overhead is the rest.
+	let pandocMs = 0;
+	let latexmkMs = 0;
+	const pipelineStart = Date.now();
 	try {
 		producedPdf = await runPipeline(pluginDir, vaultPath, file.path, (chunk) => {
 			const phase = parsePipelinePhase(chunk);
 			if (phase) reporter.update(`Exporting "${file.basename}" — ${phase}`);
+			for (const t of parsePipelineTimings(chunk)) {
+				if (t.label === 'pandoc') pandocMs = t.ms;
+				else if (t.label === 'latexmk') latexmkMs = t.ms;
+			}
 			// strip-unsupported.lua reports removed emoji/pictograph chars.
 			const m = /NOPE-STRIPPED (\d+)/.exec(chunk);
 			if (m) strippedChars = parseInt(m[1] ?? '0', 10);
@@ -171,6 +188,10 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		// build.sh re-seeds the manifest before pandoc runs, so it is fresh even on LaTeX failure.
 		return { ok: false, deps: [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps])] };
 	}
+	timer.add('pandoc', pandocMs);
+	timer.add('latexmk', latexmkMs);
+	// Container startup + mount overhead: the pipeline wall time not spent in pandoc or latexmk.
+	timer.add('overhead', Math.max(0, Date.now() - pipelineStart - pandocMs - latexmkMs));
 
 	// Read the dependency manifest before any cleanup can remove it.
 	const deps = [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps])];
@@ -216,8 +237,15 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 	if (!keepIntermediates) {
 		cleanupIntermediates(workDir);
 	}
+.
+	try {
+		appendTimerCsv(join(pluginDir, 'pipeline', 'build'), baseName, timer);
+	} catch {
+		// never fail because of logging 
+	}
 
-	reporter.succeed(finalDest ? `Exported to ${finalDest}` : `Rendered "${file.basename}"`);
+	const outcome = finalDest ? `Exported to ${finalDest}` : `Rendered "${file.basename}"`;
+	reporter.succeed(`${outcome} · ${timer.format()}`);
 
 	if (openPdf && finalDest) {
 		void shell.openPath(finalDest);
