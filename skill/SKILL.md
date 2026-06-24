@@ -2,7 +2,7 @@
 name: nope
 description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
-last-updated: 2026-06-23
+last-updated: 2026-06-24
 ---
 
 # nope — authoring conventions
@@ -148,6 +148,8 @@ Recognized fields: `author`, `editor`, `title`, `year`, `month`, `journal`, `boo
 
 One `.md` per customer/project with frontmatter overrides; the body is ignored on export. **Quote every wikilink value** (`"[[logo.png]]"`) — unquoted, YAML parses it as a list and fails. Logo wikilinks in header/footer slots (`header-left/center/right`, `footer-left/center/right`) auto-expand to an `\includegraphics` raisebox; default height `0.7cm`, override with `"[[logo.png|h=1.2cm]]"`. `titlepage-logo`/`titlepage-background` take a plain path (substitution only). SVG logos are unsupported under pdflatex — use PNG/PDF.
 
+**Always reference a logo by wikilink, never by an absolute path.** The export copies the linked image into the per-document build folder and rewrites the path to point there, so the LaTeX run finds it. An absolute path (e.g. `/Users/me/logo.png`) is *not* copied and lives outside the build sandbox, so the image is missing and the build fails. Use `"[[logo.png]]"`; the file may sit anywhere in the vault.
+
 ## Inline markup
 
 - `%%text%%` → comment, invisible in the PDF (works across blank lines).
@@ -196,6 +198,7 @@ DON'T:
 - Don't put a ` ```mermaid ` block in a note without `latex-env: mermaid` — it stays a code fence.
 - Don't set `\label{}` or adjust embed heading levels by hand — both are automatic.
 - Don't use SVG logos — pdflatex can't render them; use PNG/PDF.
+- Don't give a logo as an absolute path — use a wikilink (`"[[logo.png]]"`) so the image is copied into the build folder; an absolute path is missing at build time.
 - Don't put more than one base embed — or a base embed plus a literal table — in one `table` wrapper.
 
 ## Example main document

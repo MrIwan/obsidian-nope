@@ -26,6 +26,9 @@
 % Pandoc helper macros that its default template provides.
 \newcommand{\passthrough}[1]{#1}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+% KOMA classes define \nonumberline; article does not. Provide a no-op so
+% unnumbered headings (and a stale KOMA .toc from a previous template) don't crash.
+\providecommand{\nonumberline}{}
 \setlength{\emergencystretch}{3em}
 % Scale an image to fit text width/height (Pandoc wraps images in \pandocbounded).
 \makeatletter

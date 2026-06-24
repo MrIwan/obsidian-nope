@@ -66,7 +66,11 @@ export function prepareTemplate(
 	if (!raw) return { name: null, missingPreamble: false };
 
 	const linkpath = stripWikilink(raw);
-	const tplFile = app.metadataCache.getFirstLinkpathDest(linkpath, exportFile.path);
+	const tplFile =
+		app.metadataCache.getFirstLinkpathDest(linkpath, exportFile.path) ??
+		(/\.tex$/i.test(linkpath)
+			? null
+			: app.metadataCache.getFirstLinkpathDest(`${linkpath}.tex`, exportFile.path));
 	if (!tplFile) {
 		throw new Error(
 			`Custom template not found: "${linkpath}" ` +
