@@ -1,7 +1,7 @@
 {
 	"name": "nope",
 	"version": "0.2.4",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Export Obsidian notes to publication-ready PDFs via a Dockerized Pandoc + LaTeX (Eisvogel) toolchain.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
