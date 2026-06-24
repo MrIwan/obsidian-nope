@@ -130,7 +130,9 @@ Like glossary atoms, but for sources: one `.md` per reference with a `citekey` p
 ---
 citekey: smith2020          # the cite key used in the bibliography
 bibtype: article            # optional BibTeX type (default: misc)
-author: [Smith, Jane; Doe, John]   # list → joined with " and "
+author:                     # list → joined with " and "; quote each "Last, First"
+  - "Smith, Jane"
+  - "Doe, John"
 title: A Study of Things
 year: 2020
 journal: Journal of Things
@@ -140,7 +142,7 @@ doi: 10.1000/xyz
 ---
 ```
 
-Recognized fields: `author`, `editor`, `title`, `year`, `month`, `journal`, `booktitle`, `publisher`, `institution`, `school`, `organization`, `volume`, `number`, `pages`, `series`, `chapter`, `edition`, `address`, `doi`, `url`, `isbn`, `issn`, `howpublished`, `note`, `keywords`, `abstract`. Reference it with `[[Smith 2020]]` anywhere in the document or in an embedded note. To set a CSL style for a citation-notes-only document, add a `bibliography:` `.bib` (even an empty one) so the `csl:` key takes effect.
+Recognized fields: `author`, `editor`, `title`, `year`, `month`, `journal`, `booktitle`, `publisher`, `institution`, `school`, `organization`, `volume`, `number`, `pages`, `series`, `chapter`, `edition`, `address`, `doi`, `url`, `isbn`, `issn`, `howpublished`, `note`, `keywords`, `abstract`. A single author can also be one string (`author: "Smith, Jane and Doe, John"`). Reference it with `[[Smith 2020]]` anywhere in the document or in an embedded note. To set a CSL style for a citation-notes-only document, add a `bibliography:` `.bib` (even an empty one) so the `csl:` key takes effect.
 
 ### Branding notes
 
@@ -155,6 +157,18 @@ One `.md` per customer/project with frontmatter overrides; the body is ignored o
 ## Unsupported characters
 
 The pdflatex engine cannot typeset emoji/pictographs (✅, 😀, flags, …). Such characters are **stripped** from the PDF and the export shows a notice with the count — the build no longer crashes. Accents, `€`, dashes etc. are kept. (Real emoji rendering would need a different engine + font.)
+
+Greek letters (θ, η, …), math operators (−, ≤, ≥, ≠, ∞, →, ∑, ∫, ∈, …) and sub/superscript digits (₂, ⁴, …) pasted as **literal Unicode** are mapped to a LaTeX rendering automatically, so they no longer crash the build. If a *new* symbol still aborts the build with "Unicode character … not set up for use with LaTeX", add a `\DeclareUnicodeCharacter{<hex>}{…}` line to the `NOPE-IMPORTS` block in the template — or just write it as math (`$\theta_2$`) in the first place.
+
+## When the build fails
+
+The export notice shows the failing phase, but the real cause is in the build logs (in the plugin folder under `pipeline/build/`):
+
+- `pipeline/build/<doc>/<doc>.log` — the full pdflatex log for that document. Search it for a line starting with `!` (the first LaTeX error) — that line and the few after it name the cause. The preview's error banner already surfaces this first `!`-line.
+- `pipeline/build/last_latex_run.log` — the latexmk/pdflatex run log of the most recent export (same content, fixed path — easiest to point someone at).
+- `pipeline/build/last-build.log` — the Docker **image** build log (only relevant when the image build itself fails, not a document build).
+
+`Latexmk: ... Problematic refs and citations` and `multiply defined` are **warnings**, not the failure — keep reading to the `!`-line for the actual error. Common culprits: an unset Unicode character (see above), a missing `caption:` on a `latex-env: table`/`mermaid` note, or a malformed custom template.
 
 ## Commands
 

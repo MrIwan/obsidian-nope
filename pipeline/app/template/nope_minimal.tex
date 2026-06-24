@@ -89,6 +89,96 @@ $endif$
 \usepackage{float}  % [H] placement: fit-tables (filter emits table[H]) + figures
 \floatplacement{figure}{$if(float-placement-figure)$$float-placement-figure$$else$H$endif$}
 
+% Unicode fallbacks
+\DeclareUnicodeCharacter{2212}{\ensuremath{-}}        % minus sign
+\DeclareUnicodeCharacter{2213}{\ensuremath{\mp}}
+\DeclareUnicodeCharacter{22C5}{\ensuremath{\cdot}}
+\DeclareUnicodeCharacter{2264}{\ensuremath{\leq}}
+\DeclareUnicodeCharacter{2265}{\ensuremath{\geq}}
+\DeclareUnicodeCharacter{2260}{\ensuremath{\neq}}
+\DeclareUnicodeCharacter{2248}{\ensuremath{\approx}}
+\DeclareUnicodeCharacter{2261}{\ensuremath{\equiv}}
+\DeclareUnicodeCharacter{221D}{\ensuremath{\propto}}
+\DeclareUnicodeCharacter{221E}{\ensuremath{\infty}}
+\DeclareUnicodeCharacter{2202}{\ensuremath{\partial}}
+\DeclareUnicodeCharacter{2207}{\ensuremath{\nabla}}
+\DeclareUnicodeCharacter{2211}{\ensuremath{\sum}}
+\DeclareUnicodeCharacter{220F}{\ensuremath{\prod}}
+\DeclareUnicodeCharacter{222B}{\ensuremath{\int}}
+\DeclareUnicodeCharacter{221A}{\ensuremath{\surd}}
+\DeclareUnicodeCharacter{2200}{\ensuremath{\forall}}
+\DeclareUnicodeCharacter{2203}{\ensuremath{\exists}}
+\DeclareUnicodeCharacter{2208}{\ensuremath{\in}}
+\DeclareUnicodeCharacter{2209}{\ensuremath{\notin}}
+\DeclareUnicodeCharacter{2205}{\ensuremath{\emptyset}}
+\DeclareUnicodeCharacter{222A}{\ensuremath{\cup}}
+\DeclareUnicodeCharacter{2229}{\ensuremath{\cap}}
+\DeclareUnicodeCharacter{2282}{\ensuremath{\subset}}
+\DeclareUnicodeCharacter{2286}{\ensuremath{\subseteq}}
+\DeclareUnicodeCharacter{2190}{\ensuremath{\leftarrow}}
+\DeclareUnicodeCharacter{2192}{\ensuremath{\rightarrow}}
+\DeclareUnicodeCharacter{2194}{\ensuremath{\leftrightarrow}}
+\DeclareUnicodeCharacter{21D0}{\ensuremath{\Leftarrow}}
+\DeclareUnicodeCharacter{21D2}{\ensuremath{\Rightarrow}}
+\DeclareUnicodeCharacter{21D4}{\ensuremath{\Leftrightarrow}}
+% Greek lowercase
+\DeclareUnicodeCharacter{03B1}{\ensuremath{\alpha}}
+\DeclareUnicodeCharacter{03B2}{\ensuremath{\beta}}
+\DeclareUnicodeCharacter{03B3}{\ensuremath{\gamma}}
+\DeclareUnicodeCharacter{03B4}{\ensuremath{\delta}}
+\DeclareUnicodeCharacter{03B5}{\ensuremath{\varepsilon}}
+\DeclareUnicodeCharacter{03B6}{\ensuremath{\zeta}}
+\DeclareUnicodeCharacter{03B7}{\ensuremath{\eta}}
+\DeclareUnicodeCharacter{03B8}{\ensuremath{\theta}}
+\DeclareUnicodeCharacter{03B9}{\ensuremath{\iota}}
+\DeclareUnicodeCharacter{03BA}{\ensuremath{\kappa}}
+\DeclareUnicodeCharacter{03BB}{\ensuremath{\lambda}}
+\DeclareUnicodeCharacter{03BC}{\ensuremath{\mu}}
+\DeclareUnicodeCharacter{03BD}{\ensuremath{\nu}}
+\DeclareUnicodeCharacter{03BE}{\ensuremath{\xi}}
+\DeclareUnicodeCharacter{03C0}{\ensuremath{\pi}}
+\DeclareUnicodeCharacter{03C1}{\ensuremath{\rho}}
+\DeclareUnicodeCharacter{03C3}{\ensuremath{\sigma}}
+\DeclareUnicodeCharacter{03C4}{\ensuremath{\tau}}
+\DeclareUnicodeCharacter{03C5}{\ensuremath{\upsilon}}
+\DeclareUnicodeCharacter{03C6}{\ensuremath{\varphi}}
+\DeclareUnicodeCharacter{03C7}{\ensuremath{\chi}}
+\DeclareUnicodeCharacter{03C8}{\ensuremath{\psi}}
+\DeclareUnicodeCharacter{03C9}{\ensuremath{\omega}}
+% Greek uppercase
+\DeclareUnicodeCharacter{0393}{\ensuremath{\Gamma}}
+\DeclareUnicodeCharacter{0394}{\ensuremath{\Delta}}
+\DeclareUnicodeCharacter{0398}{\ensuremath{\Theta}}
+\DeclareUnicodeCharacter{039B}{\ensuremath{\Lambda}}
+\DeclareUnicodeCharacter{039E}{\ensuremath{\Xi}}
+\DeclareUnicodeCharacter{03A0}{\ensuremath{\Pi}}
+\DeclareUnicodeCharacter{03A3}{\ensuremath{\Sigma}}
+\DeclareUnicodeCharacter{03A6}{\ensuremath{\Phi}}
+\DeclareUnicodeCharacter{03A8}{\ensuremath{\Psi}}
+\DeclareUnicodeCharacter{03A9}{\ensuremath{\Omega}}
+% Subscripts
+\DeclareUnicodeCharacter{2080}{\textsubscript{0}}
+\DeclareUnicodeCharacter{2081}{\textsubscript{1}}
+\DeclareUnicodeCharacter{2082}{\textsubscript{2}}
+\DeclareUnicodeCharacter{2083}{\textsubscript{3}}
+\DeclareUnicodeCharacter{2084}{\textsubscript{4}}
+\DeclareUnicodeCharacter{2085}{\textsubscript{5}}
+\DeclareUnicodeCharacter{2086}{\textsubscript{6}}
+\DeclareUnicodeCharacter{2087}{\textsubscript{7}}
+\DeclareUnicodeCharacter{2088}{\textsubscript{8}}
+\DeclareUnicodeCharacter{2089}{\textsubscript{9}}
+\DeclareUnicodeCharacter{208A}{\textsubscript{+}}
+\DeclareUnicodeCharacter{208B}{\textsubscript{-}}
+\DeclareUnicodeCharacter{2099}{\textsubscript{n}}
+% Superscripts (1,2,3 already provided by textcomp)
+\DeclareUnicodeCharacter{2070}{\textsuperscript{0}}
+\DeclareUnicodeCharacter{2074}{\textsuperscript{4}}
+\DeclareUnicodeCharacter{2075}{\textsuperscript{5}}
+\DeclareUnicodeCharacter{2076}{\textsuperscript{6}}
+\DeclareUnicodeCharacter{2077}{\textsuperscript{7}}
+\DeclareUnicodeCharacter{2078}{\textsuperscript{8}}
+\DeclareUnicodeCharacter{2079}{\textsuperscript{9}}
+
 % Callouts (callouts.lua → awesomebox) and highlights (==text== → soul \hl).
 \usepackage{awesomebox}
 \usepackage{soul}
