@@ -641,6 +641,7 @@ $endif$
       \renewcommand{\figureautorefname}{Abbildung}%
       \renewcommand{\tableautorefname}{Tabelle}%
       \renewcommand{\equationautorefname}{Gleichung}%
+      \providecommand{\chapterautorefname}{Kapitel}\renewcommand{\chapterautorefname}{Kapitel}%
       \renewcommand{\sectionautorefname}{Abschnitt}%
       \renewcommand{\subsectionautorefname}{Unterabschnitt}%
       \renewcommand{\subsubsectionautorefname}{Unterunterabschnitt}%
@@ -655,6 +656,7 @@ $endif$
       \renewcommand{\figureautorefname}{Figure}%
       \renewcommand{\tableautorefname}{Table}%
       \renewcommand{\equationautorefname}{Equation}%
+      \providecommand{\chapterautorefname}{Chapter}\renewcommand{\chapterautorefname}{Chapter}%
       \renewcommand{\sectionautorefname}{Section}%
       \renewcommand{\subsectionautorefname}{Subsection}%
       \renewcommand{\subsubsectionautorefname}{Subsubsection}%
@@ -668,6 +670,13 @@ $endif$
     % --- Add further \iflanguage{<lang>}{...} blocks below if needed ---
   }{}%
 }
+
+\makeatletter\@ifundefined{c@chapter}{\newcounter{chapter}}{}\makeatother
+\providecommand{\frontmatter}{}
+\providecommand{\mainmatter}{}
+\providecommand{\backmatter}{}
+\makeatletter\@ifundefined{chapter}{\let\chapter\section}{}\makeatother
+\makeatletter\@ifundefined{abstract}{\newenvironment{abstract}{}{}}{}\makeatother
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% END NOPE-IMPORTS                                                        %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

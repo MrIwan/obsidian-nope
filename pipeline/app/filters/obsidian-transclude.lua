@@ -150,6 +150,10 @@ end
 local function annotate_with_labels(blocks, notename, skip_outer_anchor)
   local note_label = "note:" .. sanitize_label_id(notename)
   local result = {}
+  -- Captured before available_targets is populated below: only the first
+  local first_note_embed = (available_targets[notename] == nil)
+  -- Whether the note-level target has already been bound to its leading heading.
+  local outer_autoref_set = false
 
   if not available_targets[notename] then
     available_targets[notename] = note_label
@@ -162,8 +166,9 @@ local function annotate_with_labels(blocks, notename, skip_outer_anchor)
     if block.t == "Header" then
       local heading_text = inlines_text(block.content)
       local key = notename .. "#" .. heading_text
+      local heading_label
       if not available_targets[key] then
-        local heading_label = note_label .. ":sec-" .. sanitize_label_id(heading_text)
+        heading_label = note_label .. ":sec-" .. sanitize_label_id(heading_text)
         local new_content = {}
         for _, inline in ipairs(block.content) do table.insert(new_content, inline) end
         table.insert(new_content, pandoc.RawInline("latex", "\\label{" .. heading_label .. "}"))
@@ -171,7 +176,17 @@ local function annotate_with_labels(blocks, notename, skip_outer_anchor)
         available_targets[key] = heading_label
       else
         -- Already labeled in previous embed.
+        heading_label = available_targets[key]
         table.insert(result, block)
+      end
+
+      -- A bare [[Note]] ref to a chapter/section note should auto-number
+      if not skip_outer_anchor and not outer_autoref_set then
+        outer_autoref_set = true
+        if first_note_embed then
+          available_targets[notename] = heading_label
+        end
+        autoref_targets[notename] = true
       end
 
     elseif block.t == "Para" or block.t == "Plain" then
