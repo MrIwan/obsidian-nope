@@ -194,3 +194,8 @@
 	white-space: pre-wrap;
 	color: var(--text-muted);
 }
+
+.nope-preview-banner-button {
+	margin-top: var(--size-2-3);
+	cursor: pointer;
+}

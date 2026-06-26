@@ -2,7 +2,7 @@
 name: nope
 description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
-last-updated: 2026-06-24
+last-updated: 2026-06-26
 ---
 
 # nope — authoring conventions
@@ -43,6 +43,20 @@ Set on an atomic note (no headings in the body):
 - **Math** — `equation`, `align`, `gather`, `multline`, `alignat` (+ `*` variants); body is exactly one `$$…$$` block. `align`/`gather` may use `&` and `\\` (one number per line); `equation` with an inner `aligned` is multi-line with one number. Refs give "Equation N".
 
 A missing required block (table/math) or missing `caption` (table/mermaid) is a hard export error.
+
+### Custom environments
+
+Any `latex-env` value that isn't built-in (theorem family, `table`, `mermaid`, math) is wrapped generically into `\begin{<name>}…\end{<name>}`, with `latex-short:` as the optional argument and `[[…]]` refs resolving via `\autoref`. The environment only has to be **defined** somewhere.
+
+Define it in a **custom LaTeX template, not in `header-includes`** — raw LaTeX inside YAML frontmatter is brittle (quoting and escaping bite you, and it does not carry over between documents). A template is far more robust and reusable. Run `Create custom LaTeX template` (gives `nope_minimal.tex`), add your environment next to the existing `\newtheorem` block and point the document at it with `nope-template: "[[my-template]]"`:
+
+```latex
+% own counter per type → \autoref prints the right name, numbered "Praxisfall 1.1"
+\newtheorem{praxisfall}{Praxisfall}[section]
+\providecommand{\praxisfallautorefname}{Praxisfall}
+```
+
+A note with `latex-env: praxisfall` then renders as that environment and `[[…]]` refs read "Praxisfall N". The `\providecommand{…autorefname}` line is what makes `\autoref` print your name instead of inheriting the previous counter — keep it. Same pattern for any amsthm style (`\theoremstyle{definition}` etc.). Keep the `%%% NOPE-IMPORTS %%%` block intact (see `nope-template` below).
 
 ### `longtable` (table layout, default `false`)
 

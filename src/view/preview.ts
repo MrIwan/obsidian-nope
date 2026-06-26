@@ -3,7 +3,7 @@
 
 import { ItemView, MarkdownView, Menu, Notice, TFile, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
 import type { App, Debouncer, Editor, ViewStateResult } from 'obsidian';
-import { remote } from 'electron';
+import { remote, shell } from 'electron';
 import { copyFileSync, existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -515,9 +515,28 @@ export class NopePreviewView extends ItemView {
 		if (excerpt) {
 			banner.createDiv({ cls: 'nope-preview-banner-log', text: excerpt });
 		}
+		// Jump straight to the LaTeX logs in the build folder for debugging.
+		const buildFolder = this.buildFolderPath();
+		if (existsSync(buildFolder)) {
+			const btn = banner.createEl('button', {
+				cls: 'nope-preview-banner-button',
+				text: 'Open build folder',
+			});
+			btn.addEventListener('click', (evt) => {
+				// Keep the banner open — only the dismiss-on-click of the banner itself should close it.
+				evt.stopPropagation();
+				void shell.openPath(buildFolder);
+			});
+		}
 		banner.setAttribute('aria-label', 'Click to dismiss');
 		banner.addEventListener('click', () => banner.remove());
 		this.bodyEl.prepend(banner);
+	}
+
+	// pipeline/build holds the fixed-path error logs (last_latex_run.log, last-build.log)
+	// alongside the per-doc subfolders — open it, not the per-doc folder, for debugging.
+	private buildFolderPath(): string {
+		return join(getPluginAbsoluteDir(this.plugin), 'pipeline', 'build');
 	}
 
 	private clearErrorBanner(): void {
