@@ -1,8 +1,8 @@
 ---
 name: nope
-description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
+description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract, nope-chapter-autoref), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
-last-updated: 2026-06-26
+last-updated: 2026-06-29
 ---
 
 # nope — authoring conventions
@@ -31,6 +31,13 @@ Refs (`[[…]]`):
 - `[[GlossaryNote]]` → `\gls{<gls-id>}` when the target has a `gls-id` (glossary wins over an embed target of the same name).
 - `[[CitationNote]]` → a citation when the target has a `citekey` (see Citation atoms); resolved after glossary, before embed targets.
 - Multiple embeds of one note: refs point to the first occurrence (counters still advance).
+
+**Chapter/section refs** (`nope-chapter-autoref`): by default a ref to an *embedded heading* — `[[Note#Heading]]`, or a bare `[[Note]]` pointing at a note whose body has headings — is a plain jump **hyperlink** (visible text = the link). Set `nope-chapter-autoref: true` in the **main document** frontmatter (or in the branding file) to make these resolve to `\autoref` instead, so they read "Kapitel X" / "Chapter X" (or "Abschnitt X" etc., depending on heading level). It is a single global switch for the whole document. Notes:
+
+- `\autoref` always pairs the **name with the matching level**: a heading rendered as `\chapter` reads "Chapter X", a `\subsection` reads "Subsection 1.1.1". 
+- The switch **also turns section numbering on** (`numbersections`) — otherwise the template emits `\setcounter{secnumdepth}{-\maxdimen}` and `\autoref` shows the name with **no number** ("Subsection" instead of "Subsection 1.1.1"). An explicit `numbersections:` in your frontmatter/branding is respected; tune depth with `secnumdepth:` (default 5).
+- The autoref name language follows `lang:` (e.g. `lang: de` → "Kapitel/Abschnitt", `lang: en` → "Chapter/Section").
+- Custom-text refs (`[[Note#Heading|text]]`) stay plain hyperlinks regardless.
 
 ## `latex-env` — structured blocks
 

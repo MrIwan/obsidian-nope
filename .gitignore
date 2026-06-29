@@ -26,6 +26,7 @@ data.json
 build/
 
 Handover-Temp.md
+release_notes.md
 
 # Generated at build time from pipeline/ + skill/ (scripts/bundle-assets.mjs)
 src/generated/*

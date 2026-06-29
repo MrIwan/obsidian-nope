@@ -135,6 +135,16 @@ Typical behavior:
 
 This lets you keep using familiar Obsidian links while getting proper PDF cross-references.
 
+### Chapter and section references (`nope-chapter-autoref`)
+
+By default a wikilink to an embedded **heading** — `[[Note#Heading]]`, or a bare `[[Note]]` whose body has headings — is a plain jump hyperlink showing the link text. Set `nope-chapter-autoref: true` in the main document frontmatter (or in the branding file) to turn these into numbered references instead, so they read "Chapter 2", "Section 2.1", and so on. It is a single global switch for the whole document.
+
+- `\autoref` pairs the **name with the heading's actual level**: a heading rendered as a chapter reads "Chapter X", a subsection reads "Subsection 1.1.1".
+- The switch **also enables section numbering** (`numbersections`). An explicit `numbersections:` is respected, and depth is tunable with `secnumdepth:` (default 5).
+- Reference names follow the document language (`lang: de` → "Kapitel/Abschnitt", `lang: en` → "Chapter/Section").
+- Custom-text refs (`[[Note#Heading|text]]`) stay plain hyperlinks.
+
+
 ### Passive embeds
 
 Passive embeds use the `+[[...]]` syntax. They behave like normal embeds during export, but remain visually compact in the Obsidian editor.

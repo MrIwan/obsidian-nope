@@ -132,6 +132,9 @@ end
 local available_targets = {}
 local autoref_targets = {}
 
+-- Global switch, read from the host document frontmatter (nope-chapter-autoref). When true, references to embedded headings ([[Note#Heading]] and bare [[Note]]) resolve to \autoref ("Kapitel X" / "Abschnitt X") instead of a plain hyperlink.
+local chapter_autoref_enabled = false
+
 -- Remove trailing ^block_id from inlines and strip trailing whitespace.
 -- Strip trailing ^id and trailing whitespace inlines.
 local function inlines_without_block_id(content)
@@ -180,8 +183,13 @@ local function annotate_with_labels(blocks, notename, skip_outer_anchor)
         table.insert(result, block)
       end
 
-      -- A bare [[Note]] ref to a chapter/section note should auto-number
-      if not skip_outer_anchor and not outer_autoref_set then
+      -- [[Note#Heading]] ref to an embedded heading should auto-number ("Kapitel X").
+      if chapter_autoref_enabled then
+        autoref_targets[key] = true
+      end
+
+      -- A bare [[Note]] ref to a chapter/section
+      if chapter_autoref_enabled and not skip_outer_anchor and not outer_autoref_set then
         outer_autoref_set = true
         if first_note_embed then
           available_targets[notename] = heading_label
@@ -990,6 +998,18 @@ end
 
 -- Main entry: expand embeds, resolve wikilinks, flush glossary entries.
 function Pandoc(doc)
+  -- Read the global autoref switch before Phase 1, so targets are registered
+  -- with the right autoref flags. Default off → plain hyperref jump links.
+  chapter_autoref_enabled = meta_bool(doc.meta, "nope-chapter-autoref", false)
+
+  -- Numbered cross-references need section numbering switched on. Without it the
+  -- template emits \setcounter{secnumdepth}{-\maxdimen} and \autoref renders the
+  -- name with an empty number ("Subsection" instead of "Subsection 1.1.1").
+  -- Turn numbering on for the whole document, but never override an explicit
+  -- numbersections set by the user/branding (depth still tunable via secnumdepth).
+  if chapter_autoref_enabled and doc.meta.numbersections == nil then
+    doc.meta.numbersections = pandoc.MetaBool(true)
+  end
   -- Phase 1: Expand embeds and register targets.
   doc.blocks = process_blocks(doc.blocks)
   -- Phase 1b: Expand abstract transclusion (after body, so body labels win first-embed).
