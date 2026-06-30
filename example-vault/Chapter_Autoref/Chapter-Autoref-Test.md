@@ -6,6 +6,8 @@ book: true
 nope-chapter-autoref: true
 lang: en
 ---
+\part{The Chapter dis Nuts}
+
 This document tests `nope-chapter-autoref`: chapters are embedded at the **top level** so their H1 becomes a `\chapter`, then referenced via `[[…]]`. Each reference should resolve to a numbered `\autoref` ("Chapter 2", "Section 2.1") rather than a plain jump link.
 
 Both switches are set directly in the frontmatter here (`book: true`, `nope-chapter-autoref: true`), overriding a branding file. Alternatively, `nope-chapter-autoref: true` in your branding template is enough.
@@ -14,6 +16,7 @@ Both switches are set directly in the frontmatter here (`book: true`, `nope-chap
 
 ![[Chapter-Methodology]]
 
+\part{The Chapter dis Nuts Again}
 # Cross-references
 
 Expected behaviour — every reference appears numbered:

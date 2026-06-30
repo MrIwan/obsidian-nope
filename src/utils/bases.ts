@@ -107,11 +107,194 @@ function buildMarkdownTable(rb: ResolvedBase): string {
 	return [head, sep, body].filter((l) => l.length > 0).join('\n');
 }
 
-// Reproduce the user's view via the real engine: copy its config, retype the target
-// view to ours, mount the temp base headless and read the BasesQueryResult.
-async function resolveBaseView(app: App, baseFile: TFile, viewName: string | undefined): Promise<ResolvedBase> {
+// --- "this" context inlining 
+interface ThisCtx {
+	note: TFile;
+	fm: Record<string, unknown> | undefined;
+}
+
+function fileLiteral(prop: string | undefined, note: TFile): string | null {
+	switch (prop) {
+		case 'path':
+			return JSON.stringify(note.path);
+		case 'name':
+			return JSON.stringify(note.name);
+		case 'basename':
+			return JSON.stringify(note.basename);
+		case 'ext':
+			return JSON.stringify(note.extension);
+		case 'folder': {
+			const p = note.parent?.path;
+			return JSON.stringify(p && p !== '/' ? p : '');
+		}
+		case 'link':
+			return `link(${JSON.stringify(note.path)}, ${JSON.stringify(note.basename)})`;
+		default:
+			return null; // unsupported file property → caller emits null
+	}
+}
+
+function valueLiteral(v: unknown): string {
+	if (v === null || v === undefined) return 'null';
+	if (typeof v === 'string') return JSON.stringify(v);
+	if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+	if (v instanceof Date) return `date(${JSON.stringify(v.toISOString().slice(0, 10))})`;
+	if (Array.isArray(v)) return `[${v.map(valueLiteral).join(', ')}]`;
+	return 'null'; // nested objects / other types have no Bases scalar literal → null
+}
+
+// Resolve a parsed `this`-chain (e.g. ['file','link'] or ['status']) to a literal.
+function resolveThisChain(chain: string[], ctx: ThisCtx): string {
+	if (chain.length === 0) return 'this'; // bare `this` is unsupported — leave untouched
+	if (chain[0] === 'file') {
+		return fileLiteral(chain[1], ctx.note) ?? 'null';
+	}
+	let v: unknown = ctx.fm;
+	for (const key of chain) {
+		if (v == null || typeof v !== 'object') {
+			v = undefined;
+			break;
+		}
+		v = (v as Record<string, unknown>)[key];
+	}
+	return valueLiteral(v);
+}
+
+const IDENT = /[A-Za-z0-9_$]/;
+
+// Replace every `this`-expression in a single formula/filter string with a literal.
+// String literals in the expression are skipped, so `x == "this.y"` is left intact.
+function inlineThisExpr(expr: string, ctx: ThisCtx): string {
+	const at = (k: number): string => expr.charAt(k); // '' when out of range → never undefined
+	let out = '';
+	let i = 0;
+	const n = expr.length;
+	while (i < n) {
+		const c = at(i);
+		if (c === '"' || c === "'") {
+			out += c;
+			i++;
+			while (i < n) {
+				out += at(i);
+				if (at(i) === '\\' && i + 1 < n) {
+					out += at(i + 1);
+					i += 2;
+					continue;
+				}
+				if (at(i) === c) {
+					i++;
+					break;
+				}
+				i++;
+			}
+			continue;
+		}
+		const prevOk = i === 0 || !IDENT.test(at(i - 1));
+		const nextOk = i + 4 >= n || !IDENT.test(at(i + 4));
+		if (c === 't' && expr.startsWith('this', i) && prevOk && nextOk) {
+			i += 4;
+			const chain: string[] = [];
+			for (;;) {
+				let j = i;
+				while (j < n && /\s/.test(at(j))) j++;
+				if (at(j) === '.') {
+					j++;
+					while (j < n && /\s/.test(at(j))) j++;
+					let id = '';
+					while (j < n && IDENT.test(at(j))) {
+						id += at(j);
+						j++;
+					}
+					if (id === '') break;
+					chain.push(id);
+					i = j;
+				} else if (at(j) === '[') {
+					j++;
+					while (j < n && /\s/.test(at(j))) j++;
+					const q = at(j);
+					if (q !== '"' && q !== "'") break; // only quoted string keys supported
+					j++;
+					let key = '';
+					while (j < n && at(j) !== q) {
+						if (at(j) === '\\' && j + 1 < n) {
+							key += at(j + 1);
+							j += 2;
+							continue;
+						}
+						key += at(j);
+						j++;
+					}
+					j++; // closing quote
+					while (j < n && /\s/.test(at(j))) j++;
+					if (at(j) !== ']') break;
+					j++;
+					chain.push(key);
+					i = j;
+				} else {
+					break;
+				}
+			}
+			out += resolveThisChain(chain, ctx);
+			continue;
+		}
+		out += c;
+		i++;
+	}
+	return out;
+}
+
+type FilterCfg = string | { and: FilterCfg[] } | { or: FilterCfg[] } | { not: FilterCfg[] };
+
+function inlineThisInFilter(f: FilterCfg, ctx: ThisCtx): FilterCfg {
+	if (typeof f === 'string') return inlineThisExpr(f, ctx);
+	if (f && typeof f === 'object') {
+		const o = f as { and?: FilterCfg[]; or?: FilterCfg[]; not?: FilterCfg[] };
+		if (Array.isArray(o.and)) return { and: o.and.map((x) => inlineThisInFilter(x, ctx)) };
+		if (Array.isArray(o.or)) return { or: o.or.map((x) => inlineThisInFilter(x, ctx)) };
+		if (Array.isArray(o.not)) return { not: o.not.map((x) => inlineThisInFilter(x, ctx)) };
+	}
+	return f;
+}
+
+// Inline `this` in every string value of a name→formula map (formulas, summaries).
+function inlineThisInFormulas(obj: unknown, ctx: ThisCtx): unknown {
+	if (!obj || typeof obj !== 'object') return obj;
+	const out: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+		out[k] = typeof v === 'string' ? inlineThisExpr(v, ctx) : v;
+	}
+	return out;
+}
+
+// Freeze the host-note context into a parsed base config (filters, formulas and
+// summaries — both top-level and per view). The result contains no `this`.
+function inlineThisContext(cfg: Record<string, unknown>, ctx: ThisCtx): Record<string, unknown> {
+	const out: Record<string, unknown> = { ...cfg };
+	if (out.filters !== undefined) out.filters = inlineThisInFilter(out.filters as FilterCfg, ctx);
+	if (out.formulas) out.formulas = inlineThisInFormulas(out.formulas, ctx);
+	if (out.summaries) out.summaries = inlineThisInFormulas(out.summaries, ctx);
+	if (Array.isArray(out.views)) {
+		out.views = (out.views as Record<string, unknown>[]).map((v) => {
+			const vv: Record<string, unknown> = { ...v };
+			if (vv.filters !== undefined) vv.filters = inlineThisInFilter(vv.filters as FilterCfg, ctx);
+			if (vv.summaries) vv.summaries = inlineThisInFormulas(vv.summaries, ctx);
+			return vv;
+		});
+	}
+	return out;
+}
+
+// Reproduce the user's view via the real engine
+async function resolveBaseView(
+	app: App,
+	baseFile: TFile,
+	viewName: string | undefined,
+	contextNote?: TFile,
+	contextFm?: Record<string, unknown>,
+): Promise<ResolvedBase> {
 	const raw = await app.vault.read(baseFile);
-	const cfg = (parseYaml(raw) ?? {}) as Record<string, unknown>;
+	const parsed = (parseYaml(raw) ?? {}) as Record<string, unknown>;
+	const cfg = contextNote ? inlineThisContext(parsed, { note: contextNote, fm: contextFm }) : parsed;
 	const rawViews = cfg.views;
 	const views: BaseViewCfg[] = Array.isArray(rawViews) ? (rawViews as BaseViewCfg[]) : [];
 	const userView = viewName ? views.find((v) => v.name === viewName) : views[0];
@@ -201,7 +384,13 @@ export async function prepareBases(app: App, file: TFile, workDir: string): Prom
 
 		const repls: { start: number; end: number; replacement: string }[] = [];
 		for (const be of baseEmbeds) {
-			const rb = await resolveBaseView(app, be.baseFile, be.viewName);
+			const rb = await resolveBaseView(
+				app,
+				be.baseFile,
+				be.viewName,
+				note,
+				cache.frontmatter as Record<string, unknown> | undefined,
+			);
 			extraDeps.add(be.baseFile.path);
 
 			let replacement: string;

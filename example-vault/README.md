@@ -11,3 +11,10 @@ feature of the **Nope** plugin (Markdown → PDF via Pandoc + LaTeX).
    plugin binary itself is intentionally not checked in; it comes from the
    parent repo or the community store.
 3. Open a document and export it, or use the PDF preview.
+
+## Test cases
+
+- `Bases/bases.md` — exercises base `this`-context inlining: a base filtered by
+  `project == this.project` plus a `this.file.link` formula column. Phoenix tasks
+  appear, Apollo tasks (negative control) stay out. Export it to verify the
+  feature end to end.

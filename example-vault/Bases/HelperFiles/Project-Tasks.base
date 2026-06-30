@@ -2,11 +2,11 @@ filters:
   and:
     - file.inFolder("Bases/HelperFiles")
     - file.ext == "md"
-    - project == "Phoenix"
+    - project == this.project
 formulas:
-  host: link("Bases/HelperFiles/Project-Tasks-Table.md", "Project-Tasks-Table")
+  host: this.file.link
 views:
-  - type: nope-export
+  - type: table
     name: Tasks
     filters:
       and:
