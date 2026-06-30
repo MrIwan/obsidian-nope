@@ -4,7 +4,9 @@ import globals from "globals";
 import { globalIgnores } from "eslint/config";
 
 export default tseslint.config(
+	...obsidianmd.configs.recommended,
 	{
+		files: ['**/*.ts', '**/*.tsx'],
 		languageOptions: {
 			globals: {
 				...globals.browser,
@@ -13,18 +15,21 @@ export default tseslint.config(
 				activeWindow: 'readonly',
 			},
 			parserOptions: {
-				projectService: {
-					allowDefaultProject: [
-						'eslint.config.js',
-						'manifest.json'
-					]
-				},
+				projectService: true,
 				tsconfigRootDir: import.meta.dirname,
-				extraFileExtensions: ['.json']
 			},
 		},
 	},
-	...obsidianmd.configs.recommended,
+	{
+		files: ['package.json'],
+		rules: {
+			'obsidianmd/no-plugin-as-component': 'off',
+			'obsidianmd/no-unsupported-api': 'off',
+			'obsidianmd/no-view-references-in-plugin': 'off',
+			'obsidianmd/prefer-file-manager-trash-file': 'off',
+			'obsidianmd/prefer-instanceof': 'off',
+		},
+	},
 	globalIgnores([
 		"node_modules",
 		"dist",
@@ -35,5 +40,10 @@ export default tseslint.config(
 		"main.js",
 		"scripts/**",
 		"src/generated/**",
+		"package-lock.json",
+		"tsconfig.json",
+		"manifest.json",
+		".claude/**",
+		"example-vault/**",
 	]),
 );
