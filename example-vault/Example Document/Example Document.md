@@ -161,20 +161,3 @@ One embed per `|w=` value type — each should render at the labelled size with 
 
 ![[neuron.excalidraw.png|No width hint (natural size)]]
 
-# Bases
-
-Both scenarios use the same base `HelperFiles/Project-Phases.base` (view `Phases`), which lists the three phase notes in `HelperFiles/BaseTest`. The query runs through the real Bases engine at export — the core Bases plugin must be enabled.
-
-## Base as transcluded document
-
-Expected behavior: a base embedded directly in the document transcludes every note the view returns, in order. Each phase note starts with its own `# Title` and is auto-heading-shifted under this section.
-
-![[Project-Phases.base#Phases]]
-
-## Base as table
-
-Expected behavior: the same base rendered as a numbered table with exactly the view's columns (name, status, owner, priority). The wrapper note `Project-Phases-Table` carries `latex-env: table` + caption; its body is just the base embed.
-
-![[Project-Phases-Table]]
-
-As shown in [[Project-Phases-Table]].

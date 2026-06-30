@@ -12,22 +12,9 @@ const pdfWorkerInline = {
 			namespace: 'pdf-worker-inline',
 		}));
 		build.onLoad({ filter: /.*/, namespace: 'pdf-worker-inline' }, () => {
-			const code = readFileSync('node_modules/pdfjs-dist/build/pdf.worker.min.js', 'utf8');
+			const code = readFileSync('node_modules/pdfjs-dist/build/pdf.worker.min.mjs', 'utf8');
 			return { contents: `export default ${JSON.stringify(code)};`, loader: 'js' };
 		});
-	},
-};
-
-const stripPdfScriptInjection = {
-	name: 'strip-pdf-script-injection',
-	setup(build) {
-		build.onLoad({ filter: /pdfjs-dist[\\/]build[\\/]pdf\.js$/ }, (args) => ({
-			contents: readFileSync(args.path, 'utf8').replace(
-				/createElement\((["'])script\1\)/g,
-				'createElement($1template$1)',
-			),
-			loader: 'js',
-		}));
 	},
 };
 
@@ -64,7 +51,7 @@ const context = await esbuild.context({
 		...builtinModules],
 	format: "cjs",
 	target: "es2018",
-	plugins: [pdfWorkerInline, stripPdfScriptInjection],
+	plugins: [pdfWorkerInline],
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,

@@ -27,6 +27,9 @@
 	},
 	"dependencies": {
 		"obsidian": "latest",
-		"pdfjs-dist": "^3.11.174"
+		"pdfjs-dist": "~4.7.76"
+	},
+	"overrides": {
+		"tar": "^7.5.16"
 	}
 }

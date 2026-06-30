@@ -186,7 +186,7 @@ async function createEnvNote(
 ): Promise<void> {
 	const host = ctx.file;
 	if (!host) {
-		new Notice('Place the cursor in a note first.');
+		new Notice('Open a note first.');
 		return;
 	}
 

@@ -17,9 +17,9 @@ import { cleanupIntermediates } from '../utils/docker';
 import { pandocAutoIdentifier, parseAuxDestinations, sanitizeLabelId } from '../utils/pdf-anchors';
 
 // Ship the worker inside main.js: turn the inlined source into a blob-URL worker.
-// pdf.js renders to canvas, so the PDF shows on every platform ( Fix White in Windows )
-pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(
-	new Blob([pdfWorkerSrc], { type: 'text/javascript' }),
+pdfjsLib.GlobalWorkerOptions.workerPort = new Worker(
+	URL.createObjectURL(new Blob([pdfWorkerSrc], { type: 'text/javascript' })),
+	{ type: 'module' },
 );
 
 export const NOPE_PREVIEW_VIEW_TYPE = 'nope-pdf-preview';
@@ -346,11 +346,11 @@ export class NopePreviewView extends ItemView {
 				// Selectable text overlay.
 				const textLayer = wrap.createDiv({ cls: 'textLayer' });
 				textLayer.style.setProperty('--scale-factor', String(viewport.scale));
-				await pdfjsLib.renderTextLayer({
+				await new pdfjsLib.TextLayer({
 					textContentSource: await page.getTextContent(),
 					container: textLayer,
 					viewport,
-				}).promise;
+				}).render();
 				if (token !== this.renderToken) return;
 
 				await this.buildLinkLayer(wrap, page, viewport);
@@ -580,7 +580,7 @@ export class NopePreviewView extends ItemView {
 		);
 		menu.addItem((item) =>
 			item
-				.setTitle('Follow cursor')
+				.setTitle('Follow editor')
 				.setChecked(this.autoJump)
 				.onClick(() => {
 					this.autoJump = !this.autoJump;
@@ -785,7 +785,7 @@ export function registerPreviewCommand(plugin: NopePlugin): void {
 export function registerPreviewSyncCommand(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'sync-pdf-preview-to-cursor',
-		name: 'Sync PDF preview to cursor',
+		name: 'Sync PDF preview to editor',
 		editorCallback: (editor, ctx) => {
 			const leaf = plugin.app.workspace.getLeavesOfType(NOPE_PREVIEW_VIEW_TYPE)[0];
 			const view = leaf?.view instanceof NopePreviewView ? leaf.view : null;
@@ -795,7 +795,7 @@ export function registerPreviewSyncCommand(plugin: NopePlugin): void {
 			}
 			const file = ctx.file;
 			if (!file) {
-				new Notice('Place the cursor in a note first.');
+				new Notice('Open a note first.');
 				return;
 			}
 			view.syncToAnchor(cursorAnchorCandidates(plugin.app, editor, file));
