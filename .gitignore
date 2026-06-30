@@ -35,3 +35,13 @@ src/generated/*
 .bundled-assets-version
 
 !src/generated/bundled-assets.d.ts
+
+# Example vault: nur kuratierte .obsidian-Config committen, Volatiles ignorieren.
+# Die Plugin-Binary wird NICHT eingecheckt (keine Versionskopplung, kein Rebuild
+# pro Release) — nope wird separat installiert oder lokal gesymlinkt.
+# Der lokale Dev-Symlink example-vault/.obsidian/plugins/nope -> Repo-Root
+# (relativ: ../../..) wird durch die plugins/-Regel unten mit-ignoriert.
+example-vault/.obsidian/workspace.json
+example-vault/.obsidian/workspace-mobile.json
+example-vault/.obsidian/cache
+example-vault/.obsidian/plugins/

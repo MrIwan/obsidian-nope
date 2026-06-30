@@ -1,0 +1,12 @@
+filters:
+  and:
+    - file.inFolder("HelperFiles/BaseTest")
+    - file.ext == "md"
+views:
+  - type: nope-export
+    name: Phases
+    order:
+      - file.name
+      - status
+      - owner
+      - priority
