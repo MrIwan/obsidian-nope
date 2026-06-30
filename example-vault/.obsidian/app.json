@@ -2,5 +2,6 @@
   "alwaysUpdateLinks": true,
   "newLinkFormat": "shortest",
   "useMarkdownLinks": false,
-  "attachmentFolderPath": "HelperFiles"
+  "attachmentFolderPath": "HelperFiles",
+  "showUnsupportedFiles": true
 }
