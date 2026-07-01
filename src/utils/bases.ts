@@ -391,7 +391,7 @@ export async function prepareBases(app: App, file: TFile, workDir: string): Prom
 				be.baseFile,
 				be.viewName,
 				note,
-				cache.frontmatter as Record<string, unknown> | undefined,
+				cache.frontmatter,
 			);
 			extraDeps.add(be.baseFile.path);
 

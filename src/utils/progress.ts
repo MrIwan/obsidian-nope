@@ -16,10 +16,8 @@ export class ProgressNotice {
 
 	// Render the message into an own <span> so we can update the text in place and detect whether the notice was dismissed
 	private createNotice(message: string): Notice {
-		const frag = activeDocument.createDocumentFragment();
-		this.span = activeDocument.createElement('span');
-		this.span.textContent = message;
-		frag.append(this.span);
+		const frag = createFragment();
+		this.span = frag.createSpan({ text: message });
 		return new Notice(frag, 0);
 	}
 

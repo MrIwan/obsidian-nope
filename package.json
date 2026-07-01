@@ -18,7 +18,7 @@
 		"@types/node": "^20.12.12",
 		"esbuild": "0.25.5",
 		"eslint": "^9.30.0",
-		"eslint-plugin-obsidianmd": "^0.3.0",
+		"eslint-plugin-obsidianmd": "^0.4.0",
 		"globals": "14.0.0",
 		"jiti": "2.6.1",
 		"tslib": "2.4.0",

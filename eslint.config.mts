@@ -1,49 +1,36 @@
-import tseslint from 'typescript-eslint';
-import obsidianmd from "eslint-plugin-obsidianmd";
-import globals from "globals";
-import { globalIgnores } from "eslint/config";
+import obsidianmd from 'eslint-plugin-obsidianmd';
+import globals from 'globals';
+import { globalIgnores, defineConfig } from 'eslint/config';
 
-export default tseslint.config(
-	...obsidianmd.configs.recommended,
+export default defineConfig(
+	globalIgnores([
+		'node_modules',
+		'dist',
+		'esbuild.config.mjs',
+		'version-bump.mjs',
+		'versions.json',
+		'main.js',
+		'package.json',
+		'package-lock.json',
+		'tsconfig.json',
+		'scripts/**',
+		'src/generated/**',
+		'.claude/**',
+		'example-vault/**',
+	]),
 	{
-		files: ['**/*.ts', '**/*.tsx'],
 		languageOptions: {
 			globals: {
 				...globals.browser,
-				...globals.node,
-				activeDocument: 'readonly',
-				activeWindow: 'readonly',
 			},
 			parserOptions: {
-				projectService: true,
+				projectService: {
+					allowDefaultProject: ['eslint.config.mts', 'manifest.json'],
+				},
 				tsconfigRootDir: import.meta.dirname,
+				extraFileExtensions: ['.json'],
 			},
 		},
 	},
-	{
-		files: ['package.json'],
-		rules: {
-			'obsidianmd/no-plugin-as-component': 'off',
-			'obsidianmd/no-unsupported-api': 'off',
-			'obsidianmd/no-view-references-in-plugin': 'off',
-			'obsidianmd/prefer-file-manager-trash-file': 'off',
-			'obsidianmd/prefer-instanceof': 'off',
-		},
-	},
-	globalIgnores([
-		"node_modules",
-		"dist",
-		"esbuild.config.mjs",
-		"eslint.config.js",
-		"version-bump.mjs",
-		"versions.json",
-		"main.js",
-		"scripts/**",
-		"src/generated/**",
-		"package-lock.json",
-		"tsconfig.json",
-		"manifest.json",
-		".claude/**",
-		"example-vault/**",
-	]),
+	...obsidianmd.configs.recommended,
 );
