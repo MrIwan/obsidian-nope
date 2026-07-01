@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Tabelle
+    filters:
+      and:
+        - file.tags == ["Bases","klausur"]

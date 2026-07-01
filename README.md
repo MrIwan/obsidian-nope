@@ -529,6 +529,37 @@ Keep that block verbatim. Besides the NOPE features, a template also needs a Pan
 
 > **Editing `.tex` files inside Obsidian:** Obsidian hides non-markdown files by default. Enable Settings → Files & Links → *Detect all file extensions* to see them and install the [Custom File Extensions](obsidian://show-plugin?id=obsidian-custom-file-extensions-plugin) plugin to open and edit `.tex` files (it handles the `.tex` extension out of the box). Otherwise, right-click the file → *Open in default app* to edit it in your usual LaTeX editor.
 
+### Reading note frontmatter inside an environment
+
+A custom environment can read the embedded note's **own frontmatter**. Every frontmatter key — except the ones NOPE consumes itself (`latex-env`, `latex-short`, `caption`, `gls-*`, `nope-*`, `w`/`width`/`scale`, `bibliography`/`csl`, …) — is exposed inside the environment as a `\nope<key>` command. You author the values as ordinary metadata and the template decides where they appear. Guard each key with `\ifcsname` so notes that omit it simply render nothing. Values are scoped to that single embed, so repeated embeds never bleed into one another.
+
+#### Example
+
+A task note keeps its metadata in frontmatter:
+
+```yaml
+---
+latex-env: task
+difficulty: leicht
+points: 5
+---
+Berechne und kürze: $\frac{3}{4} + \frac{2}{6}$.
+```
+
+The `task` environment in the custom template reads those keys — showing the points inline and the difficulty as a badge, both optional:
+
+```latex
+\newcounter{task}
+\newenvironment{task}[1][]{%
+  \par\medskip\refstepcounter{task}\noindent\textbf{Aufgabe~\thetask}%
+  \ifcsname nopepoints\endcsname\ \textbf{(\csname nopepoints\endcsname\ Punkte)}\fi%
+  \ifcsname nopedifficulty\endcsname\hfill\fbox{\small\itshape \csname nopedifficulty\endcsname}\fi%
+  \par\nobreak\smallskip\noindent\ignorespaces}{\par\medskip}
+\providecommand{\taskautorefname}{Aufgabe}
+```
+
+Reference a key with `\csname nope<key>\endcsname`, spelled exactly as in the frontmatter. `latex-short` still works as the bracket title alongside this. A complete worked example — tasks, an exam that embeds them, and an overview base — ships in `example-vault/Schule/`.
+
 ***
 
 ## Table of contents and generated lists

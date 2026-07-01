@@ -1,0 +1,29 @@
+filters:
+  and:
+    - type == "task"
+properties:
+  file.name:
+    displayName: Aufgabe
+  subject:
+    displayName: Fach
+  difficulty:
+    displayName: Schwierigkeit
+  points:
+    displayName: Punkte
+views:
+  - type: table
+    name: Alle Aufgaben
+    order:
+      - file.name
+      - subject
+      - difficulty
+      - points
+  - type: table
+    name: Nur Mathematik
+    filters:
+      and:
+        - file.hasTag("fach/mathe")
+    order:
+      - file.name
+      - difficulty
+      - points
