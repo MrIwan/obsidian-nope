@@ -145,8 +145,10 @@ function valueLiteral(v: unknown): string {
 
 // Resolve a parsed `this`-chain (e.g. ['file','link'] or ['status']) to a literal.
 function resolveThisChain(chain: string[], ctx: ThisCtx): string {
-	if (chain.length === 0) return 'this'; // bare `this` is unsupported — leave untouched
+	// bare `this` and bare `this.file` → host File object, so file.hasLink(this) works headless
+	if (chain.length === 0) return `file(${JSON.stringify(ctx.note.path)})`;
 	if (chain[0] === 'file') {
+		if (chain.length === 1) return `file(${JSON.stringify(ctx.note.path)})`;
 		return fileLiteral(chain[1], ctx.note) ?? 'null';
 	}
 	let v: unknown = ctx.fm;

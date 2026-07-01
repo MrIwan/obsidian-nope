@@ -2,7 +2,7 @@
 name: nope
 description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract, nope-chapter-autoref), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
-last-updated: 2026-06-29
+last-updated: 2026-07-01
 ---
 
 # nope — authoring conventions
@@ -94,10 +94,11 @@ The query (filters, formulas, sort, columns) is evaluated by Obsidian's real Bas
 
 **`this` (host-note context).** Filters and formulas may reference the note the base is embedded in via `this`. At export the embedding note's values are frozen into the query, so e.g. `status == this.status` or `file.inFolder(this.file.folder)` resolve against that note, and a `this.file.link` formula column renders a link to it. Supported references:
 
+- a bare `this` or `this.file` — the host **file object**, so `file.hasLink(this)` (and `file.hasLink(this.file)`) work, e.g. to pull in every note that links back to the current one
 - `this.file.path`, `this.file.name`, `this.file.basename`, `this.file.folder`, `this.file.ext`, `this.file.link`
 - any host frontmatter key — `this.status`, `this.<key>`, including nested `this.author.name`
 
-A missing frontmatter key resolves to `null` (same as Obsidian). **Not** supported: a bare `this` (no property) and `file.*` properties outside the list above — these resolve to `null`/empty, so don't rely on them.
+A missing frontmatter key resolves to `null` (same as Obsidian). **Not** supported: `file.*` properties outside the list above — these resolve to `null`/empty, so don't rely on them.
 
 Transclude (spine) — straight in the document:
 
@@ -228,7 +229,7 @@ DON'T:
 - Don't use SVG logos — pdflatex can't render them; use PNG/PDF.
 - Don't give a logo as an absolute path — use a wikilink (`"[[logo.png]]"`) so the image is copied into the build folder; an absolute path is missing at build time.
 - Don't put more than one base embed — or a base embed plus a literal table — in one `table` wrapper.
-- In a base, only use `this` for the host's frontmatter keys and the listed `this.file.*` properties; a bare `this` or other `file.*` props resolve to null at export.
+- In a base, `this`/`this.file` (host file object), the listed `this.file.*` properties and host frontmatter keys are supported; other `file.*` props on `this` resolve to null at export.
 
 ## Example main document
 

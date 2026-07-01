@@ -689,6 +689,11 @@ export class NopePreviewView extends ItemView {
 		if (w instanceof HTMLElement) w.scrollIntoView({ block: 'start' });
 	}
 
+	// Public trigger so the open command can fire a render as if "Render now" was clicked.
+	triggerRender(): void {
+		this.requestRender();
+	}
+
 	// Single entry point for manual clicks, auto triggers, and toggle-on renders.
 	private requestRender(): void {
 		if (this.rendering) {
@@ -778,6 +783,10 @@ export function registerPreviewCommand(plugin: NopePlugin): void {
 				},
 			});
 			await plugin.app.workspace.revealLeaf(leaf);
+
+			// Kick off a render immediately, as if "Render now" was clicked.
+			const view = leaf.view instanceof NopePreviewView ? leaf.view : null;
+			view?.triggerRender();
 		},
 	});
 }

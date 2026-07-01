@@ -1,19 +1,30 @@
 filters:
   and:
-    - file.inFolder("Bases/HelperFiles")
-    - file.ext == "md"
-    - project == "Phoenix"
-formulas:
-  host: link("Bases/HelperFiles/Project-Tasks-Table.md", "Project-Tasks-Table")
+    - type == "app-update"
+    - file.hasLink(file("ServerDokumentation/Projekte/MVV-AG/Server/MA-IBMPA01/Applikationen/MVV-PRD_IBM Planning Analytics.md"))
+properties:
+  date:
+    displayName: Datum
+  version-from:
+    displayName: Version vorher
+  version-to:
+    displayName: Version nachher
+  change-type:
+    displayName: Art
+  performed-by:
+    displayName: Durchgeführt von
+  ticket:
+    displayName: Ticket
 views:
   - type: nope-export
-    name: Tasks
-    filters:
-      and:
-        - note["latex-env"] != "table"
+    name: Update-Historie
     order:
-      - file.name
-      - status
-      - owner
-      - priority
-      - formula.host
+      - date
+      - version-from
+      - version-to
+      - change-type
+      - performed-by
+      - ticket
+    sort:
+      - property: date
+        direction: ASC
