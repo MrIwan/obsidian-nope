@@ -1,6 +1,6 @@
 ---
 name: nope
-description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, latex-documentclass, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract, nope-chapter-autoref), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
+description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract, numbersections, book), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
 last-updated: 2026-07-02
 ---
@@ -32,10 +32,10 @@ Refs (`[[…]]`):
 - `[[CitationNote]]` → a citation when the target has a `citekey` (see Citation atoms); resolved after glossary, before embed targets.
 - Multiple embeds of one note: refs point to the first occurrence (counters still advance).
 
-**Chapter/section refs** (`nope-chapter-autoref`): by default a ref to an *embedded heading* — `[[Note#Heading]]`, or a bare `[[Note]]` pointing at a note whose body has headings — is a plain jump **hyperlink** (visible text = the link). Set `nope-chapter-autoref: true` in the **main document** frontmatter (or in the branding file) to make these resolve to `\autoref` instead, so they read "Kapitel X" / "Chapter X" (or "Abschnitt X" etc., depending on heading level). It is a single global switch for the whole document. Notes:
+**Chapter/section refs** (`numbersections`): by default a ref to an *embedded heading* — `[[Note#Heading]]`, or a bare `[[Note]]` pointing at a note whose body has headings — is a plain jump **hyperlink** (visible text = the link). Set `numbersections: true` in the **main document** frontmatter (or in the branding file) to make these resolve to `\autoref` instead, so they read "Kapitel X" / "Chapter X" (or "Abschnitt X" etc., depending on heading level). The same switch prints the numbers on the headings themselves — headings and cross-refs are numbered together by one key. Notes:
 
 - `\autoref` always pairs the **name with the matching level**: a heading rendered as `\chapter` reads "Chapter X", a `\subsection` reads "Subsection 1.1.1". 
-- The switch **also turns section numbering on** (`numbersections`) — otherwise the template emits `\setcounter{secnumdepth}{-\maxdimen}` and `\autoref` shows the name with **no number** ("Subsection" instead of "Subsection 1.1.1"). An explicit `numbersections:` in your frontmatter/branding is respected; tune depth with `secnumdepth:` (default 5).
+- Tune numbering depth with `secnumdepth:` (default 5). Without `numbersections` the template emits `\setcounter{secnumdepth}{-\maxdimen}` (no numbers) and refs stay plain jump links.
 - The autoref name language follows `lang:` (e.g. `lang: de` → "Kapitel/Abschnitt", `lang: en` → "Chapter/Section").
 - Custom-text refs (`[[Note#Heading|text]]`) stay plain hyperlinks regardless.
 
@@ -132,21 +132,11 @@ gls-type: acronym          # acronym | term
 ---
 ```
 
-## Document class
-
-`latex-documentclass:` in the **main document** frontmatter picks the class and, with it, the native heading mapping. Default is `article` if the key is absent.
-
-| `latex-documentclass` | `#` | `##` | `###` |
-| --- | --- | --- | --- |
-| `article` (default) | section | subsection | subsubsection |
-| `report` | chapter | section | subsection |
-| `book` | part | chapter | section |
-
-This is native LaTeX/Pandoc behavior — no manual heading juggling. `report` and `book` differ only in whether `#` is a chapter or a part. See `example-vault/Documentclass Example`.
-
 ## Document and branding frontmatter
 
 Standard Pandoc/Eisvogel keys (`lang`, `toc`, `toc-depth`, `lof`, `lot`, `geometry`, `fontsize`, `titlepage`, `titlepage-logo`, `header-left`, link colors, …) work as usual. Precedence: **doc frontmatter > branding note > plugin `_base.yml`**.
+
+- **`book: true`** — switch to the book class (`scrbook`). `#` → part, `##` → chapter, `###` → section (default `article` maps `#` → section). Cross-refs to a `##` chapter read "Kapitel/Chapter"; a ref to a `#` part currently reads "Part N" (not localized).
 
 - **`abstract`** — text block, or a quoted wikilink whose note body becomes the abstract (frontmatter stripped; heading slices and embeds work). `abstract-title:` overrides the heading. No key → no abstract page.
 - **`nope-branding: "[[Branding-Note]]"`** — apply a branding note (see below). Without it the `_base.yml` defaults apply.

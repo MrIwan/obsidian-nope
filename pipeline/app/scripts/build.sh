@@ -46,21 +46,14 @@ read_frontmatter() {
   ' "$2"
 }
 
-# latex-documentclass picks the native heading mapping.
-# article (default) → scrartcl, # = section
-# report            → scrbook,  # = chapter, ## = section
-# book              → scrbook,  # = part, ## = chapter, ### = section
-DOCCLASS=$(read_frontmatter "latex-documentclass" "$INPUT_ABS")
+# book: true (Eisvogel's scrbook class) → map # to \part, ## to \chapter, ### to \section.
+# --top-level-division auto-sets has-frontmatter, which routes toc/abstract into
+# a branch scrbook skips, so force has-frontmatter off to keep them.
 FORMAT_ARGS=()
-# -M has-frontmatter=false: --top-level-division auto-sets has-frontmatter, which
-# routes Eisvogel's toc/abstract into a branch report/book skip; force it off so
-# they render like article (chapter/part mapping stays).
-case "$DOCCLASS" in
-  report) FORMAT_ARGS=(-V book=true --top-level-division=chapter -M has-frontmatter=false); echo ">>> Document class: report" ;;
-  book)   FORMAT_ARGS=(-V book=true --top-level-division=part -M has-frontmatter=false);    echo ">>> Document class: book" ;;
-  article|"") ;; # default: scrartcl, section-based
-  *) echo ">>> WARNING: unknown latex-documentclass '$DOCCLASS' — using article" ;;
-esac
+if [[ "$(read_frontmatter "book" "$INPUT_ABS")" == "true" ]]; then
+  FORMAT_ARGS=(--top-level-division=part -M has-frontmatter=false)
+  echo ">>> book: part-based headings"
+fi
 
 # Passive-Embed-Syntax `+[[Note]]` → `![[Note]]`. Top-Level mit Base-Embeds löst das Plugin
 # vorab zu $BASE.src.md auf — die als sed-Quelle bevorzugen, sonst das Vault-Original.

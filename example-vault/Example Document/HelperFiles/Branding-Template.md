@@ -8,7 +8,7 @@ lot: false
 titlepage: true
 titlepage-rule-height: 1
 header-left:
-nope-chapter-autoref: true
+numbersections: true
 book: false
 secnumdepth: "2"
 ---

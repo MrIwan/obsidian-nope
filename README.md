@@ -135,12 +135,12 @@ Typical behavior:
 
 This lets you keep using familiar Obsidian links while getting proper PDF cross-references.
 
-### Chapter and section references (`nope-chapter-autoref`)
+### Chapter and section references (`numbersections`)
 
-By default a wikilink to an embedded **heading** — `[[Note#Heading]]`, or a bare `[[Note]]` whose body has headings — is a plain jump hyperlink showing the link text. Set `nope-chapter-autoref: true` in the main document frontmatter (or in the branding file) to turn these into numbered references instead, so they read "Chapter 2", "Section 2.1", and so on. It is a single global switch for the whole document.
+By default a wikilink to an embedded **heading** — `[[Note#Heading]]`, or a bare `[[Note]]` whose body has headings — is a plain jump hyperlink showing the link text. Set `numbersections: true` in the main document frontmatter (or in the branding file) to turn these into numbered references instead, so they read "Chapter 2", "Section 2.1", and so on. The same switch prints the numbers on the headings themselves — headings and cross-references are numbered together.
 
 - `\autoref` pairs the **name with the heading's actual level**: a heading rendered as a chapter reads "Chapter X", a subsection reads "Subsection 1.1.1".
-- The switch **also enables section numbering** (`numbersections`). An explicit `numbersections:` is respected, and depth is tunable with `secnumdepth:` (default 5).
+- Numbering depth is tunable with `secnumdepth:` (default 5). Without `numbersections` there are no heading numbers and refs stay plain jump links.
 - Reference names follow the document language (`lang: de` → "Kapitel/Abschnitt", `lang: en` → "Chapter/Section").
 - Custom-text refs (`[[Note#Heading|text]]`) stay plain hyperlinks.
 
