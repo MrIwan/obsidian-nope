@@ -16,4 +16,3 @@ views:
       - status
       - owner
       - priority
-      - formula.host

@@ -65,28 +65,6 @@ Define it in a **custom LaTeX template, not in `header-includes`** — raw LaTeX
 
 A note with `latex-env: praxisfall` then renders as that environment and `[[…]]` refs read "Praxisfall N". The `\providecommand{…autorefname}` line is what makes `\autoref` print your name instead of inheriting the previous counter — keep it. Same pattern for any amsthm style (`\theoremstyle{definition}` etc.). Keep the `%%% NOPE-IMPORTS %%%` block intact (see `nope-template` below).
 
-**Frontmatter values inside the environment.** Every frontmatter key of the note (other than the ones nope reads itself — `latex-env`, `latex-short`, `caption`, `gls-*`, `nope-*`, `w`/`width`/`scale`, `bibliography`/`csl`, …) is made available inside the environment as a `\nope<key>` command. So you author the values as normal metadata and the template decides where they go. Missing or unused keys just disappear. Guard each with `\ifcsname` so absent keys render nothing:
-
-```yaml
----
-latex-env: task
-difficulty: leicht
-points: 5
----
-Berechne …
-```
-
-```latex
-\newcounter{task}
-\newenvironment{task}[1][]{%
-  \par\medskip\refstepcounter{task}\noindent\textbf{Aufgabe~\thetask}%
-  \ifcsname nopepoints\endcsname\ \textbf{(\csname nopepoints\endcsname\ Punkte)}\fi%
-  \ifcsname nopedifficulty\endcsname\hfill\fbox{\small\itshape \csname nopedifficulty\endcsname}\fi%
-  \par\nobreak\smallskip\noindent\ignorespaces}{\par\medskip}
-```
-
-Reference a key with `\csname nope<key>\endcsname` (spell the key exactly as in the frontmatter). Values are scoped to that one embed, so repeated embeds don't bleed into each other. Use this for a handful of fields; `latex-short` still works as the bracket title alongside it.
-
 ### `longtable` (table layout, default `false`)
 
 - `false` — table stays on **one page** and, if wider than the text, is scaled down to fit (no column overflow). Best for **wide, compact** tables. It does not break across pages; in this mode wikilinks **inside cells are not resolved**.

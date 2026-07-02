@@ -1,30 +1,15 @@
 filters:
   and:
-    - type == "app-update"
-    - file.hasLink(file("ServerDokumentation/Projekte/MVV-AG/Server/MA-IBMPA01/Applikationen/MVV-PRD_IBM Planning Analytics.md"))
-properties:
-  date:
-    displayName: Datum
-  version-from:
-    displayName: Version vorher
-  version-to:
-    displayName: Version nachher
-  change-type:
-    displayName: Art
-  performed-by:
-    displayName: Durchgeführt von
-  ticket:
-    displayName: Ticket
+    - type == "book"
+    - file.hasLink(file("Bases/LibraryFiles/Reading-List-2026.md"))
+formulas:
+  list: link("Bases/LibraryFiles/Reading-List-2026.md", "Reading-List-2026")
 views:
   - type: nope-export
-    name: Update-Historie
+    name: On list
     order:
-      - date
-      - version-from
-      - version-to
-      - change-type
-      - performed-by
-      - ticket
-    sort:
-      - property: date
-        direction: ASC
+      - file.name
+      - author
+      - shelf
+      - rating
+      - status

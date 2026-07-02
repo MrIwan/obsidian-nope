@@ -1,0 +1,18 @@
+filters:
+  and:
+    - file.inFolder("Bases/LibraryFiles")
+    - file.ext == "md"
+    - type == "book"
+    - shelf == this.shelf
+formulas:
+  curator: this.curator.name
+  on: this.file.link
+views:
+  - type: table
+    name: Shelf
+    order:
+      - file.name
+      - author
+      - rating
+      - status
+      - formula.curator

@@ -3,23 +3,20 @@ title: Bases this-context Test
 subtitle: this-inlining, end to end
 author: MrIwan
 project: Phoenix
+shelf: Nordics
+curator:
+  name: Mara Voss
 lang: en
 ---
 
 # What this tests
 
-This is the **host note**; its frontmatter sets `project: Phoenix`. The base
-`Project-Tasks.base` filters tasks with `project == this.project`, so only
-Phoenix tasks may appear. `Task-Billing` and `Task-Legacy` (project `Apollo`)
-are the negative control — they must stay absent. If `this` were not inlined,
-the headless mount would see no host, `this.project` would be `null`, and the
-table would come out **empty** — that is exactly the regression this guards.
+This is the **host note**
 
 ## Transclude form — host is this document
 
 The base is embedded directly here, so `this` resolves against **this** note
-(`project: Phoenix`). Expected: Task-API, Task-Auth, Task-Search transcluded, in
-that order; no Apollo task.
+(`project: Phoenix`). 
 
 ![[Project-Tasks.base#Tasks]]
 
@@ -31,3 +28,21 @@ is a `this.file.link` formula and must link back to the wrapper in every row —
 proving `this.file.link` resolves instead of breaking.
 
 ![[Project-Tasks-Table]]
+
+# `this.<anything>` and `file.hasLink(this)`
+
+
+## `this.<key>` — transclude form, host is this document
+
+
+![[Books-by-Shelf.base#Shelf]]
+
+## `this.<key>` — table form, host is the wrapper note
+
+
+![[Books-by-Shelf-Table]]
+
+## `file.hasLink(this)` — host is the reading-list note
+
+
+![[Reading-List-2026]]

@@ -1,0 +1,15 @@
+filters:
+  and:
+    - type == "book"
+    - file.hasLink(this)
+formulas:
+  list: this.file.link
+views:
+  - type: table
+    name: On list
+    order:
+      - file.name
+      - author
+      - shelf
+      - rating
+      - status
