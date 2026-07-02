@@ -89,6 +89,26 @@ This ==has no closer and should appear as plain text with double equals signs.
 
 This is **important and ==central word== plus rest** in the sentence.
 
+## Lists
+
+Expected behavior: plain Markdown lists render as normal LaTeX `itemize`/`enumerate` blocks — no NOPE-specific syntax needed. Nested items indent one level, ordered items keep their numbering.
+
+Unordered, with a nested level:
+
+- Write the atomic note in Obsidian as usual
+- Embed it with `![[Note]]` to pull its content into the document
+- Reference it with `[[Note]]` for an auto-numbered cross-reference
+    - Works at any nesting depth
+    - Bullets stay bullets and the order is preserved
+
+Ordered, describing the export flow:
+
+1. Add the matching `latex-env` frontmatter to the note
+2. Provide a `caption:` wherever the environment requires one
+3. Export the document to PDF through the Docker pipeline
+4. Open the live preview to check the rendered result
+
+
 \newpage
 
 ![[Callouts]]

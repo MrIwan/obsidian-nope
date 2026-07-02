@@ -1,8 +1,8 @@
 ---
 name: nope
-description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract, nope-chapter-autoref), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
+description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, latex-documentclass, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract, nope-chapter-autoref), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
-last-updated: 2026-07-01
+last-updated: 2026-07-02
 ---
 
 # nope — authoring conventions
@@ -131,6 +131,18 @@ gls-description: ""        # used for terms
 gls-type: acronym          # acronym | term
 ---
 ```
+
+## Document class
+
+`latex-documentclass:` in the **main document** frontmatter picks the class and, with it, the native heading mapping. Default is `article` if the key is absent.
+
+| `latex-documentclass` | `#` | `##` | `###` |
+| --- | --- | --- | --- |
+| `article` (default) | section | subsection | subsubsection |
+| `report` | chapter | section | subsection |
+| `book` | part | chapter | section |
+
+This is native LaTeX/Pandoc behavior — no manual heading juggling. `report` and `book` differ only in whether `#` is a chapter or a part. See `example-vault/Documentclass Example`.
 
 ## Document and branding frontmatter
 

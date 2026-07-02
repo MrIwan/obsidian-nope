@@ -32,6 +32,36 @@ if [[ -f "$WORK/custom-template.tex" ]]; then
   TEMPLATE="$WORK/custom-template.tex"
 fi
 
+# Read a scalar key from the leading YAML frontmatter block (quotes stripped).
+read_frontmatter() {
+  awk -v key="$1" '
+    NR==1 && $0!="---" { exit }        # no frontmatter
+    NR==1 { next }
+    $0=="---" || $0=="..." { exit }     # end of frontmatter
+    $0 ~ "^"key"[[:space:]]*:" {
+      sub("^"key"[[:space:]]*:[[:space:]]*", "")
+      gsub(/^["'"'"']|["'"'"']$/, "")
+      print; exit
+    }
+  ' "$2"
+}
+
+# latex-documentclass picks the native heading mapping.
+# article (default) → scrartcl, # = section
+# report            → scrbook,  # = chapter, ## = section
+# book              → scrbook,  # = part, ## = chapter, ### = section
+DOCCLASS=$(read_frontmatter "latex-documentclass" "$INPUT_ABS")
+FORMAT_ARGS=()
+# -M has-frontmatter=false: --top-level-division auto-sets has-frontmatter, which
+# routes Eisvogel's toc/abstract into a branch report/book skip; force it off so
+# they render like article (chapter/part mapping stays).
+case "$DOCCLASS" in
+  report) FORMAT_ARGS=(-V book=true --top-level-division=chapter -M has-frontmatter=false); echo ">>> Document class: report" ;;
+  book)   FORMAT_ARGS=(-V book=true --top-level-division=part -M has-frontmatter=false);    echo ">>> Document class: book" ;;
+  article|"") ;; # default: scrartcl, section-based
+  *) echo ">>> WARNING: unknown latex-documentclass '$DOCCLASS' — using article" ;;
+esac
+
 # Passive-Embed-Syntax `+[[Note]]` → `![[Note]]`. Top-Level mit Base-Embeds löst das Plugin
 # vorab zu $BASE.src.md auf — die als sed-Quelle bevorzugen, sonst das Vault-Original.
 PROCESSED_INPUT="$WORK/$BASE.md"
@@ -94,6 +124,7 @@ pandoc \
   --lua-filter=/app/filters/obsidian-inline.lua \
   --lua-filter=/app/filters/callouts.lua \
   "${EXTRA_BIB_ARGS[@]}" \
+  "${FORMAT_ARGS[@]}" \
   -s \
   -t latex \
   -o "$WORK/$BASE.tex" \
