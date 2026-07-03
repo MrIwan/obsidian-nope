@@ -2,6 +2,14 @@ import obsidianmd from 'eslint-plugin-obsidianmd';
 import globals from 'globals';
 import { globalIgnores, defineConfig } from 'eslint/config';
 
+// Node-only import.meta extension; typed here because @types/node was
+// deliberately dropped (see src/node-modules.d.ts).
+declare global {
+	interface ImportMeta {
+		dirname: string;
+	}
+}
+
 export default defineConfig(
 	globalIgnores([
 		'node_modules',
