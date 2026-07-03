@@ -1,6 +1,6 @@
 {
 	"name": "nope",
-	"version": "0.3.4",
+	"version": "0.3.5",
 	"description": "Export Obsidian notes to publication-ready PDFs via a Dockerized Pandoc + LaTeX (Eisvogel) toolchain.",
 	"main": "main.js",
 	"type": "module",
