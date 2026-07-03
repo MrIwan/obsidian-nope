@@ -81,6 +81,219 @@ export class NopeSettingTab extends PluginSettingTab {
 		];
 	}
 
+	// Imperative fallback for Obsidian <1.13 only — 1.13+ ignores display() because getSettingDefinitions() returns a non-empty array 
+	display(): void {
+		const { containerEl } = this;
+		containerEl.empty();
+
+		// General settings stay at the top without a heading (plugin guidelines).
+		new Setting(containerEl)
+			.setName('Output path')
+			.setDesc(
+				'Empty = same folder as the source note. ' +
+					'Without leading "/" → relative to the vault root. ' +
+					'Leading "/" or "~/" → absolute path.',
+			)
+			.addText((text) => {
+				text
+					.setPlaceholder('Example: exports/manual.pdf or ~/Desktop/output.pdf')
+					.setValue(this.plugin.settings.outputPath)
+					.onChange(async (value) => {
+						this.plugin.settings.outputPath = value.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName('Auto-open PDF after export')
+			.setDesc('Open the generated PDF automatically when export succeeds.')
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.autoOpenPdf).onChange(async (value) => {
+					this.plugin.settings.autoOpenPdf = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Keep LaTeX intermediates after build')
+			.setDesc(
+				'Off (default): delete pipeline/build/<doc>/ after a successful export — the PDF is already in the vault. ' +
+					'On: keep .tex/.log/.aux/… for debugging.',
+			)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.keepLatexIntermediates)
+					.onChange(async (value) => {
+						this.plugin.settings.keepLatexIntermediates = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName('Cleanup build folder')
+			.setDesc('Delete everything inside pipeline/build/ (logs and per-doc intermediates).')
+			.addButton((btn) => {
+				btn.setButtonText('Cleanup').onClick(() => {
+					btn.setDisabled(true);
+					btn.setButtonText('Cleaning…');
+					try {
+						cleanupBuild(this.plugin);
+					} finally {
+						btn.setDisabled(false);
+						btn.setButtonText('Cleanup');
+					}
+				});
+			});
+
+		// Docker section: status chain, binary path, image build.
+		new Setting(containerEl).setName('Docker').setHeading();
+
+		const chipsEl = containerEl.createDiv({ cls: 'nope-status-chips' });
+		const detailsEl = containerEl.createDiv({ cls: 'nope-status-details' });
+
+		// Chips mirror the check chain; failures repeat their message below the row.
+		const renderChecks = (res: PreflightResults) => {
+			chipsEl.empty();
+			detailsEl.empty();
+			for (const c of res.checks) {
+				const state = c.skipped ? 'nope-chip-skipped' : c.passed ? 'nope-chip-ok' : 'nope-chip-fail';
+				chipsEl.createSpan({ cls: `nope-chip ${state}`, text: c.name, attr: { 'aria-label': c.message } });
+				if (!c.passed && !c.skipped) detailsEl.createDiv({ text: `${c.name}: ${c.message}` });
+			}
+		};
+		const refreshChecks = async () => {
+			try {
+				renderChecks(await runPreflightChecks());
+			} catch (e) {
+				detailsEl.setText(`Error: ${e instanceof Error ? e.message : String(e)}`);
+			}
+		};
+		// Shared with runImageBuild and the path buttons, same contract as the declarative path.
+		this.dockerRefresh = refreshChecks;
+
+		new Setting(containerEl)
+			.setName('Status')
+			.setDesc('Checks run in order: CLI → daemon → image. Hover a chip for details.')
+			.addButton((btn) => {
+				btn.setButtonText('Re-check').onClick(async () => {
+					btn.setDisabled(true);
+					await refreshChecks();
+					btn.setDisabled(false);
+				});
+			});
+
+		void refreshChecks();
+
+		const detectPlaceholder = () => detectDockerBin() ?? 'Not found — set a path or install Docker';
+		let dockerPathText: TextComponent | null = null;
+
+		new Setting(containerEl)
+			.setName('Docker path')
+			.setDesc('Empty = auto-detect common install locations (shown as placeholder). Set only for non-standard installs.')
+			.addText((text) => {
+				dockerPathText = text;
+				text
+					.setPlaceholder(detectPlaceholder())
+					.setValue(this.plugin.settings.dockerPath)
+					.onChange(async (value) => {
+						this.plugin.settings.dockerPath = value.trim();
+						setDockerPathOverride(value);
+						await this.plugin.saveSettings();
+					});
+			})
+			.addButton((btn) => {
+				btn.setIcon('folder-open').setTooltip('Browse for the docker binary').onClick(async () => {
+					const result = await remote.dialog.showOpenDialog({
+						title: 'Select the docker binary',
+						properties: ['openFile', 'showHiddenFiles'],
+					});
+					const picked = result.filePaths[0];
+					if (result.canceled || !picked) return;
+					// setValue does not fire onChange, so persist explicitly.
+					dockerPathText?.setValue(picked);
+					this.plugin.settings.dockerPath = picked;
+					setDockerPathOverride(picked);
+					await this.plugin.saveSettings();
+					await refreshChecks();
+				});
+			})
+			.addButton((btn) => {
+				btn.setButtonText('Auto-detect').onClick(async () => {
+					const found = detectDockerBin();
+					dockerPathText?.setPlaceholder(detectPlaceholder());
+					new Notice(found ? `Found: ${found}` : 'Docker not found in common install locations.');
+					await refreshChecks();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Docker image')
+			.setDesc('Build uses the layer cache; "no cache" rebuilds everything. Log: pipeline/build/last-build.log.')
+			.addButton((btn) => {
+				btn.setButtonText('Build').onClick(() => this.runImageBuild(btn, false));
+			})
+			.addButton((btn) => {
+				btn.setButtonText('Build (no cache)').onClick(() => this.runImageBuild(btn, true));
+			})
+			.addButton((btn) => {
+				btn.setButtonText('Remove').setTooltip('Delete the image; the next export rebuilds it').onClick(async () => {
+					btn.setDisabled(true);
+					btn.setButtonText('Removing…');
+					try {
+						await removeDockerImage();
+					} finally {
+						btn.setDisabled(false);
+						btn.setButtonText('Remove');
+						await refreshChecks();
+					}
+				});
+			});
+
+		// AI skill installation and status section.
+		new Setting(containerEl).setName('AI conventions skill').setHeading();
+
+		const skillChipsEl = containerEl.createDiv({ cls: 'nope-status-chips' });
+		const skillDetailsEl = containerEl.createDiv({ cls: 'nope-status-details' });
+		let skillBtnRef: ButtonComponent | null = null;
+
+		const refreshSkillStatus = () => {
+			const status = getSkillStatus(
+				getPluginAbsoluteDir(this.plugin),
+				getVaultAbsolutePath(this.app),
+			);
+			skillChipsEl.empty();
+			skillChipsEl.createSpan({
+				cls: `nope-chip ${SKILL_CHIP_CLASS[status]}`,
+				text: 'AI skill',
+				attr: { 'aria-label': SKILL_STATUS_LABEL[status] },
+			});
+			skillDetailsEl.setText(SKILL_STATUS_LABEL[status]);
+			skillBtnRef?.setButtonText(SKILL_BUTTON_LABEL[status]);
+		};
+
+		new Setting(containerEl)
+			.setName('Install / update')
+			.setDesc(
+				'Copy skill/SKILL.md → <vault>/.claude/skills/nope/SKILL.md. ' +
+					'Overwrites any existing file at the target.',
+			)
+			.addButton((btn) => {
+				skillBtnRef = btn;
+				btn.onClick(() => {
+					btn.setDisabled(true);
+					btn.setButtonText('Installing…');
+					try {
+						installAiSkill(this.plugin);
+					} finally {
+						btn.setDisabled(false);
+						refreshSkillStatus();
+					}
+				});
+			});
+
+		refreshSkillStatus();
+	}
+
 	// Docker section: status chain, binary path, image build.
 	private dockerItems(): SettingDefinition[] {
 		return [

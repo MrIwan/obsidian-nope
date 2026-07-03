@@ -2,7 +2,7 @@
 	"id": "nope",
 	"name": "Nope",
 	"version": "0.3.4",
-	"minAppVersion": "1.13.0",
+	"minAppVersion": "1.11.0",
 	"description": "Not anOther Pdf Exporter. Export notes to publication-ready PDFs via Pandoc and the Eisvogel LaTeX template. Custom branding, glossaries, transclusions, and cross-references — Docker-powered toolchain, no LaTeX install required.",
 	"author": "Wanja Zemke",
 	"authorUrl": "https://github.com/MrIwan",
