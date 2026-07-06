@@ -40,7 +40,7 @@ interface AnchorPos {
 	name: string;
 }
 
-// Anchor candidates for the cursor position, most specific first; shared by command and toolbar sync.
+// Anchor candidates for the cursor position, most specific first; shared by toolbar sync and mod-click follow.
 function cursorAnchorCandidates(app: App, editor: Editor, file: TFile): string[] {
 	const line = editor.getCursor().line;
 	const headings = app.metadataCache.getFileCache(file)?.headings ?? [];
@@ -498,8 +498,8 @@ export class NopePreviewView extends ItemView {
 		return null;
 	}
 
-	// Manual sync command: loud feedback on every outcome.
-	syncToAnchor(candidates: string[]): void {
+	// Manual editor→PDF sync: loud feedback on every outcome.
+	private syncToAnchor(candidates: string[]): void {
 		const file = this.getFile();
 		if (!file) {
 			this.setStatus('No note bound to this preview.', 'error');
@@ -1046,23 +1046,3 @@ export function registerPreviewClickOpenToggleCommand(plugin: NopePlugin): void 
 	});
 }
 
-export function registerPreviewSyncCommand(plugin: NopePlugin): void {
-	plugin.addCommand({
-		id: 'sync-pdf-preview-to-cursor',
-		name: 'Sync PDF preview to editor',
-		editorCallback: (editor, ctx) => {
-			const leaf = plugin.app.workspace.getLeavesOfType(NOPE_PREVIEW_VIEW_TYPE)[0];
-			const view = leaf?.view instanceof NopePreviewView ? leaf.view : null;
-			if (!view) {
-				new Notice('Open the PDF preview first.');
-				return;
-			}
-			const file = ctx.file;
-			if (!file) {
-				new Notice('Open a note first.');
-				return;
-			}
-			view.syncToAnchor(cursorAnchorCandidates(plugin.app, editor, file));
-		},
-	});
-}

@@ -586,7 +586,7 @@ The preview pane renders the document through the real export pipeline and shows
 
 ### Editor → PDF: sync to cursor
 
-The crosshair button in the preview toolbar (or the `Sync PDF preview to editor` command) scrolls the PDF to the part of the document your cursor is in — this also works while editing an embedded note, not just the main document.
+The crosshair button in the preview toolbar scrolls the PDF to the part of the document your cursor is in — this also works while editing an embedded note, not just the main document.
 
 ### PDF → editor: click-to-open
 
@@ -607,9 +607,9 @@ The plugin exposes several commands through the Obsidian command palette.
 This is the main command. It runs the document through the containerized export pipeline and writes the resulting PDF.
 
 
-### Open PDF preview / Sync PDF preview to editor
+### Open PDF preview
 
-`Open PDF preview` opens the live preview pane. `Sync PDF preview to editor` scrolls the preview to the part of the document your cursor is in. See [Editor functionality](#editor-functionality) for details.
+Opens the live preview pane. See [Editor functionality](#editor-functionality) for details.
 
 
 ### Toggle click-to-open in PDF preview
