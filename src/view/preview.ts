@@ -1,7 +1,7 @@
 // PDF preview view: renders the active note via the export pipeline and shows the build PDF inline.
 // Auto mode watches the dependency set from the last render and re-renders on changes.
 
-import { ItemView, MarkdownView, Menu, Notice, TFile, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
+import { ItemView, Keymap, MarkdownView, Menu, Notice, TFile, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
 import type { App, Debouncer, Editor, ViewStateResult } from 'obsidian';
 import { remote, shell } from 'electron';
 import { copyFileSync, existsSync, readFileSync, statSync } from 'fs';
@@ -25,16 +25,22 @@ pdfjsLib.GlobalWorkerOptions.workerPort = new Worker(
 export const NOPE_PREVIEW_VIEW_TYPE = 'nope-pdf-preview';
 
 const RENDER_DEBOUNCE_MS = 3000;
-const JUMP_DEBOUNCE_MS = 500;
 
 interface PreviewState {
 	filePath: string | null;
 	autoRender: boolean;
-	autoJump: boolean;
+	clickOpen: boolean;
 	zoom: number;
 }
 
-// Anchor candidates for the cursor position, most specific first; shared by command and auto-jump.
+// A named destination resolved to its physical position (page + y from page bottom).
+interface AnchorPos {
+	page: number;
+	top: number | null;
+	name: string;
+}
+
+// Anchor candidates for the cursor position, most specific first; shared by command and toolbar sync.
 function cursorAnchorCandidates(app: App, editor: Editor, file: TFile): string[] {
 	const line = editor.getCursor().line;
 	const headings = app.metadataCache.getFileCache(file)?.headings ?? [];
@@ -63,15 +69,17 @@ export class NopePreviewView extends ItemView {
 	private plugin: NopePlugin;
 	private filePath: string | null = null;
 	private autoRender = false;
-	private autoJump = false;
+	private clickOpen = false;
 	private rendering = false;
 	private pending = false;
 	private watchSet = new Set<string>();
 	private lastAnchor: { candidate: string; dest: string } | null = null;
 	private destCache: Map<string, string> | null = null;
+	private anchorIndex: AnchorPos[] | null = null;
+	private lastEditorLeaf: WorkspaceLeaf | null = null;
 	private debouncedRender: Debouncer<[], void>;
-	private debouncedJump: Debouncer<[], void>;
 	private renderButton: HTMLElement | null = null;
+	private clickOpenButton: HTMLElement | null = null;
 	private statusEl: HTMLElement | null = null;
 	private bodyEl: HTMLElement | null = null;
 	private pagesEl: HTMLElement | null = null;
@@ -91,7 +99,6 @@ export class NopePreviewView extends ItemView {
 		this.plugin = plugin;
 		// Trailing debounce with reset: a burst of saves yields exactly one render after quiet time.
 		this.debouncedRender = debounce(() => this.requestRender(), RENDER_DEBOUNCE_MS, true);
-		this.debouncedJump = debounce(() => this.autoJumpToCursor(), JUMP_DEBOUNCE_MS, true);
 	}
 
 	getViewType(): string {
@@ -115,7 +122,7 @@ export class NopePreviewView extends ItemView {
 		return {
 			filePath: this.filePath,
 			autoRender: this.autoRender,
-			autoJump: this.autoJump,
+			clickOpen: this.clickOpen,
 			zoom: this.zoom,
 		};
 	}
@@ -125,15 +132,17 @@ export class NopePreviewView extends ItemView {
 		const previousPath = this.filePath;
 		this.filePath = typeof s?.filePath === 'string' ? s.filePath : null;
 		this.autoRender = s?.autoRender === true;
-		this.autoJump = s?.autoJump === true;
+		this.clickOpen = s?.clickOpen === true;
 		this.zoom = typeof s?.zoom === 'number' && s.zoom > 0 ? s.zoom : 1;
 		this.updateZoomLabel();
+		this.updateClickOpenButton();
 		// Re-binding to another note invalidates the old dependency set and its build folder.
 		if (this.filePath !== previousPath) {
 			if (previousPath) this.cleanupFor(previousPath);
 			this.watchSet = new Set(this.filePath ? [this.filePath] : []);
 			this.lastAnchor = null;
 			this.destCache = null;
+			this.anchorIndex = null;
 		}
 		this.refreshBody();
 		await super.setState(state, result);
@@ -155,6 +164,19 @@ export class NopePreviewView extends ItemView {
 		setIcon(caret, 'chevron-down');
 		caret.setAttribute('aria-label', 'Render options');
 		caret.addEventListener('click', (evt) => this.openRenderMenu(evt));
+
+		// One-shot editor→PDF sync: scroll to the anchor at the cursor of the last active editor.
+		const syncButton = toolbar.createDiv({ cls: 'clickable-icon nope-preview-action' });
+		setIcon(syncButton, 'locate');
+		syncButton.setAttribute('aria-label', 'Sync PDF to editor');
+		syncButton.addEventListener('click', () => this.syncFromEditor());
+
+		// Toggle for PDF→editor sync: while active, a click in the PDF opens the note rendered there.
+		this.clickOpenButton = toolbar.createDiv({ cls: 'clickable-icon nope-preview-action' });
+		setIcon(this.clickOpenButton, 'mouse-pointer-click');
+		this.clickOpenButton.setAttribute('aria-label', 'Click PDF to open the note at that position');
+		this.clickOpenButton.addEventListener('click', () => this.toggleClickOpen());
+		this.updateClickOpenButton();
 
 		// Zoom controls; the label resets to fit-width on click.
 		const zoomOut = toolbar.createDiv({ cls: 'clickable-icon nope-preview-action' });
@@ -203,10 +225,20 @@ export class NopePreviewView extends ItemView {
 		);
 		// Scroll fires on the inner page container; capture phase catches it on contentEl.
 		this.registerDomEvent(this.contentEl, 'scroll', () => this.schedulePageUpdate(), true);
-		// CM6 is contenteditable, so cursor movement surfaces as document selection changes.
-		this.registerDomEvent(activeDocument, 'selectionchange', () => {
-			if (this.autoJump) this.debouncedJump();
-		});
+		// Capture phase so click-to-open wins over the link annotation layer while active.
+		this.registerDomEvent(this.bodyEl, 'click', (evt) => void this.handlePdfClick(evt), true);
+		// Mod+click inside an editor syncs the preview to the clicked position (setting-gated).
+		this.registerDomEvent(activeDocument, 'click', (evt) => this.handleEditorModClick(evt));
+		// Remember the last markdown leaf so sync and click-to-open never target the preview itself.
+		const seed = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (seed) this.lastEditorLeaf = seed.leaf;
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', (leaf) => {
+				if (leaf && leaf !== this.leaf && leaf.view instanceof MarkdownView) {
+					this.lastEditorLeaf = leaf;
+				}
+			}),
+		);
 		// Keep the binding alive when the bound note is renamed.
 		this.registerEvent(
 			this.app.vault.on('rename', (file, oldPath) => {
@@ -221,7 +253,6 @@ export class NopePreviewView extends ItemView {
 
 	onClose(): Promise<void> {
 		this.debouncedRender.cancel();
-		this.debouncedJump.cancel();
 		void this.destroyDoc();
 		this.cleanupFor(this.filePath);
 		return Promise.resolve();
@@ -319,6 +350,8 @@ export class NopePreviewView extends ItemView {
 				return;
 			}
 			this.pdfDoc = doc;
+			// Page refs in the anchor index belong to the previous document proxy.
+			this.anchorIndex = null;
 			this.numPages = doc.numPages;
 			container.empty();
 			const width = Math.max((container.clientWidth - 16) * this.zoom, 200);
@@ -486,23 +519,245 @@ export class NopePreviewView extends ItemView {
 		this.setStatus(`Jumped to ${hit.candidate}`);
 	}
 
-	// Resolve the cursor position to an anchor, honoring the watch-set scope.
-	private currentCursorAnchor(): { candidate: string; dest: string } | null {
-		const file = this.getFile();
-		const md = this.app.workspace.getActiveViewOfType(MarkdownView);
-		const cursorFile = md?.file;
-		if (!file || !md || !cursorFile) return null;
-		return this.resolveAnchor(file, cursorAnchorCandidates(this.app, md.editor, cursorFile));
+	// The tracked editor leaf, only while it still lives in the layout and shows markdown.
+	private lastEditorView(): MarkdownView | null {
+		const leaf = this.lastEditorLeaf;
+		if (!leaf || !this.isLeafAttached(leaf)) return null;
+		return leaf.view instanceof MarkdownView ? leaf.view : null;
 	}
 
-	// Auto-jump: silent no-ops, and reload the embed only when the destination actually changes.
-	private autoJumpToCursor(): void {
-		if (this.rendering) return;
-		const hit = this.currentCursorAnchor();
-		if (!hit || hit.dest === this.lastAnchor?.dest) return;
-		this.lastAnchor = hit;
-		this.refreshBody(hit.dest);
-		this.setStatus(`Following cursor — ${hit.candidate}`);
+	private isLeafAttached(leaf: WorkspaceLeaf): boolean {
+		let attached = false;
+		this.app.workspace.iterateAllLeaves((l) => {
+			if (l === leaf) attached = true;
+		});
+		return attached;
+	}
+
+	// Toolbar button: one-shot scroll to the cursor anchor of the last active editor.
+	private syncFromEditor(): void {
+		const view = this.lastEditorView();
+		const file = view?.file;
+		if (!view || !file) {
+			this.setStatus('No recent editor to sync from.', 'error');
+			return;
+		}
+		this.syncToAnchor(cursorAnchorCandidates(this.app, view.editor, file));
+	}
+
+	// Public: also driven by the "Toggle click-to-open in PDF preview" command.
+	toggleClickOpen(): void {
+		this.clickOpen = !this.clickOpen;
+		this.updateClickOpenButton();
+		this.app.workspace.requestSaveLayout();
+		this.setStatus(
+			this.clickOpen ? 'Click the PDF to open the note rendered there.' : 'Click-to-open off.',
+		);
+	}
+
+	// Editor half of "Follow on Ctrl/Cmd+click": the clicked note must be part of the document.
+	private handleEditorModClick(evt: MouseEvent): void {
+		if (!this.plugin.settings.followOnModClick || !Keymap.isModifier(evt, 'Mod')) return;
+		const target = evt.target;
+		if (!(target instanceof HTMLElement)) return;
+		// The PDF half lives in handlePdfClick; links keep Obsidian's mod-click navigation.
+		if (this.contentEl.contains(target)) return;
+		if (target.closest('a, .cm-hmd-internal-link, .cm-link, .cm-url, .cm-underline')) return;
+		if (!target.closest('.cm-editor')) return;
+		// The clicked leaf became active on mousedown, so the tracked editor is the right one.
+		const view = this.lastEditorView();
+		const file = view?.file;
+		if (!view || !file || !view.containerEl.contains(target)) return;
+		const bound = this.getFile();
+		if (!bound || !this.candidateNotes(bound).some((f) => f.path === file.path)) return;
+		this.syncToAnchor(cursorAnchorCandidates(this.app, view.editor, file));
+	}
+
+	private updateClickOpenButton(): void {
+		this.clickOpenButton?.toggleClass('is-active', this.clickOpen);
+		this.contentEl.toggleClass('nope-preview-clickopen', this.clickOpen);
+	}
+
+	// Click in the PDF → nearest anchor above the click → open the matching note in the editor.
+	// Active via the toolbar toggle, or per click via mod+click when the setting is on.
+	private async handlePdfClick(evt: MouseEvent): Promise<void> {
+		const modFollow = this.plugin.settings.followOnModClick && Keymap.isModifier(evt, 'Mod');
+		if ((!this.clickOpen && !modFollow) || this.rendering) return;
+		const target = evt.target;
+		if (!(target instanceof HTMLElement) || target.closest('.nope-preview-banner')) return;
+		const wrap = target.closest('.nope-preview-page-wrap');
+		const container = this.pagesEl;
+		const doc = this.pdfDoc;
+		const file = this.getFile();
+		if (!(wrap instanceof HTMLElement) || !container || !doc || !file) return;
+		// Don't hijack an in-progress text selection.
+		const sel = activeWindow.getSelection();
+		if (sel && !sel.isCollapsed) return;
+		// While the mode is active it wins over the link annotation layer (capture phase).
+		evt.preventDefault();
+		evt.stopPropagation();
+		const pageIndex = Array.from(container.children).indexOf(wrap);
+		const canvas = wrap.querySelector('canvas');
+		if (pageIndex < 0 || !(canvas instanceof HTMLCanvasElement) || canvas.clientHeight === 0) return;
+		try {
+			const page = await doc.getPage(pageIndex + 1);
+			const baseHeight = page.getViewport({ scale: 1 }).height;
+			const fraction = (evt.clientY - canvas.getBoundingClientRect().top) / canvas.clientHeight;
+			const top = baseHeight * (1 - fraction);
+			// Nearest mappable anchor wins; anchors we can't map to a note (e.g. images) are skipped.
+			for (const name of await this.anchorsAbove(pageIndex, top)) {
+				const hit = this.mapAnchor(name, file);
+				if (hit) {
+					await this.openTarget(hit, name);
+					return;
+				}
+			}
+			// Title page, TOC and friends carry no mappable anchor → the bound note itself.
+			await this.openTarget({ file }, file.basename);
+		} catch {
+			this.setStatus('Could not resolve the clicked position.', 'error');
+		}
+	}
+
+	// All anchor names at or above the click position, nearest first.
+	private async anchorsAbove(pageIndex: number, top: number): Promise<string[]> {
+		const index = await this.getAnchorIndex();
+		const posOf = (a: AnchorPos): number => a.top ?? Number.MAX_SAFE_INTEGER;
+		return index
+			.filter((a) => a.page < pageIndex || (a.page === pageIndex && posOf(a) >= top - 4))
+			.map((a) => a.name)
+			.reverse();
+	}
+
+	// Resolve every .aux destination to its physical position once per rendered PDF.
+	private async getAnchorIndex(): Promise<AnchorPos[]> {
+		if (this.anchorIndex) return this.anchorIndex;
+		const doc = this.pdfDoc;
+		const file = this.getFile();
+		const index: AnchorPos[] = [];
+		if (doc && file) {
+			for (const [name, destName] of this.getDestinations(file)) {
+				try {
+					const dest = await doc.getDestination(destName);
+					if (!Array.isArray(dest) || dest.length === 0) continue;
+					const ref = dest[0] as Parameters<PDFDocumentProxy['getPageIndex']>[0];
+					index.push({ page: await doc.getPageIndex(ref), top: destTop(dest), name });
+				} catch {
+					// Skip destinations the document no longer knows.
+				}
+			}
+			// Reading order: page ascending, then top of page (large y) first.
+			const posOf = (a: AnchorPos): number => a.top ?? Number.MAX_SAFE_INTEGER;
+			index.sort((a, b) => a.page - b.page || posOf(b) - posOf(a));
+		}
+		this.anchorIndex = index;
+		return index;
+	}
+
+	// Map a label/anchor name back to a vault note (and line where possible).
+	private mapAnchor(name: string, mainFile: TFile): { file: TFile; line?: number } | null {
+		const m = name.match(/^(?:note|tab|eq|fig):([^:]+)(?::(sec|blk)-(.+))?$/);
+		// No filter prefix → a pandoc heading slug from the merged document.
+		if (!m) return this.headingBySlug(name, mainFile);
+		const file = this.fileForLabelBase(m[1] ?? '', mainFile);
+		if (!file) return null;
+		const kind = m[2];
+		const rest = m[3];
+		if (kind === 'sec' && rest !== undefined) {
+			const headings = this.app.metadataCache.getFileCache(file)?.headings ?? [];
+			const h = headings.find((x) => sanitizeLabelId(x.heading) === rest);
+			return { file, line: h?.position.start.line };
+		}
+		if (kind === 'blk' && rest !== undefined) {
+			const block = this.app.metadataCache.getFileCache(file)?.blocks?.[rest];
+			return { file, line: block?.position.start.line };
+		}
+		return { file };
+	}
+
+	// The bound note plus everything it pulls in. Sources: the metadata embed/link graph
+	// (available before the first render) and the markdown deps of the last render
+	// (covers indirections the cache can't see, e.g. nesting behind passive embeds).
+	private candidateNotes(mainFile: TFile): TFile[] {
+		const out: TFile[] = [];
+		const seen = new Set<string>();
+		const add = (f: TFile): void => {
+			if (seen.has(f.path)) return;
+			seen.add(f.path);
+			out.push(f);
+		};
+		add(mainFile);
+		const queue: TFile[] = [mainFile];
+		for (let i = 0; i < queue.length; i++) {
+			const current = queue[i];
+			if (!current) continue;
+			const cache = this.app.metadataCache.getFileCache(current);
+			const resolve = (link: string): TFile | null => {
+				const linkpath = link.split('#')[0] ?? '';
+				if (linkpath === '') return null;
+				const t = this.app.metadataCache.getFirstLinkpathDest(linkpath, current.path);
+				return t && t.extension.toLowerCase() === 'md' ? t : null;
+			};
+			// Embeds transclude → recurse; plain links (incl. passive embeds) only collect.
+			for (const embed of cache?.embeds ?? []) {
+				const t = resolve(embed.link);
+				if (t && !seen.has(t.path)) {
+					add(t);
+					queue.push(t);
+				}
+			}
+			for (const link of cache?.links ?? []) {
+				const t = resolve(link.link);
+				if (t) add(t);
+			}
+		}
+
+		for (const path of this.watchSet) {
+			if (!path.toLowerCase().endsWith('.md')) continue;
+			const f = this.app.vault.getFileByPath(path);
+			if (f) add(f);
+		}
+		return out;
+	}
+
+	// Label bases come from the wikilink target as written — usually the basename, but a
+	// subpath link ("folder/note") sanitizes its slashes too, hence the path-suffix check.
+	private fileForLabelBase(base: string, mainFile: TFile): TFile | null {
+		for (const f of this.candidateNotes(mainFile)) {
+			if (sanitizeLabelId(f.basename) === base) return f;
+			const sanitizedPath = sanitizeLabelId(f.path.replace(/\.md$/i, ''));
+			if (sanitizedPath === base || sanitizedPath.endsWith(`_${base}`)) return f;
+		}
+		return null;
+	}
+
+	// Find the heading behind a pandoc slug, main note first; retry without pandoc's -N dedup suffix.
+	private headingBySlug(slug: string, mainFile: TFile): { file: TFile; line: number } | null {
+		const stripped = slug.replace(/-\d+$/, '');
+		for (const file of this.candidateNotes(mainFile)) {
+			const headings = this.app.metadataCache.getFileCache(file)?.headings ?? [];
+			for (const h of headings) {
+				const id = pandocAutoIdentifier(h.heading);
+				if (id === slug || (stripped !== slug && id === stripped)) {
+					return { file, line: h.position.start.line };
+				}
+			}
+		}
+		return null;
+	}
+
+	// Open in the last active editor leaf; never in the preview leaf itself.
+	private async openTarget(target: { file: TFile; line?: number }, label: string): Promise<void> {
+		let leaf = this.lastEditorLeaf;
+		if (!leaf || leaf === this.leaf || !this.isLeafAttached(leaf)) {
+			leaf = this.app.workspace.getLeaf('tab');
+		}
+		await leaf.openFile(target.file, {
+			active: true,
+			...(target.line !== undefined ? { eState: { line: target.line } } : {}),
+		});
+		this.lastEditorLeaf = leaf;
+		this.setStatus(`Opened ${label}`);
 	}
 
 	// Last good PDF stays visible; the banner sits above it and is replaced on the next attempt.
@@ -576,18 +831,6 @@ export class NopePreviewView extends ItemView {
 					void this.plugin.saveSettings();
 					// Render on enable so the watch set reflects the current document.
 					if (this.autoRender) this.requestRender();
-				}),
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle('Follow editor')
-				.setChecked(this.autoJump)
-				.onClick(() => {
-					this.autoJump = !this.autoJump;
-					this.app.workspace.requestSaveLayout();
-					this.plugin.settings.previewAutoJump = this.autoJump;
-					void this.plugin.saveSettings();
-					if (this.autoJump) this.debouncedJump();
 				}),
 		);
 		menu.showAtMouseEvent(evt);
@@ -733,11 +976,9 @@ export class NopePreviewView extends ItemView {
 				// Re-resolve by candidate, not by destination — counter names shift between renders.
 				const previousAnchor = this.lastAnchor;
 				this.destCache = null;
+				this.anchorIndex = null;
 				this.lastAnchor = null;
-				let hit = this.autoJump ? this.currentCursorAnchor() : null;
-				if (!hit && previousAnchor) {
-					hit = this.resolveAnchor(file, [previousAnchor.candidate]);
-				}
+				const hit = previousAnchor ? this.resolveAnchor(file, [previousAnchor.candidate]) : null;
 				this.lastAnchor = hit;
 				this.refreshBody(hit?.dest);
 			} else {
@@ -779,7 +1020,7 @@ export function registerPreviewCommand(plugin: NopePlugin): void {
 				state: {
 					filePath: targetPath,
 					autoRender: existingView?.getState().autoRender ?? plugin.settings.previewAutoRender,
-					autoJump: existingView?.getState().autoJump ?? plugin.settings.previewAutoJump,
+					clickOpen: existingView?.getState().clickOpen ?? false,
 				},
 			});
 			await plugin.app.workspace.revealLeaf(leaf);
@@ -787,6 +1028,20 @@ export function registerPreviewCommand(plugin: NopePlugin): void {
 			// Kick off a render immediately, as if "Render now" was clicked.
 			const view = leaf.view instanceof NopePreviewView ? leaf.view : null;
 			view?.triggerRender();
+		},
+	});
+}
+
+export function registerPreviewClickOpenToggleCommand(plugin: NopePlugin): void {
+	plugin.addCommand({
+		id: 'toggle-preview-click-open',
+		name: 'Toggle click-to-open in PDF preview',
+		checkCallback: (checking) => {
+			const leaf = plugin.app.workspace.getLeavesOfType(NOPE_PREVIEW_VIEW_TYPE)[0];
+			const view = leaf?.view instanceof NopePreviewView ? leaf.view : null;
+			if (!view) return false;
+			if (!checking) view.toggleClickOpen();
+			return true;
 		},
 	});
 }

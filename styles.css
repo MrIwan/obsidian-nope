@@ -92,6 +92,18 @@
 	pointer-events: none;
 }
 
+/* Active state for toggle actions (click-to-open mode). */
+.nope-preview-action.is-active {
+	color: var(--text-accent);
+	background-color: var(--background-modifier-hover);
+}
+
+/* While click-to-open is active, the page surface reads as clickable. */
+.nope-preview-clickopen .nope-preview-page-wrap,
+.nope-preview-clickopen .textLayer span {
+	cursor: pointer;
+}
+
 .nope-preview-status-error {
 	color: var(--text-error);
 }

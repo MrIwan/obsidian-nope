@@ -578,6 +578,26 @@ lot: true
 
 ***
 
+## Editor functionality
+
+### Live PDF preview
+
+The preview pane renders the document through the real export pipeline and shows the PDF next to your notes. With **Auto-render** (toolbar dropdown) it re-renders automatically whenever the document or one of its embedded notes changes.
+
+### Editor → PDF: sync to cursor
+
+The crosshair button in the preview toolbar (or the `Sync PDF preview to editor` command) scrolls the PDF to the part of the document your cursor is in — this also works while editing an embedded note, not just the main document.
+
+### PDF → editor: click-to-open
+
+The mouse-pointer button toggles the reverse direction: while active, clicking anywhere in the PDF opens the note that is rendered at that spot, in the last active editor tab. Embedded notes, heading slices (`![[Note#Heading]]`), tables, equations and mermaid diagrams open their source note at the matching heading or block; the title page and table of contents open the main document. Text selection and links in the PDF keep working while the mode is on.
+
+### Follow on Ctrl/Cmd+click
+
+With this setting enabled, both directions work per modified click without any toggle: Ctrl/Cmd+click in a note that is part of the previewed document syncs the PDF to the clicked position, Ctrl/Cmd+click in the PDF opens the note rendered there. Plain clicks are untouched and mod-clicking a wikilink still follows the link. On by default.
+
+***
+
 ## Commands
 
 The plugin exposes several commands through the Obsidian command palette.
@@ -587,9 +607,14 @@ The plugin exposes several commands through the Obsidian command palette.
 This is the main command. It runs the document through the containerized export pipeline and writes the resulting PDF.
 
 
-### Open PDF preview / Sync PDF preview to cursor
+### Open PDF preview / Sync PDF preview to editor
 
-`Open PDF preview` opens a live preview pane that re-renders the PDF as you edit. `Sync PDF preview to cursor` scrolls the preview to the part of the document your cursor is in.
+`Open PDF preview` opens the live preview pane. `Sync PDF preview to editor` scrolls the preview to the part of the document your cursor is in. See [Editor functionality](#editor-functionality) for details.
+
+
+### Toggle click-to-open in PDF preview
+
+Toggles the click-to-open mode of the preview (see [Editor functionality](#editor-functionality)). Assign a hotkey if you use it a lot.
 
 
 ### Build docker image (with cache) / (no cache)

@@ -3,10 +3,10 @@ export interface NopeSettings {
 	/** Absolute or vault-relative path where the final PDF is copied after a successful build. */
 	outputPath: string;
 	autoOpenPdf: boolean;
+	followOnModClick: boolean;
 	keepLatexIntermediates: boolean;
 	dockerPath: string;
 	previewAutoRender: boolean;
-	previewAutoJump: boolean;
 }
 
 export interface PreflightCheckResult {

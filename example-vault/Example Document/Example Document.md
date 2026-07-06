@@ -109,6 +109,13 @@ Ordered, describing the export flow:
 4. Open the live preview to check the rendered result
 
 
+And what happens with Checkboxes? 
+
+- [ ] a
+- [x] b
+- [c] c
+
+
 \newpage
 
 ![[Callouts]]

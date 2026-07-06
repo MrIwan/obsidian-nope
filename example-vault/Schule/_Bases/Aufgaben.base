@@ -18,6 +18,9 @@ views:
       - subject
       - difficulty
       - points
+    sort:
+      - property: subject
+        direction: DESC
   - type: table
     name: Nur Mathematik
     filters:

@@ -13,10 +13,10 @@ import { getSkillStatus, type SkillStatus } from './utils/skill';
 export const DEFAULT_SETTINGS: NopeSettings = {
 	outputPath: '',
 	autoOpenPdf: false,
+	followOnModClick: true,
 	keepLatexIntermediates: false,
 	dockerPath: '',
 	previewAutoRender: false,
-	previewAutoJump: false,
 };
 
 export class NopeSettingTab extends PluginSettingTab {
@@ -50,6 +50,13 @@ export class NopeSettingTab extends PluginSettingTab {
 				name: 'Auto-open PDF after export',
 				desc: 'Open the generated PDF automatically when export succeeds.',
 				control: { type: 'toggle', key: 'autoOpenPdf' },
+			},
+			{
+				name: 'Follow on Ctrl/Cmd+click',
+				desc:
+					'In a note that is part of the previewed document: Ctrl/Cmd+click syncs the PDF preview to the clicked position. ' +
+					'In the PDF preview: Ctrl/Cmd+click opens the note rendered there, even while the click-to-open toggle is off.',
+				control: { type: 'toggle', key: 'followOnModClick' },
 			},
 			{
 				name: 'Keep LaTeX intermediates after build',
@@ -110,6 +117,19 @@ export class NopeSettingTab extends PluginSettingTab {
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.autoOpenPdf).onChange(async (value) => {
 					this.plugin.settings.autoOpenPdf = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Follow on Ctrl/Cmd+click')
+			.setDesc(
+				'In a note that is part of the previewed document: Ctrl/Cmd+click syncs the PDF preview to the clicked position. ' +
+					'In the PDF preview: Ctrl/Cmd+click opens the note rendered there, even while the click-to-open toggle is off.',
+			)
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.followOnModClick).onChange(async (value) => {
+					this.plugin.settings.followOnModClick = value;
 					await this.plugin.saveSettings();
 				});
 			});

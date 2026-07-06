@@ -7,7 +7,7 @@ import { registerBrandingTemplateCommand } from './commands/branding-template';
 import { registerCustomTemplateCommand } from './commands/custom-template';
 import { registerEnvTemplateCommands } from './commands/env-templates';
 import { registerMaintenanceCommands } from './commands/maintenance';
-import { NOPE_PREVIEW_VIEW_TYPE, NopePreviewView, registerPreviewCommand, registerPreviewSyncCommand } from './view/preview';
+import { NOPE_PREVIEW_VIEW_TYPE, NopePreviewView, registerPreviewClickOpenToggleCommand, registerPreviewCommand, registerPreviewSyncCommand } from './view/preview';
 import { getPluginAbsoluteDir } from './utils/paths';
 import { ensureBundledAssets } from './utils/assets';
 import { setDockerPathOverride } from './utils/docker';
@@ -35,6 +35,7 @@ export default class NopePlugin extends Plugin {
 		registerExportCommand(this);
 		registerPreviewCommand(this);
 		registerPreviewSyncCommand(this);
+		registerPreviewClickOpenToggleCommand(this);
 		registerBuildCommand(this);
 		registerBuildCommandnoCache(this);
 		registerBrandingTemplateCommand(this);
