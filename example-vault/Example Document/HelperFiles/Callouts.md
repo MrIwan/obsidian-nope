@@ -32,15 +32,3 @@ This section tests every callout type the Lua filter supports. Each block should
 > [!unknown] simple info box for an unknown type!
 
 > Normal blockquote without a callout marker
-
-# Table Test
-
-| Criterion                      | Obsidian Default Export | Better Export PDF               | Enhancing Export              | Pandoc Plugin               |
-| ------------------------------ | ----------------------- | ------------------------------- | ----------------------------- | --------------------------- |
-| Last updated (as of Jan 2026)  | With Obsidian core      | Active (2025)                   | Active (2025)                 | Rare, long gaps             |
-| Render engine                  | Obsidian render engine  | Obsidian render engine (Chrome) | Pandoc + pdfLaTeX             | Pandoc + pdfLaTeX           |
-| Callouts                       | Yes                     | Yes                             | No (or blockquote only)       | No (or blockquote only)     |
-| Mermaid                        | Yes                     | Yes                             | Not natively (filter only)    | Not natively (filter only)  |
-| Formulas (LaTeX/MathJax)       | Yes, limited            | Yes                             | Yes, full (native LaTeX)      | Yes, full (native LaTeX)    |
-| Excalidraw                     | Yes, if auto-export on  | Yes, if auto-export on          | Only if exported as PNG/SVG   | Only if exported as PNG/SVG |
-| Embedded file links (`![[…]]`) | Yes                     | Yes                             | No (Pandoc doesn't know them) | Yes, resolves embeds        |

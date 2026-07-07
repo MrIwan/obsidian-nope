@@ -511,11 +511,11 @@ By default NOPE renders with the bundled Eisvogel template. Power users can supp
 
 ```yaml
 ---
-nope-template: "[[my-template]]"
+nope-template: "[[my-template.tex]]"
 ---
 ```
 
-If unset, Eisvogel is always the fallback. When a custom template is used, NOPE shows a notice.
+The wikilink **must include the `.tex` extension** — `[[my-template]]` without it does not resolve and the export aborts with "Custom template not found". If unset, Eisvogel is always the fallback. When a custom template is used, NOPE shows a notice.
 
 A custom template must pull in the packages and definitions NOPE depends on (tables, callouts, theorems, glossary, cross-reference names). These live in a clearly marked block inside the template:
 
