@@ -8,8 +8,9 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 RUN test -x "$PUPPETEER_EXECUTABLE_PATH"
 # In Container als root → Chromium braucht --no-sandbox.
+# --disable-gpu: kein /dev/dri im Container (WSL2-Crash); --disable-dev-shm-usage: 64MB-Default-/dev/shm reicht Chromium nicht.
 RUN mkdir -p /etc/mmdc && \
-    printf '{ "args": ["--no-sandbox", "--disable-setuid-sandbox"] }\n' \
+    printf '{ "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu", "--disable-dev-shm-usage"] }\n' \
       > /etc/mmdc/puppeteer-config.json
 RUN npm install -g @mermaid-js/mermaid-cli
 # kpsewhich am Ende verifiziert die Installation

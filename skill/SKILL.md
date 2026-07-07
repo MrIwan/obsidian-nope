@@ -55,7 +55,7 @@ A missing required block (table/math) or missing `caption` (table/mermaid) is a 
 
 Any `latex-env` value that isn't built-in (theorem family, `table`, `mermaid`, math) is wrapped generically into `\begin{<name>}…\end{<name>}`, with `latex-short:` as the optional argument and `[[…]]` refs resolving via `\autoref`. The environment only has to be **defined** somewhere.
 
-Define it in a **custom LaTeX template, not in `header-includes`** — raw LaTeX inside YAML frontmatter is brittle (quoting and escaping bite you, and it does not carry over between documents). A template is far more robust and reusable. Run `Create custom LaTeX template` (gives `nope_minimal.tex`), add your environment next to the existing `\newtheorem` block and point the document at it with `nope-template: "[[my-template.tex]]"` (the wikilink **must include the `.tex` extension** — an extension-less link does not resolve):
+Define it in a **custom LaTeX template, not in `header-includes`** — raw LaTeX inside YAML frontmatter is brittle (quoting and escaping bite you, and it does not carry over between documents). A template is far more robust and reusable. Run `Create custom LaTeX template` (gives `nope_minimal.tex`), add your environment next to the existing `\newtheorem` block and point the document at it with `nope-template: "[[my-template]]"`:
 
 ```latex
 % own counter per type → \autoref prints the right name, numbered "Praxisfall 1.1"
@@ -140,7 +140,7 @@ Standard Pandoc/Eisvogel keys (`lang`, `toc`, `toc-depth`, `lof`, `lot`, `geomet
 
 - **`abstract`** — text block, or a quoted wikilink whose note body becomes the abstract (frontmatter stripped; heading slices and embeds work). `abstract-title:` overrides the heading. No key → no abstract page.
 - **`nope-branding: "[[Branding-Note]]"`** — apply a branding note (see below). Without it the `_base.yml` defaults apply.
-- **`nope-template: "[[my-template.tex]]"`** — use a custom `.tex` Pandoc template instead of Eisvogel (doc or branding frontmatter; without it Eisvogel is used). The wikilink **must include the `.tex` extension**; `[[my-template]]` without it does not resolve and the export fails with "Custom template not found". The template **must keep the marked `%%% NOPE-IMPORTS %%%` block** (all required packages) or tables/callouts/theorems/glossary break — the export warns if it is missing. Start from the `Create custom LaTeX template` command (`nope_minimal.tex`).
+- **`nope-template: "[[my-template]]"`** — use a custom `.tex` Pandoc template instead of Eisvogel (doc or branding frontmatter; without it Eisvogel is used). The template **must keep the marked `%%% NOPE-IMPORTS %%%` block** (all required packages) or tables/callouts/theorems/glossary break — the export warns if it is missing. Start from the `Create custom LaTeX template` command (`nope_minimal.tex`).
 
 ### Citations
 
