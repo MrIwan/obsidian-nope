@@ -1,8 +1,13 @@
 # FROM pandoc/extra:3.9.0.0-debian
 FROM pandoc/extra:3.9.0.2-debian
 # bash für unser build.sh — Alpine-Base hat nur /bin/sh.
-# nodejs/npm + chromium für mermaid-cli
-RUN apt update && apt upgrade -y && apt install bash nodejs npm chromium fonts-freefont-ttf latexmk -y
+# curl für NodeSource; chromium für mermaid-cli
+RUN apt update && apt upgrade -y && apt install bash curl chromium fonts-freefont-ttf latexmk -y
+
+# Node 22 via NodeSource statt Debian-Node-18 — aktuelles mermaid-cli/puppeteer verlangt Node >=22.
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt install -y nodejs && \
+    node --version | grep -q "^v22\."
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
@@ -12,7 +17,8 @@ RUN test -x "$PUPPETEER_EXECUTABLE_PATH"
 RUN mkdir -p /etc/mmdc && \
     printf '{ "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu", "--disable-dev-shm-usage"] }\n' \
       > /etc/mmdc/puppeteer-config.json
-RUN npm install -g @mermaid-js/mermaid-cli
+# Major gepinnt — ungepinnte Builds driften zwischen Maschinen (verifiziert: puppeteer-25-auf-node-18-Bruch).
+RUN npm install -g @mermaid-js/mermaid-cli@11
 # kpsewhich am Ende verifiziert die Installation
 RUN tlmgr update --self && \
     tlmgr install \
