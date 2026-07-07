@@ -16,7 +16,7 @@ https://github.com/user-attachments/assets/93402f1f-b05f-48d8-879e-37bfac73c5cf
 
 ## Install
 >
-> **Platform support:** Only **Linux** and **macOS** are tested. Windows is **experimental and currently untested** — it may not work yet. Feedback and reports very welcome.
+> **Platform support:** Only **Linux** and **macOS** are tested. Windows is **experimental and currently untested** — it may not work yet; known issue: **mermaid diagrams do not render on Windows** (see the Mermaid section). Feedback and reports very welcome.
 
 At a high level, the setup is simple:
 
@@ -277,6 +277,8 @@ From [[Equation-Energy]] we see that ...
 ```
 
 ### Mermaid diagrams
+
+> **Known issue:** Mermaid rendering currently does **not work on Windows** — Chromium fails to launch inside the container ("Failed to launch the browser process") and exports with mermaid notes abort. We are investigating; exports without mermaid notes are unaffected.
 
 Mermaid diagrams can be authored as atomic notes with `latex-env: mermaid`. The note body contains the Mermaid code block, while frontmatter supplies metadata such as the caption.
 
