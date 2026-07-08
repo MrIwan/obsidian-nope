@@ -24,6 +24,25 @@
 \usepackage{fvextra}
 \usepackage{hyperref}
 
+% --- Extra LaTeX packages demo -----------------------------------------------
+% "cancel" is NOT part of the base Docker image. Add "cancel" under Settings → LaTeX packages → Extra LaTeX packages and rebuild the image;
+% the demobox in the example document then turns green and shows the package in action.
+% Without it, a red box tells you the package is missing.
+% (tcolorbox itself ships with the base image, so the box always renders.)
+\usepackage{tcolorbox}
+\IfFileExists{cancel.sty}{%
+  \usepackage{cancel}%
+  \newenvironment{demobox}%
+    {\begin{tcolorbox}[colback=green!5,colframe=green!50!black,title=cancel is installed — extra LaTeX packages work]%
+     \(\frac{\cancel{6}\cdot 5}{\cancel{6}} = 5\)\quad(rendered by the \texttt{cancel} package)\par\smallskip}%
+    {\end{tcolorbox}}%
+}{%
+  \newenvironment{demobox}%
+    {\begin{tcolorbox}[colback=red!5,colframe=red!60!black,title=cancel is NOT installed — add it under Settings \(\to\) LaTeX packages]}%
+    {\end{tcolorbox}}%
+}
+% ------------------------------------------------------------------------------
+
 % Pandoc helper macros that its default template provides.
 \newcommand{\passthrough}[1]{#1}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}

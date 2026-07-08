@@ -21,7 +21,7 @@ export const DEFAULT_SETTINGS: NopeSettings = {
 };
 
 const EXTRA_TEX_PACKAGES_DESC =
-	'Space-separated tlmgr package names, installed on top of the base image (e.g. tcolorbox pgfplots).';
+	'Space-separated tlmgr package names, installed on top of the base image (e.g. cancel pgfplots).';
 
 export class NopeSettingTab extends PluginSettingTab {
 	plugin: NopePlugin;
@@ -282,7 +282,7 @@ export class NopeSettingTab extends PluginSettingTab {
 			.setDesc(EXTRA_TEX_PACKAGES_DESC)
 			.addText((text) => {
 				text
-					.setPlaceholder('Example: tcolorbox pgfplots fontawesome5')
+					.setPlaceholder('Example: cancel pgfplots algorithm2e')
 					.setValue(this.plugin.settings.extraTexPackages)
 					.onChange(async (value) => {
 						this.plugin.settings.extraTexPackages = value;
@@ -460,7 +460,7 @@ export class NopeSettingTab extends PluginSettingTab {
 					setting
 						.addText((text) => {
 							text
-								.setPlaceholder('Example: tcolorbox pgfplots fontawesome5')
+								.setPlaceholder('Example: cancel pgfplots algorithm2e')
 								.setValue(this.plugin.settings.extraTexPackages)
 								.onChange(async (value) => {
 									this.plugin.settings.extraTexPackages = value;
