@@ -10,7 +10,7 @@ The core authoring model is **atomic**. Chapters, theorems, tables, glossary ent
 
 > **Under Construction**: NOPE is still in early development. The Plugin is not stable yet and there may be breaking changes. Feedback and contributions are very welcome to help shape the direction of the plugin.
 
-https://github.com/user-attachments/assets/93402f1f-b05f-48d8-879e-37bfac73c5cf
+https://github.com/user-attachments/assets/962cc7c4-eca4-4ed5-a45c-2170d8e9f676
 
 ***
 
