@@ -26,13 +26,6 @@ _timer_t0=0
 timer_start() { _timer_t0=$(date +%s%3N); }
 timer_end() { echo ">>> NOPE-TIMING $1 $(( $(date +%s%3N) - _timer_t0 ))ms"; }
 
-# Template: custom-template.tex (materialized by the plugin) wins, else Eisvogel.
-TEMPLATE="/app/template/eisvogel.tex"
-if [[ -f "$WORK/custom-template.tex" ]]; then
-  echo ">>> Custom template: $WORK/custom-template.tex"
-  TEMPLATE="$WORK/custom-template.tex"
-fi
-
 # Read a scalar key from the leading YAML frontmatter block (quotes stripped).
 read_frontmatter() {
   awk -v key="$1" '
@@ -75,6 +68,27 @@ VAULT_PATHS=$(find /vault -type d \
     -not -path '*/node_modules*' \
     2>/dev/null | tr '\n' ':')
 
+RESOURCE_PATH="$WORK:$INPUT_DIR:$VAULT_PATHS/app/assets"
+
+# Prepare pass: resolve custom template, branding override, bibliography and citation notes from the vault into $WORK
+echo ">>> Prepare: resolving vault references"
+timer_start
+NOPE_WORK_DIR="$WORK" NOPE_BASE="$BASE" pandoc \
+  -f markdown+wikilinks_title_after_pipe \
+  --resource-path="$RESOURCE_PATH" \
+  --lua-filter=/app/filters/nope-prepare.lua \
+  -t plain \
+  -o /dev/null \
+  "$PROCESSED_INPUT"
+timer_end prepare
+
+# Template: custom-template.tex (materialized by the prepare pass) wins, else Eisvogel.
+TEMPLATE="/app/template/eisvogel.tex"
+if [[ -f "$WORK/custom-template.tex" ]]; then
+  echo ">>> Custom template: $WORK/custom-template.tex"
+  TEMPLATE="$WORK/custom-template.tex"
+fi
+
 # Check if Branding Override exists
 EXTRA_METADATA_FILES=()
 if [[ -f "$WORK/branding-override.yml" ]]; then
@@ -110,7 +124,7 @@ pandoc \
   -f markdown+wikilinks_title_after_pipe \
   --metadata-file=/app/branding/_base.yml \
   "${EXTRA_METADATA_FILES[@]}" \
-  --resource-path="$WORK:$INPUT_DIR:$VAULT_PATHS/app/assets" \
+  --resource-path="$RESOURCE_PATH" \
   --extract-media="$WORK/media" \
   --template="$TEMPLATE" \
   --lua-filter=/app/filters/obsidian-transclude.lua \

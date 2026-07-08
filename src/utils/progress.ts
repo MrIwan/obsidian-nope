@@ -49,7 +49,9 @@ export class ProgressNotice {
 export function parsePipelinePhase(chunk: string): string | null {
 	let phase: string | null = null;
 	for (const line of chunk.split('\n')) {
-		if (line.includes('>>> Branding override')) phase = 'applying branding';
+		if (line.includes('>>> Prepare:')) phase = 'resolving vault references';
+		else if (line.includes('>>> Custom template')) phase = 'applying custom template';
+		else if (line.includes('>>> Branding override')) phase = 'applying branding';
 		else if (line.includes('>>> Bibliography')) phase = 'preparing bibliography';
 		else if (line.includes('>>> Pandoc:')) phase = 'Pandoc → LaTeX';
 		else if (line.includes('mermaid chart')) phase = 'rendering mermaid diagrams';
@@ -117,11 +119,8 @@ export class PhaseTimer {
 const TIMER_CSV_PHASES = [
 	'assets',
 	'docker',
-	'branding',
-	'bib',
-	'citations',
-	'template',
 	'bases',
+	'prepare',
 	'pandoc',
 	'latexmk',
 	'overhead',

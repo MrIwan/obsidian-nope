@@ -8,10 +8,6 @@ import type NopePlugin from '../main';
 import { buildImage, checkDockerReady, cleanupIntermediates, imageStatus, runPipeline } from './docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from './paths';
 import { PhaseTimer, appendTimerCsv, parseBuildStep, parsePipelinePhase, parsePipelineTimings } from './progress';
-import { prepareBrandingOverride } from './branding';
-import { prepareBibliography } from './bibliography';
-import { prepareCitations } from './citations';
-import { prepareTemplate } from './template';
 import { prepareBases } from './bases';
 import { ensureBundledAssets } from './assets';
 
@@ -99,70 +95,8 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 	const workDir = join(pluginDir, 'pipeline', 'build', baseName);
 	mkdirSync(workDir, { recursive: true });
 
-	// Materialize branding overrides; fail loudly if branding file cannot be resolved.
-	try {
-		prepareBrandingOverride(
-			plugin.app,
-			file,
-			workDir,
-			vaultPath,
-			baseName,
-		);
-	} catch (e) {
-		const msg = e instanceof Error ? e.message : String(e);
-		reporter.fail(`Branding override failed. ${msg}`);
-		return { ok: false };
-	}
-	timer.lap('branding');
-
-	// Materialize bibliography; copy to work directory with fixed filenames for build.sh.
-	try {
-		prepareBibliography(
-			plugin.app,
-			file,
-			workDir,
-			vaultPath,
-			pluginDir,
-		);
-	} catch (e) {
-		const msg = e instanceof Error ? e.message : String(e);
-		reporter.fail(`Bibliography prep failed. ${msg}`);
-		return { ok: false };
-	}
-	timer.lap('bib');
-
-	// Generate references-notes.bib from citekey notes; runs alongside the .bib system.
-	let citeDeps: string[] = [];
-	try {
-		citeDeps = prepareCitations(plugin.app, file, workDir);
-	} catch (e) {
-		const msg = e instanceof Error ? e.message : String(e);
-		reporter.fail(`Citation notes prep failed. ${msg}`);
-		return { ok: false };
-	}
-	timer.lap('citations');
-
-	// Materialize a custom template if selected
-	try {
-		const tpl = prepareTemplate(plugin.app, file, workDir, vaultPath);
-		if (tpl.name) {
-			// Status goes into the progress notice; only the warning needs its own toast.
-			reporter.update(`Using custom template "${tpl.name}"…`);
-			if (tpl.missingPreamble) {
-				new Notice(
-					`Template "${tpl.name}" is missing the NOPE-IMPORTS block — ` +
-						`tables, callouts, theorems and the glossary may break. ` +
-						`Copy nope_minimal.tex as a starting point.`,
-					12000,
-				);
-			}
-		}
-	} catch (e) {
-		const msg = e instanceof Error ? e.message : String(e);
-		reporter.fail(`Template prep failed. ${msg}`);
-		return { ok: false };
-	}
-	timer.lap('template');
+	// Branding, bibliography, citation notes and custom templates are resolved
+	// inside the container (nope-prepare.lua); only Bases need the Obsidian API.
 
 	// Resolve embedded Bases and materialize shadows for the transclude filter.
 	let baseDeps: string[] = [];
@@ -178,16 +112,30 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 	// Run export pipeline
 	let producedPdf: string;
 	let strippedChars = 0;
-	// pandoc/latexmk durations come from build.sh's ">>> NOPE-TIMING" lines; overhead is the rest.
+	// prepare/pandoc/latexmk durations come from build.sh's ">>> NOPE-TIMING" lines; overhead is the rest.
+	let prepareMs = 0;
 	let pandocMs = 0;
 	let latexmkMs = 0;
+	// Structured markers from nope-prepare.lua: errors abort the run, warnings become notices.
+	const pipelineErrors: string[] = [];
+	const pipelineWarnings: string[] = [];
 	const pipelineStart = Date.now();
+	const collectMarkers = (chunk: string): void => {
+		for (const line of chunk.split('\n')) {
+			const err = /^>>> NOPE-ERROR: (.+)$/.exec(line);
+			if (err?.[1]) pipelineErrors.push(err[1]);
+			const wrn = /^>>> NOPE-WARN (.+)$/.exec(line);
+			if (wrn?.[1]) pipelineWarnings.push(wrn[1]);
+		}
+	};
 	try {
 		producedPdf = await runPipeline(pluginDir, vaultPath, file.path, (chunk) => {
+			collectMarkers(chunk);
 			const phase = parsePipelinePhase(chunk);
 			if (phase) reporter.update(`Exporting "${file.basename}" — ${phase}`);
 			for (const t of parsePipelineTimings(chunk)) {
-				if (t.label === 'pandoc') pandocMs = t.ms;
+				if (t.label === 'prepare') prepareMs = t.ms;
+				else if (t.label === 'pandoc') pandocMs = t.ms;
 				else if (t.label === 'latexmk') latexmkMs = t.ms;
 			}
 			// strip-unsupported.lua reports removed emoji/pictograph chars.
@@ -196,17 +144,22 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		});
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
-		reporter.fail(`Export failed. ${msg}`);
+		reporter.fail(`Export failed. ${pipelineErrors.length > 0 ? pipelineErrors.join(' ') : msg}`);
 		// build.sh re-seeds the manifest before pandoc runs, so it is fresh even on LaTeX failure.
-		return { ok: false, deps: [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps, ...citeDeps])] };
+		return { ok: false, deps: [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps])] };
 	}
+	timer.add('prepare', prepareMs);
 	timer.add('pandoc', pandocMs);
 	timer.add('latexmk', latexmkMs);
-	// Container startup + mount overhead: the pipeline wall time not spent in pandoc or latexmk.
-	timer.add('overhead', Math.max(0, Date.now() - pipelineStart - pandocMs - latexmkMs));
+	// Container startup + mount overhead: the pipeline wall time not spent in prepare, pandoc or latexmk.
+	timer.add('overhead', Math.max(0, Date.now() - pipelineStart - prepareMs - pandocMs - latexmkMs));
+
+	for (const warning of pipelineWarnings) {
+		new Notice(warning, 12000);
+	}
 
 	// Read the dependency manifest before any cleanup can remove it.
-	const deps = [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps, ...citeDeps])];
+	const deps = [...new Set([...readDepsManifest(workDir, file.path), ...baseDeps])];
 
 	if (strippedChars > 0) {
 		new Notice(
