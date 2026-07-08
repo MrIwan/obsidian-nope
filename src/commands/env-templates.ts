@@ -1,10 +1,11 @@
-// Scaffold commands for latex-env atomic notes: create a note with the correct
-// frontmatter + body skeleton and insert an embed/ref at the cursor.
+// Scaffold command for latex-env atomic notes: one "Add structured note" command
+// opens a picker with all note types; the chosen template creates a note with the
+// correct frontmatter + body skeleton and inserts an embed/ref at the cursor.
 
-import { Editor, MarkdownFileInfo, MarkdownView, Notice, TFile, normalizePath } from 'obsidian';
+import { Editor, FuzzySuggestModal, MarkdownFileInfo, MarkdownView, Notice, TFile, normalizePath } from 'obsidian';
 import type NopePlugin from '../main';
 
-// One entry per "Nope: Add …" command. `embed` decides the insert syntax:
+// One entry per picker option. `embed` decides the insert syntax:
 // true → block embed ![[…]], false → plain ref [[…]] (glossary terms).
 interface EnvTemplate {
 	id: string;
@@ -210,14 +211,38 @@ async function createEnvNote(
 	}
 }
 
-export function registerEnvTemplateCommands(plugin: NopePlugin): void {
-	for (const tpl of TEMPLATES) {
-		plugin.addCommand({
-			id: tpl.id,
-			name: tpl.name,
-			editorCallback: (editor, ctx) => {
-				void createEnvNote(plugin, editor, ctx, tpl);
-			},
-		});
+// Fuzzy-searchable submenu listing all note types ("Table", "Mermaid diagram", …).
+class EnvTemplateModal extends FuzzySuggestModal<EnvTemplate> {
+	constructor(
+		private plugin: NopePlugin,
+		private editor: Editor,
+		private ctx: MarkdownView | MarkdownFileInfo,
+	) {
+		super(plugin.app);
+		this.setPlaceholder('Pick a note type…');
 	}
+
+	getItems(): EnvTemplate[] {
+		return TEMPLATES;
+	}
+
+	getItemText(tpl: EnvTemplate): string {
+		// Picker shows the bare type: "Add table" → "Table".
+		const label = tpl.name.replace(/^Add /, '');
+		return label.charAt(0).toUpperCase() + label.slice(1);
+	}
+
+	onChooseItem(tpl: EnvTemplate): void {
+		void createEnvNote(this.plugin, this.editor, this.ctx, tpl);
+	}
+}
+
+export function registerEnvTemplateCommands(plugin: NopePlugin): void {
+	plugin.addCommand({
+		id: 'add-env-note',
+		name: 'Add structured note',
+		editorCallback: (editor, ctx) => {
+			new EnvTemplateModal(plugin, editor, ctx).open();
+		},
+	});
 }
