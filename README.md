@@ -16,7 +16,7 @@ https://github.com/user-attachments/assets/962cc7c4-eca4-4ed5-a45c-2170d8e9f676
 
 ## Install
 >
-> **Platform support:** Only **Linux** and **macOS** are tested. Windows is **experimental and currently untested** — it may not work yet; known issue: **mermaid diagrams do not render on Windows** (see the Mermaid section). Feedback and reports very welcome.
+> **Platform support:** Only **Linux** and **macOS** are tested. Windows is **experimental and currently untested** — it may not work yet. Feedback and reports very welcome. (The earlier known issue — mermaid diagrams not rendering on Windows — should be resolved since mermaid no longer uses a browser; reports welcome.)
 
 At a high level, the setup is simple:
 
@@ -278,7 +278,7 @@ From [[Equation-Energy]] we see that ...
 
 ### Mermaid diagrams
 
-> **Known issue:** Mermaid rendering currently does **not work on Windows** — Chromium fails to launch inside the container ("Failed to launch the browser process") and exports with mermaid notes abort. We are investigating; exports without mermaid notes are unaffected.
+> Mermaid diagrams are rendered inside the pipeline by [merman](https://github.com/Latias94/merman), a headless Rust implementation of Mermaid — no browser involved. This replaced the earlier Chromium/mermaid-cli setup (and with it the known Windows rendering issue).
 
 Mermaid diagrams can be authored as atomic notes with `latex-env: mermaid`. The note body contains the Mermaid code block, while frontmatter supplies metadata such as the caption.
 

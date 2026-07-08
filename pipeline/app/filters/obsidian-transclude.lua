@@ -275,17 +275,16 @@ local function render_mermaid_to_png(source_text, scale)
   fh:close()
 
   local cmd = table.concat({
-    "mmdc",
+    "merman-cli render",
     "-i", mermaid_shell_escape(mmd_path),
     "-o", mermaid_shell_escape(png_abs),
     "-b", "transparent",
     "-s", tostring(scale),
-    "-p", "/etc/mmdc/puppeteer-config.json",
     "2>&1",
   }, " ")
   local ok, _, code = os.execute(cmd)
   if not ok or not mermaid_file_exists(png_abs) then
-    io.stderr:write("mermaid: mmdc failed for " .. mmd_path
+    io.stderr:write("mermaid: merman-cli failed for " .. mmd_path
       .. " (exit " .. tostring(code) .. ", cmd: " .. cmd .. ")\n")
     return nil
   end
