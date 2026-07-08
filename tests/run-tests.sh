@@ -1,16 +1,5 @@
 #!/usr/bin/env bash
 # run-tests.sh — headless pipeline tests over the example vault.
-#
-# For every case in tests/manifest.txt: export the document through the Docker
-# pipeline (docker compose run), then assert exit code, non-empty PDF,
-# must/must-not strings in the generated .tex and a clean LaTeX reference log.
-#
-# Usage: tests/run-tests.sh [doc-filter]
-#   doc-filter  optional substring; only manifest cases whose path matches run.
-# Env: NOPE_TEST_VAULT overrides the vault (default: example-vault).
-#
-# Requires the `nope` Docker image (built once via `docker compose build` in
-# pipeline/, or by the plugin).
 
 set -u
 
@@ -20,6 +9,11 @@ PIPELINE_DIR="$REPO_DIR/pipeline"
 VAULT="${NOPE_TEST_VAULT:-$REPO_DIR/example-vault}"
 MANIFEST="$SCRIPT_DIR/manifest.txt"
 FILTER="${1:-}"
+
+rm -rf "$PIPELINE_DIR"/build/test-run-* 2>/dev/null
+BUILD_ROOT="$PIPELINE_DIR/build/test-run-$(date +%Y%m%d-%H%M%S)-$$"
+mkdir -p "$BUILD_ROOT"
+echo "build root: $BUILD_ROOT"
 
 pass_count=0
 fail_count=0
@@ -33,40 +27,27 @@ run_test() {
     return
   fi
 
-  local base work tex pdf runlog latexlog errors start elapsed
+  local base work tex pdf runlog latexlog errors start elapsed exported
   base=$(basename "$doc" .md)
-  work="$PIPELINE_DIR/build/$base"
+  work="$BUILD_ROOT/$base"
   tex="$work/$base.tex"
   pdf="$work/$base.pdf"
   latexlog="$work/$base.log"
   runlog="$work/build_sh.log"
   errors=""
-
-  # Clear contents but keep the directory inode: deleting the dir right before
-  # the container writes into it races Docker Desktop's bind-mount cache
-  # (VirtioFS) — the container then fails with "No such file or directory".
-  clean_work() {
-    mkdir -p "$work"
-    find "$work" -mindepth 1 -delete
-  }
-  clean_work
+  exported=0
+  mkdir -p "$work"
 
   start=$(date +%s)
   # </dev/null: compose must not eat the manifest being read by the caller's loop.
-  # Retry once if the run still hit the stale-mount race (signature above).
-  local attempt exported=0
-  for attempt in 1 2; do
-    if (cd "$PIPELINE_DIR" && VAULT_PATH="$VAULT" docker compose run --rm pipeline "$doc") > "$runlog" 2>&1 < /dev/null; then
-      exported=1
-      break
-    fi
-    grep -q 'No such file or directory' "$runlog" || break
-    sleep 1
-    clean_work
-  done
+  if (cd "$PIPELINE_DIR" && VAULT_PATH="$VAULT" NOPE_BUILD_PATH="$BUILD_ROOT" \
+      docker compose run --rm pipeline "$doc") > "$runlog" 2>&1 < /dev/null; then
+    exported=1
+  fi
+
   if [ "$exported" -ne 1 ]; then
     local marker
-    marker=$(grep -m1 '>>> NOPE-ERROR:' "$runlog" | sed 's/^>>> NOPE-ERROR: //')
+    marker=$(grep -m1 '>>> NOPE-ERROR:' "$runlog" 2>/dev/null | sed 's/^>>> NOPE-ERROR: //')
     errors="$errors
   export failed${marker:+: $marker}"
   else
@@ -100,6 +81,11 @@ run_test() {
   else
     echo "FAIL  $doc (${elapsed}s)$errors"
     echo "      run log: $runlog"
+    # Surface the cause directly in the (CI) output — artifacts are a detour.
+    if [ "$exported" -ne 1 ] && [ -f "$runlog" ]; then
+      echo "      ---- run log tail ----"
+      tail -n 20 "$runlog" | sed 's/^/      /'
+    fi
     fail_count=$((fail_count + 1))
     failed_docs="$failed_docs $doc"
   fi

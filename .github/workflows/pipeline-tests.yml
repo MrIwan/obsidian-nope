@@ -31,5 +31,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pipeline-test-logs
-          path: pipeline/build/*/*.log
+          path: pipeline/build/**/*.log
           if-no-files-found: ignore

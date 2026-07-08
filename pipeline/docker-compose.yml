@@ -11,5 +11,5 @@ services:
     volumes:
       - ./app:/app:ro
       - ${VAULT_PATH}:/vault:ro
-      - ./build:/build
+      - ${NOPE_BUILD_PATH:-./build}:/build
     working_dir: /build
