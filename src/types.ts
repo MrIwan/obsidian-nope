@@ -7,6 +7,7 @@ export interface NopeSettings {
 	keepLatexIntermediates: boolean;
 	dockerPath: string;
 	previewAutoRender: boolean;
+	extraTexPackages: string;
 }
 
 export interface PreflightCheckResult {

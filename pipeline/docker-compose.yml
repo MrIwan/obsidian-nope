@@ -2,6 +2,8 @@ services:
   pipeline:
     build:
       context: .
+      args:
+        EXTRA_TLMGR_PACKAGES: "${NOPE_EXTRA_TLMGR:-}"
       labels:
         nope.image-hash: "${NOPE_IMAGE_HASH:-}"
     image: nope

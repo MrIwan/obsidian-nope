@@ -4,7 +4,7 @@ import { remote } from 'electron';
 import type NopePlugin from './main';
 import type { NopeSettings, PreflightResults } from './types';
 import { runPreflightChecks } from './utils/preflight';
-import { buildImage, detectDockerBin, setDockerPathOverride } from './utils/docker';
+import { buildImage, detectDockerBin, setDockerPathOverride, setExtraTexPackages } from './utils/docker';
 import { ProgressNotice, parseBuildStep } from './utils/progress';
 import { getPluginAbsoluteDir, getVaultAbsolutePath } from './utils/paths';
 import { cleanupBuild, installAiSkill, removeDockerImage } from './commands/maintenance';
@@ -17,7 +17,11 @@ export const DEFAULT_SETTINGS: NopeSettings = {
 	keepLatexIntermediates: false,
 	dockerPath: '',
 	previewAutoRender: false,
+	extraTexPackages: '',
 };
+
+const EXTRA_TEX_PACKAGES_DESC =
+	'Space-separated tlmgr package names, installed on top of the base image (e.g. tcolorbox pgfplots).';
 
 export class NopeSettingTab extends PluginSettingTab {
 	plugin: NopePlugin;
@@ -84,6 +88,7 @@ export class NopeSettingTab extends PluginSettingTab {
 				},
 			},
 			{ type: 'group', heading: 'Docker', items: this.dockerItems() },
+			{ type: 'group', heading: 'LaTeX packages', items: this.texPackageItems() },
 			{ type: 'group', heading: 'AI conventions skill', items: this.skillItems() },
 		];
 	}
@@ -269,6 +274,23 @@ export class NopeSettingTab extends PluginSettingTab {
 				});
 			});
 
+		// LaTeX packages section: user tlmgr packages baked into the image on rebuild.
+		new Setting(containerEl).setName('LaTeX packages').setHeading();
+
+		new Setting(containerEl)
+			.setName('Extra LaTeX packages')
+			.setDesc(EXTRA_TEX_PACKAGES_DESC)
+			.addText((text) => {
+				text
+					.setPlaceholder('Example: tcolorbox pgfplots fontawesome5')
+					.setValue(this.plugin.settings.extraTexPackages)
+					.onChange(async (value) => {
+						this.plugin.settings.extraTexPackages = value;
+						setExtraTexPackages(value);
+						await this.plugin.saveSettings();
+					});
+			});
+
 		// AI skill installation and status section.
 		new Setting(containerEl).setName('AI conventions skill').setHeading();
 
@@ -428,8 +450,37 @@ export class NopeSettingTab extends PluginSettingTab {
 		];
 	}
 
+	// LaTeX packages section: user tlmgr packages baked into the image on rebuild.
+	private texPackageItems(): SettingDefinition[] {
+		return [
+			{
+				name: 'Extra LaTeX packages',
+				desc: EXTRA_TEX_PACKAGES_DESC,
+				render: (setting: Setting): void => {
+					setting
+						.addText((text) => {
+							text
+								.setPlaceholder('Example: tcolorbox pgfplots fontawesome5')
+								.setValue(this.plugin.settings.extraTexPackages)
+								.onChange(async (value) => {
+									this.plugin.settings.extraTexPackages = value;
+									setExtraTexPackages(value);
+									await this.plugin.saveSettings();
+								});
+						})
+						.addButton((btn) => {
+							btn
+								.setButtonText('Rebuild image')
+								.setTooltip('Apply the package list now instead of on the next export')
+								.onClick(() => this.runImageBuild(btn, false, 'Rebuild image'));
+						});
+				},
+			},
+		];
+	}
+
 	// Shared build handler; cache off forces a clean rebuild of every layer.
-	private async runImageBuild(btn: ButtonComponent, noCache: boolean): Promise<void> {
+	private async runImageBuild(btn: ButtonComponent, noCache: boolean, idleLabel?: string): Promise<void> {
 		btn.setDisabled(true);
 		btn.setButtonText('Building…');
 		const label = noCache ? 'no cache, 5–15 min' : 'cached';
@@ -446,7 +497,7 @@ export class NopeSettingTab extends PluginSettingTab {
 			progress.fail(`Build failed: ${msg}`);
 		} finally {
 			btn.setDisabled(false);
-			btn.setButtonText(noCache ? 'Build (no cache)' : 'Build');
+			btn.setButtonText(idleLabel ?? (noCache ? 'Build (no cache)' : 'Build'));
 			await this.dockerRefresh?.();
 		}
 	}

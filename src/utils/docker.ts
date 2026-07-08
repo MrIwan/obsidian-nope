@@ -43,6 +43,13 @@ export function setDockerPathOverride(path: string): void {
 	dockerPathOverride = path.trim();
 }
 
+// User-configured extra tlmgr packages
+let extraTexPackages = '';
+
+export function setExtraTexPackages(value: string): void {
+	extraTexPackages = value;
+}
+
 // First existing candidate from the search dirs, or null if none exists.
 export function detectDockerBin(): string | null {
 	for (const dir of dockerSearchDirs()) {
@@ -103,11 +110,16 @@ export async function imageExists(): Promise<boolean> {
 	});
 }
 
-// Short hash of the Dockerfile — the image-relevant input
+// Short hash of the image-relevant inputs: Dockerfile plus the user's extra tlmgr packages — a change to either makes the image stale and triggers a rebuild.
 export function pipelineImageHash(pluginDir: string): string {
 	try {
 		const dockerfile = readFileSync(join(pluginDir, 'pipeline', 'Dockerfile'));
-		return createHash('sha256').update(dockerfile).digest('hex').slice(0, 12);
+		return createHash('sha256')
+			.update(dockerfile)
+			.update('\0')
+			.update(extraTexPackages)
+			.digest('hex')
+			.slice(0, 12);
 	} catch {
 		return '';
 	}
@@ -189,11 +201,12 @@ export async function buildImage(
 		let output = '';
 		const proc = spawn(getDockerBin(), ['compose', 'build', noCache ? '--no-cache' : undefined].filter(Boolean) as string[], {
 			cwd: pipelineDir,
-			// VAULT_PATH is only mounted at runtime (compose run), but compose still
-			// validates the volume spec at build time — so give it a valid existing
-			// path here to avoid an "empty section between colons" error.
-			// NOPE_IMAGE_HASH is stamped onto the image as a label (freshness check).
-			env: { ...getDockerEnv(), VAULT_PATH: pipelineDir, NOPE_IMAGE_HASH: pipelineImageHash(pluginDir) },
+			env: {
+				...getDockerEnv(),
+				VAULT_PATH: pipelineDir,
+				NOPE_IMAGE_HASH: pipelineImageHash(pluginDir),
+				NOPE_EXTRA_TLMGR: extraTexPackages,
+			},
 			windowsHide: true,
 		});
 

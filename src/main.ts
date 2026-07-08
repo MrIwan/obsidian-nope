@@ -10,7 +10,7 @@ import { registerMaintenanceCommands } from './commands/maintenance';
 import { NOPE_PREVIEW_VIEW_TYPE, NopePreviewView, registerPreviewClickOpenToggleCommand, registerPreviewCommand } from './view/preview';
 import { getPluginAbsoluteDir } from './utils/paths';
 import { ensureBundledAssets } from './utils/assets';
-import { setDockerPathOverride } from './utils/docker';
+import { setDockerPathOverride, setExtraTexPackages } from './utils/docker';
 import { registerBasesExportView } from './utils/bases';
 
 export default class NopePlugin extends Plugin {
@@ -19,6 +19,7 @@ export default class NopePlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		setDockerPathOverride(this.settings.dockerPath);
+		setExtraTexPackages(this.settings.extraTexPackages);
 
 		// Materialize bundled pipeline/ + skill/ files so installs that only
 		// deliver main.js (BRAT/store) still have the full toolchain on disk.

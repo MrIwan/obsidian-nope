@@ -23,5 +23,12 @@ RUN tlmgr update --self && \
         background \
         setspace && \
     kpsewhich ragged2e.sty glossaries.sty awesomebox.sty svg.sty background.sty setspace.sty
+ARG EXTRA_TLMGR_PACKAGES=""
+RUN if [ -n "$EXTRA_TLMGR_PACKAGES" ]; then \
+        tlmgr install $EXTRA_TLMGR_PACKAGES && \
+        for p in $EXTRA_TLMGR_PACKAGES; do \
+            tlmgr info --only-installed --data name "$p" | grep -qx "$p"; \
+        done; \
+    fi
 ENTRYPOINT []
 WORKDIR /build

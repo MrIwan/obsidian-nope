@@ -564,6 +564,13 @@ Reference a key with `\csname nope<key>\endcsname`, spelled exactly as in the fr
 
 ***
 
+## Extra LaTeX packages
+
+Custom templates often need LaTeX packages that are not part of the base image (e.g. `tcolorbox`, `pgfplots`). Add them under **Settings → LaTeX packages → Extra LaTeX packages** as a space-separated list of [tlmgr](https://ctan.org/pkg/texlive) package names. They are installed on top of the base image as an extra Docker layer.
+
+
+***
+
 ## Table of contents and generated lists
 
 NOPE supports document metadata such as a table of contents, list of figures and list of tables.
