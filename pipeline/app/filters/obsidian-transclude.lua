@@ -556,6 +556,35 @@ end
 -- amsthm environments without a counter — cannot carry a meaningful \autoref number.
 local UNNUMBERED_ENVS = { proof = true, remark = true, note = true }
 
+-- Frontmatter forwarding: expose a note's own frontmatter to its latex-env as \nope<key> macros, scoped per embed. Keys NOPE consumes itself are skipped; keys the template never reads simply go unused (\ifcsname is false).
+local RESERVED_META = {
+  ["latex-env"] = true, ["latex-short"] = true, ["caption"] = true,
+  ["longtable"] = true, ["align"] = true, ["page-break"] = true,
+  ["w"] = true, ["width"] = true, ["scale"] = true,
+  ["gls-id"] = true, ["gls-short"] = true, ["gls-long"] = true,
+  ["gls-description"] = true, ["gls-type"] = true,
+  ["citekey"] = true, ["bibtype"] = true, ["entry-type"] = true,
+  ["nope-branding"] = true, ["nope-template"] = true, ["nope-chapter-autoref"] = true,
+  ["abstract"] = true, ["abstract-title"] = true, ["bibliography"] = true, ["csl"] = true,
+}
+
+-- Escape LaTeX specials so a forwarded value can be typeset safely.
+local function meta_escape(s)
+  return (s:gsub("([&%%$#_{}])", "\\%1"))
+end
+
+-- "\def\nope<key>{value}" runs for every non-reserved frontmatter key.
+local function build_meta_defs(doc_meta)
+  local parts = {}
+  for k, v in pairs(doc_meta) do
+    if type(k) == "string" and not RESERVED_META[k] then
+      local val = meta_escape(pandoc.utils.stringify(v))
+      parts[#parts + 1] = "\\expandafter\\def\\csname nope" .. k .. "\\endcsname{" .. val .. "}"
+    end
+  end
+  return table.concat(parts)
+end
+
 local function wrap_block(notename, env_name, sliced, doc_meta)
   local env_short = doc_meta["latex-short"]
     and pandoc.utils.stringify(doc_meta["latex-short"]) or nil
@@ -571,9 +600,19 @@ local function wrap_block(notename, env_name, sliced, doc_meta)
     opener = opener .. "\\label{" .. label .. "}"
   end
 
-  local wrapped = { pandoc.RawBlock("latex", opener) }
+  -- Scope forwarded frontmatter macros to this embed so sibling embeds don't inherit them.
+  local meta_defs = build_meta_defs(doc_meta)
+
+  local wrapped = {}
+  if meta_defs ~= "" then
+    table.insert(wrapped, pandoc.RawBlock("latex", "\\begingroup" .. meta_defs))
+  end
+  table.insert(wrapped, pandoc.RawBlock("latex", opener))
   for _, b in ipairs(annotated_inner) do table.insert(wrapped, b) end
   table.insert(wrapped, pandoc.RawBlock("latex", "\\end{" .. env_name .. "}"))
+  if meta_defs ~= "" then
+    table.insert(wrapped, pandoc.RawBlock("latex", "\\endgroup"))
+  end
 
   return wrapped
 end

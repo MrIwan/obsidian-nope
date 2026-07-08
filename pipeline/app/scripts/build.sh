@@ -4,6 +4,7 @@
 # Usage: docker compose run --rm pipeline /app/scripts/build.sh <path-relative-to-vault>
 
 set -e
+export LANG=C.UTF-8 LC_ALL=C.UTF-8
 
 INPUT="$1"
 

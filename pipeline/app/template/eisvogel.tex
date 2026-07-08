@@ -401,6 +401,7 @@ $-- also used for underline
   \usepackage[soul]{lua-ul}
 \else
 \usepackage{soul}
+\usepackage{soulutf8}
 $if(CJKmainfont)$
   \ifXeTeX
     % soul's \st doesn't work for CJK:
@@ -603,6 +604,8 @@ $endif$
 % Callouts (callouts.lua → awesomebox) and highlights (==text== → soul \hl).
 \usepackage{awesomebox}
 \usepackage{soul}
+% utf8 + soul: without this \hl{} breaks on multibyte chars (umlauts). Guarded: no-op if unavailable.
+\IfFileExists{soulutf8.sty}{\usepackage{soulutf8}}{}
 
 % SVG logos/images.
 \usepackage{svg}
