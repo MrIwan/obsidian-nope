@@ -788,8 +788,8 @@ export class NopePreviewView extends ItemView {
 		this.bodyEl.prepend(banner);
 	}
 
-	// pipeline/build holds the fixed-path error logs (last_latex_run.log, last-build.log)
-	// alongside the per-doc subfolders — open it, not the per-doc folder, for debugging.
+	// pipeline/build holds last-build.log plus the per-doc subfolders with the
+	// run log (build_sh.log) and LaTeX intermediates — open it for debugging.
 	private buildFolderPath(): string {
 		return join(getPluginAbsoluteDir(this.plugin), 'pipeline', 'build');
 	}
@@ -798,9 +798,13 @@ export class NopePreviewView extends ItemView {
 		this.bodyEl?.querySelector('.nope-preview-banner')?.remove();
 	}
 
-	// Pull the first LaTeX error ("!"-line) or the last lines as fallback from the run log.
+	// Pull the first LaTeX error ("!"-line) or the last lines as fallback from the
+	// run log in the document's work directory (build/<doc>/build_sh.log).
 	private readLatexLogExcerpt(): string | null {
-		const logPath = join(getPluginAbsoluteDir(this.plugin), 'pipeline', 'build', 'last_latex_run.log');
+		if (!this.filePath) return null;
+		const base = this.filePath.split('/').pop()?.replace(/\.md$/i, '') ?? '';
+		if (!base) return null;
+		const logPath = join(this.buildFolderPath(), base, 'build_sh.log');
 		if (!existsSync(logPath)) return null;
 		try {
 			const lines = readFileSync(logPath, 'utf8').split('\n');

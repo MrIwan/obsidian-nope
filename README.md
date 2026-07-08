@@ -655,6 +655,11 @@ This command removes the pipeline image. The next export can then rebuild the en
 
 This command clears the build folder used during export. It is mainly useful for maintenance and debugging.
 
+***
+
+## Example vault
+
+The repo ships an `example-vault/` you can open directly in Obsidian. `example-vault/Features/` contains one small document per feature (tables, citations, glossary, mermaid, callouts, …) — export the one you care about to see exactly that feature in isolation. `Example Document/` remains the full integration showcase.
 
 ***
 

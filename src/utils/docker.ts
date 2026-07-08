@@ -246,7 +246,6 @@ export async function runPipeline(
 ): Promise<string> {
 	const pipelineDir = join(pluginDir, 'pipeline');
 	const buildDir = join(pipelineDir, 'build');
-	const logFile = join(buildDir, 'last_latex_run.log');
 
 	// Container output PDF is mapped from /build/<basename>/<basename>.pdf to <pluginDir>/pipeline/build/...
 	const baseName = mdRelPath
@@ -254,8 +253,11 @@ export async function runPipeline(
 		.pop()!
 		.replace(/\.md$/i, '');
 	const pdfPath = join(buildDir, baseName, `${baseName}.pdf`);
+	// Run log lives with the document's intermediates (build/<doc>/build_sh.log);
+	// only the docker image build log stays at the build/ root.
+	const logFile = join(buildDir, baseName, 'build_sh.log');
 
-	mkdirSync(buildDir, { recursive: true });
+	mkdirSync(join(buildDir, baseName), { recursive: true });
 
 	const ready = await checkDockerReady();
 	if (!ready.ok) throw new Error(ready.message);

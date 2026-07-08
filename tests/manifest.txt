@@ -1,0 +1,106 @@
+# Pipeline test manifest — consumed by tests/run-tests.sh.
+#
+# Format:
+#   [<doc path relative to the vault>]     starts a test case
+#   must=<string>                          generated .tex must contain the string (fixed, no regex)
+#   must-not=<string>                      generated .tex must NOT contain the string
+#
+# Every case additionally checks: exit code 0, a non-empty PDF, and that the
+# final LaTeX log reports no undefined references.
+
+# ---- Feature documents (unit level) ----
+
+[Features/Feature-Tables.md]
+must=Comparison of implementation variants
+must=Project phases overview
+must=\begin{longtable}
+must-not=[Not found:
+
+[Features/Feature-Citations.md]
+must=Vaswani
+must=Rumelhart
+must=CSLReferences
+must-not=[Not found:
+
+[Features/Feature-Glossary.md]
+must=\gls{
+must=\newacronym
+must-not=[Not found:
+
+[Features/Feature-Equations.md]
+must=\begin{equation}
+must=\label{eq:
+must-not=[Not found:
+
+[Features/Feature-Environments.md]
+must=\begin{theorem}
+must=Pythagoras
+must-not=[Not found:
+
+[Features/Feature-Callouts.md]
+must=noteblock
+must=Important Notice
+must-not=[Not found:
+
+[Features/Feature-Figures.md]
+must=\begin{figure}
+must=Diagram of a Neuron
+must=\includegraphics
+must-not=[Not found:
+
+# Note: the rendered PNG travels via pandoc --extract-media into media/,
+# so assert on the figure + caption, not on a mermaid/ path.
+[Features/Feature-Mermaid.md]
+must=\begin{figure}
+must=The example representation from the Mermaid
+must=\includegraphics
+must-not=[Not found:
+
+[Features/Feature-Footnotes.md]
+must=\footnote{
+must-not=[Not found:
+
+[Features/Feature-Slices.md]
+# Pandoc escapes brackets/# in LaTeX output ({[}Heading not found: slice-source\#…{]}),
+# so assert on the unescaped prefix only.
+must=Middle Section
+must=Sub-Heading A
+must=Heading not found: slice-source
+must-not=content of the first section
+must-not=content of the third section
+must-not=[Not found:
+
+[Features/Feature-Markup.md]
+must=\hl{
+must=After the hidden region
+must-not=this text is hidden
+must-not=[Not found:
+
+[Features/Feature-Branding.md]
+must=titlepage
+must=A Subsection
+must-not=[Not found:
+
+# ---- Integration documents ----
+
+[Example Document/Example Document.md]
+must=Vaswani
+must=Rumelhart
+must=\begin{theorem}
+must=Comparison of implementation variants
+must=\begin{longtable}
+must=\gls{
+must=\footnote{
+must=The example representation from the Mermaid
+must=Heading not found: slice-source
+must-not=content of the first section
+must-not=this text is hidden
+must-not=[Not found:
+
+[Minimal LaTex/Example Custom LaTeX.md]
+must=demobox
+must-not=[Not found:
+
+[Book Example/Book Example.md]
+must=\part{
+must-not=[Not found:

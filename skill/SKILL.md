@@ -198,7 +198,7 @@ Greek letters (θ, η, …), math operators (−, ≤, ≥, ≠, ∞, →, ∑, 
 The export notice shows the failing phase, but the real cause is in the build logs (in the plugin folder under `pipeline/build/`):
 
 - `pipeline/build/<doc>/<doc>.log` — the full pdflatex log for that document. Search it for a line starting with `!` (the first LaTeX error) — that line and the few after it name the cause. The preview's error banner already surfaces this first `!`-line.
-- `pipeline/build/last_latex_run.log` — the latexmk/pdflatex run log of the most recent export (same content, fixed path — easiest to point someone at).
+- `pipeline/build/<doc>/build_sh.log` — the full pipeline run log (pandoc + latexmk output) of that document's export; kept together with the LaTeX intermediates.
 - `pipeline/build/last-build.log` — the Docker **image** build log (only relevant when the image build itself fails, not a document build).
 
 `Latexmk: ... Problematic refs and citations` and `multiply defined` are **warnings**, not the failure — keep reading to the `!`-line for the actual error. Common culprits: an unset Unicode character (see above), a missing `caption:` on a `latex-env: table`/`mermaid` note, or a malformed custom template.
