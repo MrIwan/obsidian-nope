@@ -203,6 +203,21 @@ The export notice shows the failing phase, but the real cause is in the build lo
 
 `Latexmk: ... Problematic refs and citations` and `multiply defined` are **warnings**, not the failure — keep reading to the `!`-line for the actual error. Common culprits: an unset Unicode character (see above), a missing `caption:` on a `latex-env: table`/`mermaid` note, or a malformed custom template.
 
+## Running the pipeline standalone (no Obsidian)
+
+The whole export runs headless via Docker — useful to test a document or reproduce a build failure without driving the Obsidian UI:
+
+```bash
+cd <vault>/.obsidian/plugins/nope/pipeline
+VAULT_PATH="/absolute/path/to/vault" docker compose run --rm pipeline "Folder/Document.md"
+```
+
+- The document path is **relative to the vault root**; the PDF lands in `pipeline/build/<doc>/<doc>.pdf`, logs and LaTeX intermediates next to it (`build_sh.log`, `<doc>.log`, `<doc>.tex`).
+- Requires the `nope` Docker image (built by the plugin on first export, or manually via `docker compose build` in the same directory).
+- Everything resolves inside the container — custom templates, branding, bibliography, citation notes, mermaid. **Exception: Bases** (`![[X.base#View]]`) need the Obsidian API and stay empty in standalone runs.
+- Failures exit non-zero; resolution errors print a `>>> NOPE-ERROR: …` line naming the cause.
+- `NOPE_BUILD_PATH=/some/dir` redirects the output root (defaults to `./build`) — handy for throwaway test runs.
+
 ## Commands
 
 - `Export active note to PDF` — main command.

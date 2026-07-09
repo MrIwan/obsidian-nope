@@ -663,6 +663,22 @@ The repo ships an `example-vault/` you can open directly in Obsidian. `example-v
 
 ***
 
+## Running the pipeline standalone (CLI)
+
+Every export also works without Obsidian — the pipeline is a plain Docker container. From the `pipeline/` directory (in the repo, or inside a vault at `.obsidian/plugins/nope/pipeline`):
+
+```bash
+VAULT_PATH="/absolute/path/to/vault" docker compose run --rm pipeline "Folder/Document.md"
+```
+
+- The document path is **relative to the vault root**. The PDF lands in `pipeline/build/<doc>/<doc>.pdf`, with the run log (`build_sh.log`) and LaTeX intermediates next to it.
+- Custom templates, branding, bibliography, citation notes and mermaid all resolve inside the container. Only **Bases** need the Obsidian API and stay empty in standalone runs.
+- Failures exit non-zero and print a `>>> NOPE-ERROR: …` line naming the cause.
+- The `nope` image must exist once — `docker compose build` in the same directory, or let the plugin build it.
+- `NOPE_BUILD_PATH=/some/dir` redirects the output root (default `./build`).
+
+***
+
 ## AI skill integration
 
 NOPE can install a skill into the vault, where the NOPE conventions are defined. The `Install AI conventions skill` command copies the skill into the vault. The goal is to help AI tools follow the plugin's writing conventions when generating or editing exportable notes.
