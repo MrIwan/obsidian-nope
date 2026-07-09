@@ -2,8 +2,11 @@ services:
   pipeline:
     build:
       context: .
+      # Dockerfile.pull = prebuilt image from GHCR, Dockerfile = full local build.
+      dockerfile: ${NOPE_DOCKERFILE:-Dockerfile}
       args:
         EXTRA_TLMGR_PACKAGES: "${NOPE_EXTRA_TLMGR:-}"
+        NOPE_IMAGE_TAG: "${NOPE_IMAGE_TAG:-}"
       labels:
         nope.image-hash: "${NOPE_IMAGE_HASH:-}"
     image: nope

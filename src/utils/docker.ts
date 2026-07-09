@@ -50,6 +50,34 @@ export function setExtraTexPackages(value: string): void {
 	extraTexPackages = value;
 }
 
+// Prebuilt image published by CI on tag pushes (docker-image.yml).
+export const PREBUILT_IMAGE_REPO = 'ghcr.io/mriwan/nope-pipeline';
+
+// Prebuilt mode pulls from GHCR via Dockerfile.pull; off = full local build.
+let usePrebuiltImage = true;
+
+export function setUsePrebuiltImage(value: boolean): void {
+	usePrebuiltImage = value;
+}
+
+// Empty = image tag matching the plugin version; set to pull e.g. a test-* tag.
+let imageTagOverride = '';
+
+export function setImageTagOverride(value: string): void {
+	imageTagOverride = value.trim();
+}
+
+// Plugin version from the manifest; default tag for the prebuilt image.
+let pluginVersion = '';
+
+export function setPluginVersion(value: string): void {
+	pluginVersion = value;
+}
+
+export function prebuiltImageTag(): string {
+	return imageTagOverride || pluginVersion;
+}
+
 // First existing candidate from the search dirs, or null if none exists.
 export function detectDockerBin(): string | null {
 	for (const dir of dockerSearchDirs()) {
@@ -110,12 +138,15 @@ export async function imageExists(): Promise<boolean> {
 	});
 }
 
-// Short hash of the image-relevant inputs: Dockerfile plus the user's extra tlmgr packages — a change to either makes the image stale and triggers a rebuild.
+// Short hash of the image-relevant inputs — a change makes the image stale and triggers a rebuild.
+// Prebuilt mode: registry tag plus the user's extra tlmgr packages; local build: Dockerfile content plus packages.
 export function pipelineImageHash(pluginDir: string): string {
 	try {
-		const dockerfile = readFileSync(join(pluginDir, 'pipeline', 'Dockerfile'));
+		const source: string | Uint8Array = usePrebuiltImage
+			? `pull:${PREBUILT_IMAGE_REPO}:${prebuiltImageTag()}`
+			: readFileSync(join(pluginDir, 'pipeline', 'Dockerfile'));
 		return createHash('sha256')
-			.update(dockerfile)
+			.update(source)
 			.update('\0')
 			.update(extraTexPackages)
 			.digest('hex')
@@ -199,13 +230,19 @@ export async function buildImage(
 
 	return new Promise<void>((resolve, reject) => {
 		let output = '';
-		const proc = spawn(getDockerBin(), ['compose', 'build', noCache ? '--no-cache' : undefined].filter(Boolean) as string[], {
+		// --pull in prebuilt mode so a re-pushed tag (test-*) is fetched fresh.
+		const args = ['compose', 'build'];
+		if (noCache) args.push('--no-cache');
+		if (usePrebuiltImage) args.push('--pull');
+		const proc = spawn(getDockerBin(), args, {
 			cwd: pipelineDir,
 			env: {
 				...getDockerEnv(),
 				VAULT_PATH: pipelineDir,
 				NOPE_IMAGE_HASH: pipelineImageHash(pluginDir),
 				NOPE_EXTRA_TLMGR: extraTexPackages,
+				NOPE_DOCKERFILE: usePrebuiltImage ? 'Dockerfile.pull' : 'Dockerfile',
+				NOPE_IMAGE_TAG: prebuiltImageTag(),
 			},
 			windowsHide: true,
 		});

@@ -4,7 +4,7 @@ import { remote } from 'electron';
 import type NopePlugin from './main';
 import type { NopeSettings, PreflightResults } from './types';
 import { runPreflightChecks } from './utils/preflight';
-import { buildImage, detectDockerBin, setDockerPathOverride, setExtraTexPackages } from './utils/docker';
+import { PREBUILT_IMAGE_REPO, buildImage, detectDockerBin, setDockerPathOverride, setExtraTexPackages, setImageTagOverride, setUsePrebuiltImage } from './utils/docker';
 import { ProgressNotice, parseBuildStep } from './utils/progress';
 import { getPluginAbsoluteDir, getVaultAbsolutePath } from './utils/paths';
 import { cleanupBuild, installAiSkill, removeDockerImage } from './commands/maintenance';
@@ -18,10 +18,19 @@ export const DEFAULT_SETTINGS: NopeSettings = {
 	dockerPath: '',
 	previewAutoRender: false,
 	extraTexPackages: '',
+	usePrebuiltImage: true,
+	imageTag: '',
 };
 
 const EXTRA_TEX_PACKAGES_DESC =
 	'Space-separated tlmgr package names, installed on top of the base image (e.g. cancel pgfplots).';
+
+const USE_PREBUILT_DESC =
+	`On (default): pull the release image from ${PREBUILT_IMAGE_REPO} and only add extra LaTeX packages locally (fast, bit-identical for all users). ` +
+	'Off: build everything locally from pipeline/Dockerfile.';
+
+const IMAGE_TAG_DESC =
+	'Prebuilt image only. Empty = tag matching the plugin version. Set a specific tag (e.g. test-x) to try a CI build without a release.';
 
 export class NopeSettingTab extends PluginSettingTab {
 	plugin: NopePlugin;
@@ -252,6 +261,32 @@ export class NopeSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
+			.setName('Use prebuilt image')
+			.setDesc(USE_PREBUILT_DESC)
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.usePrebuiltImage).onChange(async (value) => {
+					this.plugin.settings.usePrebuiltImage = value;
+					setUsePrebuiltImage(value);
+					await this.plugin.saveSettings();
+					await refreshChecks();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Image tag override')
+			.setDesc(IMAGE_TAG_DESC)
+			.addText((text) => {
+				text
+					.setPlaceholder(this.plugin.manifest.version)
+					.setValue(this.plugin.settings.imageTag)
+					.onChange(async (value) => {
+						this.plugin.settings.imageTag = value.trim();
+						setImageTagOverride(value);
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
 			.setName('Docker image')
 			.setDesc('Build uses the layer cache; "no cache" rebuilds everything. Log: pipeline/build/last-build.log.')
 			.addButton((btn) => {
@@ -419,6 +454,36 @@ export class NopeSettingTab extends PluginSettingTab {
 								await this.dockerRefresh?.();
 							});
 						});
+				},
+			},
+			{
+				name: 'Use prebuilt image',
+				desc: USE_PREBUILT_DESC,
+				render: (setting: Setting): void => {
+					setting.addToggle((toggle) => {
+						toggle.setValue(this.plugin.settings.usePrebuiltImage).onChange(async (value) => {
+							this.plugin.settings.usePrebuiltImage = value;
+							setUsePrebuiltImage(value);
+							await this.plugin.saveSettings();
+							await this.dockerRefresh?.();
+						});
+					});
+				},
+			},
+			{
+				name: 'Image tag override',
+				desc: IMAGE_TAG_DESC,
+				render: (setting: Setting): void => {
+					setting.addText((text) => {
+						text
+							.setPlaceholder(this.plugin.manifest.version)
+							.setValue(this.plugin.settings.imageTag)
+							.onChange(async (value) => {
+								this.plugin.settings.imageTag = value.trim();
+								setImageTagOverride(value);
+								await this.plugin.saveSettings();
+							});
+					});
 				},
 			},
 			{

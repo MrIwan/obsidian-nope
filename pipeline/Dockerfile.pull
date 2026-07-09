@@ -1,0 +1,13 @@
+# Thin layer over the prebuilt CI image (built by .github/workflows/docker-image.yml
+# from ./Dockerfile). ENTRYPOINT/WORKDIR are inherited from the base; the full
+# local build in ./Dockerfile stays as fallback (self-build/air-gap).
+ARG NOPE_IMAGE_TAG
+FROM ghcr.io/mriwan/nope-pipeline:${NOPE_IMAGE_TAG}
+
+ARG EXTRA_TLMGR_PACKAGES=""
+RUN if [ -n "$EXTRA_TLMGR_PACKAGES" ]; then \
+        tlmgr install $EXTRA_TLMGR_PACKAGES && \
+        for p in $EXTRA_TLMGR_PACKAGES; do \
+            tlmgr info --only-installed --data name "$p" | grep -qx "$p"; \
+        done; \
+    fi

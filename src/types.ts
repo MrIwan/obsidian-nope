@@ -8,6 +8,8 @@ export interface NopeSettings {
 	dockerPath: string;
 	previewAutoRender: boolean;
 	extraTexPackages: string;
+	usePrebuiltImage: boolean;
+	imageTag: string;
 }
 
 export interface PreflightCheckResult {

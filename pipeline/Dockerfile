@@ -5,6 +5,10 @@ RUN cargo install merman-cli --locked --version 0.7.0
 # --- Stage 2: Pipeline-Image --------------------------------------------------
 # FROM pandoc/extra:3.9.0.0-debian
 FROM pandoc/extra:3.9.0.2-debian
+# Links the GHCR package to the repo; NOPE_IMAGE_TAG is only consumed by
+# Dockerfile.pull, declared here so compose can pass it without a warning.
+LABEL org.opencontainers.image.source="https://github.com/MrIwan/obsidian-nope"
+ARG NOPE_IMAGE_TAG=""
 # bash für unser build.sh — Alpine-Base hat nur /bin/sh.
 RUN apt update && apt upgrade -y && apt install bash fonts-freefont-ttf latexmk -y
 

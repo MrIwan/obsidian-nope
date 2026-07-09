@@ -24,7 +24,7 @@ At a high level, the setup is simple:
 2. Install the NOPE plugin.
 3. Export the active note to PDF.
 
-The first export prepares the full toolchain, including the download and build of the Docker image. Alternatively you can build the image in the Settings or via the command palette. PDF export is a regular command from the Obsidian command palette.
+The first export prepares the full toolchain. By default it pulls the prebuilt pipeline image from `ghcr.io/mriwan/nope-pipeline`. Alternatively you can pull ( or build ) the image in the Settings or via the command palette. PDF export is a regular command from the Obsidian command palette.
 
 ### Install the plugin
 
@@ -40,7 +40,7 @@ The first export prepares the full toolchain, including the download and build o
 2. Add beta plugin: `MrIwan/obsidian-nope`.
 3. Enable NOPE.
 
-Requires Docker. First export builds the image.
+Requires Docker. First export pulls (or builds) the image.
 
 ***
 
@@ -628,7 +628,7 @@ Toggles the click-to-open mode of the preview (see [Editor functionality](#edito
 
 ### Build docker image (with cache) / (no cache)
 
-These commands build the Docker image used by the export pipeline. You typically need it for the first run and after environment-related changes. The cached variant reuses existing layers (faster). The no-cache variant rebuilds from scratch. The image also rebuilds itself automatically after a plugin update changes the pipeline.
+These commands prepare the Docker image used by the export pipeline. With **Use prebuilt image** on (default) this pulls the release image from GHCR and only adds your extra LaTeX packages as a local layer. With the toggle off it builds everything locally from the shipped Dockerfile. You typically need it for the first run and after environment-related changes. The cached variant reuses existing layers (faster). The no-cache variant rebuilds from scratch. The image also rebuilds itself automatically after a plugin update changes the pipeline.
 
 
 ### Create branding template
