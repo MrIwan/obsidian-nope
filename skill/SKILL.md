@@ -2,7 +2,7 @@
 name: nope
 description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract, numbersections, book), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
-last-updated: 2026-07-06
+last-updated: 2026-07-13
 ---
 
 # nope — authoring conventions
@@ -64,6 +64,8 @@ Define it in a **custom LaTeX template, not in `header-includes`** — raw LaTeX
 ```
 
 A note with `latex-env: praxisfall` then renders as that environment and `[[…]]` refs read "Praxisfall N". The `\providecommand{…autorefname}` line is what makes `\autoref` print your name instead of inheriting the previous counter — keep it. Same pattern for any amsthm style (`\theoremstyle{definition}` etc.). Keep the `%%% NOPE-IMPORTS %%%` block intact (see `nope-template` below).
+
+**Restyling NOPE defaults.** Callouts, fit tables, highlights and header logos render through overridable LaTeX names whose defaults ship with the export: `nopecallout{<type>}` (environment; default maps the Obsidian type to an awesomebox), `nopefittable{<align>}{<colspec>}{<caption>}` (environment; default is a one-page auto-shrunk booktabs table), `\nopehl{…}` (default: soul highlight) and `\nopelogo[<height>]{<path>}` (default: raised `\includegraphics`, 0.7cm). Define any of these names in a custom template **before** the header-includes to replace the default — e.g. restyle all callouts without touching the pipeline. If you don't, the defaults apply; old templates keep working.
 
 ### `longtable` (table layout, default `false`)
 
@@ -177,7 +179,7 @@ Recognized fields: `author`, `editor`, `title`, `year`, `month`, `journal`, `boo
 
 ### Branding notes
 
-One `.md` per customer/project with frontmatter overrides; the body is ignored on export. **Quote every wikilink value** (`"[[logo.png]]"`) — unquoted, YAML parses it as a list and fails. Logo wikilinks in header/footer slots (`header-left/center/right`, `footer-left/center/right`) auto-expand to an `\includegraphics` raisebox; default height `0.7cm`, override with `"[[logo.png|h=1.2cm]]"`. `titlepage-logo`/`titlepage-background` take a plain path (substitution only). SVG logos are unsupported under pdflatex — use PNG/PDF.
+One `.md` per customer/project with frontmatter overrides; the body is ignored on export. **Quote every wikilink value** (`"[[logo.png]]"`) — unquoted, YAML parses it as a list and fails. Logo wikilinks in header/footer slots (`header-left/center/right`, `footer-left/center/right`) auto-expand to `\nopelogo{<path>}` (a raised `\includegraphics`); default height `0.7cm`, override with `"[[logo.png|h=1.2cm]]"`. `titlepage-logo`/`titlepage-background` take a plain path (substitution only). SVG logos are unsupported under pdflatex — use PNG/PDF.
 
 **Always reference a logo by wikilink, never by an absolute path.** The export copies the linked image into the per-document build folder and rewrites the path to point there, so the LaTeX run finds it. An absolute path (e.g. `/Users/me/logo.png`) is *not* copied and lives outside the build sandbox, so the image is missing and the build fails. Use `"[[logo.png]]"`; the file may sit anywhere in the vault.
 

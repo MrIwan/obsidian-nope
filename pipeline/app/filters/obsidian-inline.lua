@@ -1,7 +1,8 @@
 --   %%text%%   --> removed
---   ==text==   --> wrapped in \hl{...} (LaTeX `soul` package).
+--   ==text==   --> wrapped in \nopehl{...} (default: soul \hl, injected below).
 
 local doc_state = { hidden = false }
+local has_highlight = false
 
 local process_inlines  -- forward declaration
 
@@ -33,8 +34,9 @@ process_inlines = function(inlines)
 	end
 
 	local function end_marked()
-		-- Wrap buffered content in \hl{} and flush.
-		table.insert(out, pandoc.RawInline("latex", "\\hl{"))
+		-- Wrap buffered content in \nopehl{} and flush.
+		has_highlight = true
+		table.insert(out, pandoc.RawInline("latex", "\\nopehl{"))
 		for _, x in ipairs(marked) do table.insert(out, x) end
 		table.insert(out, pandoc.RawInline("latex", "}"))
 		marked = nil
@@ -158,5 +160,14 @@ end
 
 function Pandoc(doc)
 	doc.blocks = walk_blocks(doc.blocks)
+	-- Inject the guarded \nopehl default (soul \hl); a template can predefine it to restyle.
+	if has_highlight then
+		local hi = doc.meta["header-includes"] or pandoc.MetaList({})
+		if hi.t ~= "MetaList" then hi = pandoc.MetaList({hi}) end
+		table.insert(hi, pandoc.MetaBlocks({
+			pandoc.RawBlock("latex", "\\providecommand{\\nopehl}[1]{\\hl{#1}}")
+		}))
+		doc.meta["header-includes"] = hi
+	end
 	return doc
 end

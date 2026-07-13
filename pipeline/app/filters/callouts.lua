@@ -1,37 +1,47 @@
--- Convert Obsidian callouts ([!type] Title \n> Content) to LaTeX awesomebox environments.
+-- Convert Obsidian callouts ([!type] Title \n> Content) to \begin{nopecallout}{<type>} blocks.
+-- Type→awesomebox mapping lives in the injected LaTeX defaults below; a custom
+-- template can predefine nopecallout to restyle callouts without touching Lua.
 
 local has_callout = false
 
--- Obsidian type to awesomebox environment mapping.
-local type_map = {
-  note      = "noteblock",
-  info      = "noteblock",
-  tldr      = "noteblock",
-  summary   = "noteblock",
-  abstract  = "noteblock",
-  tip       = "tipblock",
-  hint      = "tipblock",
-  example   = "tipblock",
-  todo      = "tipblock",
-  warning   = "warningblock",
-  caution   = "warningblock",
-  attention = "warningblock",
-  danger    = "cautionblock",
-  important = "cautionblock",
-  error     = "cautionblock",
-  bug       = "cautionblock",
-  question  = "noteblock",
-  help      = "noteblock",
-  faq       = "noteblock",
-  success   = "tipblock",
-  done      = "tipblock",
-  check     = "tipblock",
-  failure   = "warningblock",
-  fail      = "warningblock",
-  missing   = "warningblock",
-  quote     = "noteblock",
-  cite      = "noteblock",
-}
+-- Guarded defaults for header-includes; skipped entirely if a template defines nopecallout.
+local CALLOUT_DEFS = [[
+\makeatletter
+\ifcsname nopecallout\endcsname\else
+\newcommand{\nope@co@def}[2]{\expandafter\def\csname nope@co@#1\endcsname{#2}}
+\nope@co@def{note}{noteblock}
+\nope@co@def{info}{noteblock}
+\nope@co@def{tldr}{noteblock}
+\nope@co@def{summary}{noteblock}
+\nope@co@def{abstract}{noteblock}
+\nope@co@def{question}{noteblock}
+\nope@co@def{help}{noteblock}
+\nope@co@def{faq}{noteblock}
+\nope@co@def{quote}{noteblock}
+\nope@co@def{cite}{noteblock}
+\nope@co@def{tip}{tipblock}
+\nope@co@def{hint}{tipblock}
+\nope@co@def{example}{tipblock}
+\nope@co@def{todo}{tipblock}
+\nope@co@def{success}{tipblock}
+\nope@co@def{done}{tipblock}
+\nope@co@def{check}{tipblock}
+\nope@co@def{warning}{warningblock}
+\nope@co@def{caution}{warningblock}
+\nope@co@def{attention}{warningblock}
+\nope@co@def{failure}{warningblock}
+\nope@co@def{fail}{warningblock}
+\nope@co@def{missing}{warningblock}
+\nope@co@def{danger}{cautionblock}
+\nope@co@def{important}{cautionblock}
+\nope@co@def{error}{cautionblock}
+\nope@co@def{bug}{cautionblock}
+\newenvironment{nopecallout}[1]{%
+  \edef\nope@co@env{\ifcsname nope@co@#1\endcsname\csname nope@co@#1\endcsname\else noteblock\fi}%
+  \csname\nope@co@env\endcsname}%
+ {\csname end\nope@co@env\endcsname}
+\fi
+\makeatother]]
 
 -- Detect a callout marker: expects a leading "[!type]" string.
 local function parse_callout_marker(inlines)
@@ -88,8 +98,6 @@ function BlockQuote(el)
 
   local typ = parse_callout_marker(first.content)
   if not typ then return nil end
-
-  local env = type_map[typ] or "noteblock"
   has_callout = true
 
   -- Title: rest of first line after marker, only up to the first line break.
@@ -109,7 +117,7 @@ function BlockQuote(el)
 
   -- If the first line had title text, insert it as a bold paragraph.
   local result = {}
-  result[#result + 1] = pandoc.RawBlock("latex", "\\begin{" .. env .. "}")
+  result[#result + 1] = pandoc.RawBlock("latex", "\\begin{nopecallout}{" .. typ .. "}")
 
   if #title_inlines > 0 then
     local title_para = pandoc.Para({
@@ -122,14 +130,16 @@ function BlockQuote(el)
     result[#result + 1] = b
   end
 
-  result[#result + 1] = pandoc.RawBlock("latex", "\\end{" .. env .. "}")
+  result[#result + 1] = pandoc.RawBlock("latex", "\\end{nopecallout}")
   return result
 end
 
--- Set meta flag when callouts were present (template can react to it).
+-- Inject the guarded nopecallout defaults to header-includes (glossary pattern).
 function Pandoc(doc)
-  if has_callout then
-    doc.meta["has-callouts"] = pandoc.MetaBool(true)
-  end
+  if not has_callout then return doc end
+  local hi = doc.meta["header-includes"] or pandoc.MetaList({})
+  if hi.t ~= "MetaList" then hi = pandoc.MetaList({hi}) end
+  table.insert(hi, pandoc.MetaBlocks({ pandoc.RawBlock("latex", CALLOUT_DEFS) }))
+  doc.meta["header-includes"] = hi
   return doc
 end

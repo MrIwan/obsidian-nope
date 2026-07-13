@@ -64,7 +64,7 @@ For `header-left`, `header-center`, `header-right`, `footer-left`,
 
 - **Plain text**: `header-left: "Draft"` renders text directly.
 - **Logo via wikilink**: `header-left: "[[logo.png]]"` auto-expands to
-  `\raisebox{-0.3\height}{\includegraphics[height=0.7cm]{<path>}}`. Default
+  `\nopelogo{<path>}` (a raised `\includegraphics`). Default
   height is `0.7cm`; override with an optional `|h=<value>` suffix:
   `"[[logo.png|h=1.2cm]]"`. Accepted units: `cm`, `mm`, `pt`, `em`, and LaTeX
   lengths like `0.5\textheight`.

@@ -401,8 +401,31 @@ local function blocks_to_latex_line(blocks)
   return (s:gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
--- longtable: false → render the table as a booktabs tabular wrapped in a shrink-only \resizebox (graphicx). True pandas longtable
+-- Guarded table defaults for header-includes; a custom template can predefine
+-- nopefittable / \nopelongtableleft to restyle without touching Lua.
+local needs_table_defs = false
+local TABLE_DEFS = [[
+\makeatletter
+\ifcsname nopefittable\endcsname\else
+\newsavebox{\nope@ft@box}
+\newenvironment{nopefittable}[3]{%
+  \def\nope@ft@left{left}\def\nope@ft@align{#1}%
+  \begin{table}[H]%
+  \ifx\nope@ft@align\nope@ft@left\raggedright\else\centering\fi
+  \caption{#3}%
+  \begin{lrbox}{\nope@ft@box}%
+  \begin{tabular}{@{}#2@{}}}%
+ {\end{tabular}\end{lrbox}%
+  \resizebox{\ifdim\wd\nope@ft@box>\linewidth \linewidth\else\wd\nope@ft@box\fi}{!}{\usebox{\nope@ft@box}}%
+  \end{table}}
+\fi
+\makeatother
+\providecommand{\nopelongtableleft}{\setlength{\LTleft}{0pt}\setlength{\LTright}{\fill}}
+\providecommand{\nopelongtablecenter}{\setlength{\LTleft}{\fill}\setlength{\LTright}{\fill}}]]
+
+-- longtable: false → booktabs tabular in a shrink-only fit env (defs injected above).
 local function render_fit_table(table_block, caption_inlines, label, first_embed, align)
+  needs_table_defs = true
   local cols = {}
   for _, spec in ipairs(table_block.colspecs) do
     cols[#cols + 1] = LATEX_ALIGN[spec[1]] or "l"
@@ -426,20 +449,15 @@ local function render_fit_table(table_block, caption_inlines, label, first_embed
   end
 
   local label_tex = first_embed and ("\\label{" .. label .. "}") or ""
+  local caption_tex = blocks_to_latex_line({ pandoc.Plain(caption_inlines) }) .. label_tex
   local tex = table.concat({
-    "\\begin{table}[H]",
-    (align == "left") and "\\raggedright" or "\\centering",
-    "\\caption{" .. blocks_to_latex_line({ pandoc.Plain(caption_inlines) }) .. label_tex .. "}",
-    "\\resizebox{\\ifdim\\width>\\linewidth \\linewidth\\else\\width\\fi}{!}{%",
-    "\\begin{tabular}{@{}" .. table.concat(cols) .. "@{}}",
+    "\\begin{nopefittable}{" .. align .. "}{" .. table.concat(cols) .. "}{" .. caption_tex .. "}",
     "\\toprule",
     render_rows(table_block.head.rows),
     "\\midrule",
     render_rows(body_rows),
     "\\bottomrule",
-    "\\end{tabular}%",
-    "}",
-    "\\end{table}",
+    "\\end{nopefittable}",
   }, "\n")
 
   return pandoc.RawBlock("latex", tex)
@@ -483,10 +501,9 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
 
   -- longtable centers via \LTleft/\LTright=\fill; flush left, then reset after.
   if align == "left" then
-    table.insert(annotated, idx,
-      pandoc.RawBlock("latex", "\\setlength{\\LTleft}{0pt}\\setlength{\\LTright}{\\fill}"))
-    table.insert(annotated, idx + 2,
-      pandoc.RawBlock("latex", "\\setlength{\\LTleft}{\\fill}\\setlength{\\LTright}{\\fill}"))
+    needs_table_defs = true
+    table.insert(annotated, idx, pandoc.RawBlock("latex", "\\nopelongtableleft"))
+    table.insert(annotated, idx + 2, pandoc.RawBlock("latex", "\\nopelongtablecenter"))
   end
 
   return annotated
@@ -679,6 +696,14 @@ local function try_resolve_citation(target)
   return pandoc.Cite({ pandoc.Str("@" .. key) }, { pandoc.Citation(key, "NormalCitation") })
 end
 
+-- Append a raw LaTeX block to header-includes.
+local function append_header_includes(doc, tex)
+  local hi = doc.meta["header-includes"] or pandoc.MetaList({})
+  if hi.t ~= "MetaList" then hi = pandoc.MetaList({hi}) end
+  table.insert(hi, pandoc.MetaBlocks({ pandoc.RawBlock("latex", tex) }))
+  doc.meta["header-includes"] = hi
+end
+
 -- Flush collected glossary entries to header-includes; set has-glossary meta flag.
 local function flush_glossary_entries(doc)
   if next(glossary_entries) == nil then return end
@@ -696,12 +721,7 @@ local function flush_glossary_entries(doc)
     end
   end
 
-  local hi = doc.meta["header-includes"] or pandoc.MetaList({})
-  if hi.t ~= "MetaList" then hi = pandoc.MetaList({hi}) end
-  table.insert(hi, pandoc.MetaBlocks({
-    pandoc.RawBlock("latex", table.concat(lines, "\n"))
-  }))
-  doc.meta["header-includes"] = hi
+  append_header_includes(doc, table.concat(lines, "\n"))
   doc.meta["has-glossary"] = pandoc.MetaBool(true)
 end
 
@@ -1048,7 +1068,10 @@ function Pandoc(doc)
   doc.blocks = walked.content
   -- Phase 2b: Resolve wikilinks in abstract (glossary refs, autoref, plain-text fallback).
   resolve_abstract_links(doc.meta)
-  -- Phase 3: Inject glossary entries to header-includes.
+  -- Phase 3: Inject glossary entries and table defaults to header-includes.
   flush_glossary_entries(doc)
+  if needs_table_defs then append_header_includes(doc, TABLE_DEFS) end
+  append_header_includes(doc,
+    "\\providecommand{\\nopelogo}[2][0.7cm]{\\raisebox{-0.3\\height}{\\includegraphics[height=#1]{#2}}}")
   return doc
 end

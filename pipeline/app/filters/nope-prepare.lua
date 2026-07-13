@@ -211,7 +211,7 @@ end
 -- Branding override (nope-branding)
 -- ============================================================================
 
--- Header/footer keys auto-expand solo image wikilinks to \raisebox{\includegraphics} snippets.
+-- Header/footer keys auto-expand solo image wikilinks to \nopelogo snippets.
 local header_footer_keys = {
   ["header-left"] = true, ["header-center"] = true, ["header-right"] = true,
   ["footer-left"] = true, ["footer-center"] = true, ["footer-right"] = true,
@@ -221,8 +221,6 @@ local logo_image_exts = {
   png = true, jpg = true, jpeg = true, gif = true, svg = true,
   webp = true, bmp = true, pdf = true,
 }
-
-local DEFAULT_LOGO_HEIGHT = "0.7cm"
 
 local function is_logo_image(linkpath)
   local ext = linkpath:match("%.(%w+)$")
@@ -278,12 +276,12 @@ local function prepare_branding(doc_meta)
     return container_dir .. "/" .. name
   end
 
-  -- Solo image wikilink in a header/footer key → LaTeX logo snippet.
+  -- Solo image wikilink in a header/footer key → \nopelogo (defined via header-includes, default height 0.7cm).
   local function expand_logo(inner)
     local lp, height = parse_logo_inner(inner)
     local container_path = copy_asset(lp)
-    local h = height or DEFAULT_LOGO_HEIGHT
-    return "\\raisebox{-0.3\\height}{\\includegraphics[height=" .. h .. "]{" .. container_path .. "}}"
+    local h_part = height and ("[" .. height .. "]") or ""
+    return "\\nopelogo" .. h_part .. "{" .. container_path .. "}"
   end
 
   -- Replace every [[…]] inside a plain string with the copied asset's container path.

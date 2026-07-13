@@ -14,6 +14,7 @@
 must=Comparison of implementation variants
 must=Project phases overview
 must=\begin{longtable}
+must=\begin{nopefittable}
 must-not=[Not found:
 
 [Features/Feature-Citations.md]
@@ -38,7 +39,7 @@ must=Pythagoras
 must-not=[Not found:
 
 [Features/Feature-Callouts.md]
-must=noteblock
+must=\begin{nopecallout}{
 must=Important Notice
 must-not=[Not found:
 
@@ -71,7 +72,7 @@ must-not=content of the third section
 must-not=[Not found:
 
 [Features/Feature-Markup.md]
-must=\hl{
+must=\nopehl{
 must=After the hidden region
 must-not=this text is hidden
 must-not=[Not found:
@@ -89,6 +90,7 @@ must=Rumelhart
 must=\begin{theorem}
 must=Comparison of implementation variants
 must=\begin{longtable}
+must=\begin{nopefittable}
 must=\gls{
 must=\footnote{
 must=The example representation from the Mermaid

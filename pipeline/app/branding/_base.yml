@@ -15,4 +15,4 @@ titlepage-text-color: "1A1A1A"
 titlepage-background: /app/assets/bg-tiny.jpg
 titlepage-logo: /app/assets/logo-tiny.png
 header-left: |
-  \raisebox{-0.3\height}{\includegraphics[height=0.7cm]{/app/assets/logo-tiny.png}}
+  \nopelogo{/app/assets/logo-tiny.png}
