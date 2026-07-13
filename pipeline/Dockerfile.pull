@@ -5,8 +5,13 @@ ARG NOPE_IMAGE_TAG
 FROM ghcr.io/mriwan/nope-pipeline:${NOPE_IMAGE_TAG}
 
 ARG EXTRA_TLMGR_PACKAGES=""
+# CTAN serves only the current TL release; the pinned base ships an older one whose
+# tlmgr refuses it — install from the frozen historic repo, CTAN as fallback.
 RUN if [ -n "$EXTRA_TLMGR_PACKAGES" ]; then \
-        tlmgr install $EXTRA_TLMGR_PACKAGES && \
+        year=$(tlmgr version | sed -n 's/.*version \([0-9]\{4\}\).*/\1/p'); \
+        repo="https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${year}/tlnet-final"; \
+        { tlmgr --repository "$repo" install $EXTRA_TLMGR_PACKAGES || \
+          tlmgr install $EXTRA_TLMGR_PACKAGES; } && \
         for p in $EXTRA_TLMGR_PACKAGES; do \
             tlmgr info --only-installed --data name "$p" | grep -qx "$p"; \
         done; \

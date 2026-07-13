@@ -20,19 +20,33 @@ RUN printf 'flowchart LR\n  A-->B\n' > /tmp/smoke.mmd && \
     merman-cli render -i /tmp/smoke.mmd -o /tmp/smoke.png -b transparent -s 2 && \
     rm /tmp/smoke.mmd /tmp/smoke.png
 
-# kpsewhich am Ende verifiziert die Installation
-RUN tlmgr update --self && \
-    tlmgr install \
+# CTAN serviert nur das aktuelle TL-Release — die gepinnte pandoc-Base braucht ihr
+# eingefrorenes Historic-Repo, CTAN bleibt Fallback solange das Release aktuell ist.
+# kpsewhich am Ende verifiziert die Installation.
+RUN year=$(tlmgr version | sed -n 's/.*version \([0-9]\{4\}\).*/\1/p') && \
+    repo="https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${year}/tlnet-final" && \
+    { tlmgr --repository "$repo" install \
         glossaries \
         ragged2e \
         awesomebox \
         svg \
         background \
-        setspace && \
+        setspace || \
+      { tlmgr update --self && tlmgr install \
+        glossaries \
+        ragged2e \
+        awesomebox \
+        svg \
+        background \
+        setspace; }; } && \
     kpsewhich ragged2e.sty glossaries.sty awesomebox.sty svg.sty background.sty setspace.sty
 ARG EXTRA_TLMGR_PACKAGES=""
+# Gleiche Historic-Repo-Logik wie in Dockerfile.pull — beide synchron halten.
 RUN if [ -n "$EXTRA_TLMGR_PACKAGES" ]; then \
-        tlmgr install $EXTRA_TLMGR_PACKAGES && \
+        year=$(tlmgr version | sed -n 's/.*version \([0-9]\{4\}\).*/\1/p'); \
+        repo="https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${year}/tlnet-final"; \
+        { tlmgr --repository "$repo" install $EXTRA_TLMGR_PACKAGES || \
+          tlmgr install $EXTRA_TLMGR_PACKAGES; } && \
         for p in $EXTRA_TLMGR_PACKAGES; do \
             tlmgr info --only-installed --data name "$p" | grep -qx "$p"; \
         done; \
