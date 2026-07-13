@@ -3,6 +3,8 @@
 local removed = 0
 
 local function should_strip(cp)
+  -- Keep task-list checkboxes ☐/☑/☒ — Pandoc renders them as $\square$ etc. (amssymb)
+  if cp >= 0x2610 and cp <= 0x2612 then return false end
   return (cp >= 0x1F000 and cp <= 0x1FFFF)   -- emoji & pictographs (SMP)
     or (cp >= 0x2600 and cp <= 0x27BF)        -- misc symbols + dingbats (incl. ✅, ❌)
     or (cp >= 0x2B00 and cp <= 0x2BFF)        -- misc symbols & arrows (incl. ⭐)

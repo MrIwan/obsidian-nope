@@ -119,6 +119,7 @@ And what happens with Checkboxes?
 \newpage
 
 ![[Callouts]]
+
 # Figures
 
 ![[image-test]]
