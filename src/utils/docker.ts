@@ -43,14 +43,6 @@ export function setDockerPathOverride(path: string): void {
 	dockerPathOverride = path.trim();
 }
 
-// Accumulated tlmgr packages (settings.texPackages, fed by nope-tlmgr frontmatter),
-// space-joined; flows into the image hash and the EXTRA_TLMGR_PACKAGES build arg.
-let extraTexPackages = '';
-
-export function setExtraTexPackages(value: string): void {
-	extraTexPackages = value;
-}
-
 // Prebuilt image published by CI on tag pushes (docker-image.yml).
 export const PREBUILT_IMAGE_REPO = 'ghcr.io/mriwan/nope-pipeline';
 
@@ -140,18 +132,13 @@ export async function imageExists(): Promise<boolean> {
 }
 
 // Short hash of the image-relevant inputs — a change makes the image stale and triggers a rebuild.
-// Prebuilt mode: registry tag plus the user's extra tlmgr packages; local build: Dockerfile content plus packages.
+// Prebuilt mode: registry tag; local build: Dockerfile content.
 export function pipelineImageHash(pluginDir: string): string {
 	try {
 		const source: string | Uint8Array = usePrebuiltImage
 			? `pull:${PREBUILT_IMAGE_REPO}:${prebuiltImageTag()}`
 			: readFileSync(join(pluginDir, 'pipeline', 'Dockerfile'));
-		return createHash('sha256')
-			.update(source)
-			.update('\0')
-			.update(extraTexPackages)
-			.digest('hex')
-			.slice(0, 12);
+		return createHash('sha256').update(source).digest('hex').slice(0, 12);
 	} catch {
 		return '';
 	}
@@ -241,7 +228,6 @@ export async function buildImage(
 				...getDockerEnv(),
 				VAULT_PATH: pipelineDir,
 				NOPE_IMAGE_HASH: pipelineImageHash(pluginDir),
-				NOPE_EXTRA_TLMGR: extraTexPackages,
 				NOPE_DOCKERFILE: usePrebuiltImage ? 'Dockerfile.pull' : 'Dockerfile',
 				NOPE_IMAGE_TAG: prebuiltImageTag(),
 			},

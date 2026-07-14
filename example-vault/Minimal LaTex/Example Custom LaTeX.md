@@ -21,6 +21,6 @@ To test it yourself:
 
 1. Export this note once — the box is red: `cancel` is **not** installed.
 2. Add `nope-tlmgr: [cancel]` to this note's frontmatter.
-3. Export again — the image is rebuilt automatically and the box turns green.
+3. Export again — the package is installed during the export and the box turns green.
 
 The `IfFileExists` dance is only for this red/green demo. A real template just declares `nope-tlmgr:` in the document (or branding note) and uses plain `\usepackage{...}` — if a package is missing anyway, the export fails and the reason lands in the LaTeX log (keep intermediates via settings to inspect it).

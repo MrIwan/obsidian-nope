@@ -621,7 +621,7 @@ nope-tlmgr: [cancel, pgfplots]
 ---
 ```
 
-On export, new names are installed on top of the base image as an extra Docker layer (one automatic rebuild, cached afterwards). The set is accumulated across documents; **Remove docker image** resets it, and the next export re-installs what the exported document declares. The template can then use plain `\usepackage{...}` — no guards needed.
+During the export, the pipeline installs missing declared packages into a persistent TeX user tree inside the build folder — the first run downloads them (network required), every later run finds them on disk. The same mechanism serves the plugin, the live preview, CI and [standalone runs](#running-the-pipeline-standalone-cli); no settings, no image rebuild. The template can use plain `\usepackage{...}` — no guards needed. **Cleanup build folder** removes the tree; the next export re-installs what the document declares.
 
 
 ***

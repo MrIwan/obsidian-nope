@@ -53,6 +53,7 @@ export function parsePipelinePhase(chunk: string): string | null {
 		else if (line.includes('>>> Custom template')) phase = 'applying custom template';
 		else if (line.includes('>>> Branding override')) phase = 'applying branding';
 		else if (line.includes('>>> Bibliography')) phase = 'preparing bibliography';
+		else if (line.includes('>>> Installing LaTeX packages')) phase = 'installing LaTeX packages';
 		else if (line.includes('>>> Pandoc:')) phase = 'Pandoc → LaTeX';
 		else if (line.includes('mermaid chart')) phase = 'rendering mermaid diagrams';
 		else if (line.includes('>>> latexmk')) phase = 'compiling PDF (latexmk)';

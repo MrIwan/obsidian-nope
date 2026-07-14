@@ -5,34 +5,11 @@ import { shell } from 'electron';
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { dirname, isAbsolute, join, relative, sep } from 'path';
 import type NopePlugin from '../main';
-import { buildImage, checkDockerReady, cleanupIntermediates, imageStatus, runPipeline, setExtraTexPackages } from './docker';
+import { buildImage, checkDockerReady, cleanupIntermediates, imageStatus, runPipeline } from './docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath, resolveOutputPath } from './paths';
 import { PhaseTimer, appendTimerCsv, parseBuildStep, parsePipelinePhase, parsePipelineTimings } from './progress';
 import { prepareBases } from './bases';
 import { ensureBundledAssets } from './assets';
-
-// Only plain tlmgr names — the values end up in a docker build arg, so whitelist hard.
-const TLMGR_NAME = /^[a-z0-9][a-z0-9._-]*$/i;
-
-function tlmgrFromFrontmatter(fm: Record<string, unknown> | undefined): string[] {
-	const raw: unknown = fm?.['nope-tlmgr'];
-	const items: unknown[] = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(/[\s,]+/) : [];
-	return items.map((v) => String(v).trim()).filter((v) => TLMGR_NAME.test(v));
-}
-
-// nope-tlmgr from the document and its branding note: tlmgr packages the export needs.
-function collectTlmgrPackages(plugin: NopePlugin, file: TFile): string[] {
-	const cache = plugin.app.metadataCache;
-	const fm = cache.getFileCache(file)?.frontmatter;
-	const pkgs = tlmgrFromFrontmatter(fm);
-	const brandingRef: unknown = fm?.['nope-branding'];
-	if (typeof brandingRef === 'string') {
-		const linkpath = (brandingRef.replace(/^\s*\[\[/, '').replace(/\]\]\s*$/, '').split('|')[0] ?? '').trim();
-		const target = cache.getFirstLinkpathDest(linkpath, file.path);
-		if (target) pkgs.push(...tlmgrFromFrontmatter(cache.getFileCache(target)?.frontmatter));
-	}
-	return [...new Set(pkgs)];
-}
 
 // Minimal progress surface; ProgressNotice satisfies it, the preview view brings its own.
 export interface ProgressReporter {
@@ -84,17 +61,6 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		return { ok: false };
 	}
 
-	// nope-tlmgr frontmatter (doc + branding) declares LaTeX packages the document
-	// needs; new names join the accumulated set and change the image hash below.
-	const newPackages = collectTlmgrPackages(plugin, file).filter(
-		(p) => !plugin.settings.texPackages.includes(p),
-	);
-	if (newPackages.length > 0) {
-		plugin.settings.texPackages = [...plugin.settings.texPackages, ...newPackages].sort();
-		await plugin.saveSettings();
-		setExtraTexPackages(plugin.settings.texPackages.join(' '));
-	}
-
 	// Image must be present AND built from the current Dockerfile (rebuild after updates).
 	const status = await imageStatus(pluginDir);
 	if (status !== 'current') {
@@ -102,9 +68,7 @@ export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOpt
 		reporter.update(
 			firstRun
 				? 'Docker image not found — building it now (first run, 5–15 min)…'
-				: newPackages.length > 0
-					? `Installing LaTeX packages (${newPackages.join(', ')}) — rebuilding the Docker image…`
-					: 'Pipeline updated — rebuilding the Docker image…',
+				: 'Pipeline updated — rebuilding the Docker image…',
 		);
 		try {
 			await buildImage(pluginDir, false, (chunk) => {

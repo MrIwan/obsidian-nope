@@ -10,7 +10,7 @@ import { registerMaintenanceCommands } from './commands/maintenance';
 import { NOPE_PREVIEW_VIEW_TYPE, NopePreviewView, registerPreviewClickOpenToggleCommand, registerPreviewCommand } from './view/preview';
 import { getPluginAbsoluteDir } from './utils/paths';
 import { ensureBundledAssets } from './utils/assets';
-import { setDockerPathOverride, setExtraTexPackages, setImageTagOverride, setPluginVersion, setUsePrebuiltImage } from './utils/docker';
+import { setDockerPathOverride, setImageTagOverride, setPluginVersion, setUsePrebuiltImage } from './utils/docker';
 import { registerBasesExportView } from './utils/bases';
 
 export default class NopePlugin extends Plugin {
@@ -19,7 +19,6 @@ export default class NopePlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		setDockerPathOverride(this.settings.dockerPath);
-		setExtraTexPackages(this.settings.texPackages.join(' '));
 		setUsePrebuiltImage(this.settings.usePrebuiltImage);
 		setImageTagOverride(this.settings.imageTag);
 		setPluginVersion(this.manifest.version);
@@ -53,19 +52,11 @@ export default class NopePlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		const data = ((await this.loadData()) ?? {}) as Partial<NopeSettings> & {
-			extraTexPackages?: string;
-		};
-		// Migrate the removed "Extra LaTeX packages" setting into the accumulated set.
-		const legacy = data.extraTexPackages?.trim();
-		delete data.extraTexPackages;
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
-		if (legacy) {
-			this.settings.texPackages = [
-				...new Set([...this.settings.texPackages, ...legacy.split(/\s+/)]),
-			].sort();
-			await this.saveSettings();
-		}
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			(await this.loadData()) as Partial<NopeSettings>,
+		);
 	}
 
 	async saveSettings() {

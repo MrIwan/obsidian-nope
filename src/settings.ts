@@ -17,7 +17,6 @@ export const DEFAULT_SETTINGS: NopeSettings = {
 	keepLatexIntermediates: false,
 	dockerPath: '',
 	previewAutoRender: false,
-	texPackages: [],
 	usePrebuiltImage: true,
 	imageTag: '',
 };
@@ -296,7 +295,7 @@ export class NopeSettingTab extends PluginSettingTab {
 					btn.setDisabled(true);
 					btn.setButtonText('Removing…');
 					try {
-						await removeDockerImage(this.plugin);
+						await removeDockerImage();
 					} finally {
 						btn.setDisabled(false);
 						btn.setButtonText('Remove');
@@ -481,7 +480,7 @@ export class NopeSettingTab extends PluginSettingTab {
 								btn.setDisabled(true);
 								btn.setButtonText('Removing…');
 								try {
-									await removeDockerImage(this.plugin);
+									await removeDockerImage();
 								} finally {
 									btn.setDisabled(false);
 									btn.setButtonText('Remove');

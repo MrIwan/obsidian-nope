@@ -40,6 +40,73 @@ read_frontmatter() {
   ' "$2"
 }
 
+# Read a key that may be a scalar, an inline list ([a, b]) or a block list (- item)
+# from the leading YAML frontmatter block; prints whitespace-separated values.
+read_frontmatter_list() {
+  awk -v key="$1" '
+    NR==1 && $0!="---" { exit }
+    NR==1 { next }
+    $0=="---" || $0=="..." { exit }
+    collect && /^[[:space:]]*-[[:space:]]*/ {
+      sub(/^[[:space:]]*-[[:space:]]*/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; next
+    }
+    collect { exit }                     # next key ends the block list
+    $0 ~ "^"key"[[:space:]]*:" {
+      sub("^"key"[[:space:]]*:[[:space:]]*", "")
+      if ($0 == "") { collect=1; next }  # block list follows
+      gsub(/[][,]/, " "); gsub(/["'"'"']/, ""); print; exit
+    }
+  ' "$2"
+}
+
+# nope-tlmgr: LaTeX packages the document (or its branding note) declares.
+# The single install path for plugin, preview, CI and standalone runs. The container is ephemeral, so installs go into a user-mode TeX tree on the persistent /build mount — packages download once and survive across runs (Cleanup build folder resets them). System-tree install stays as fallback for the rare package that misbehaves in user mode (not persistent).
+# Names are whitelisted hard — they end up on a tlmgr command line.
+export TEXMFHOME=/build/.texlive/texmf
+export TEXMFVAR=/build/.texlive/texmf-var
+export TEXMFCONFIG=/build/.texlive/texmf-config
+
+tlmgr_has() {
+  tlmgr info --only-installed --data name "$1" 2>/dev/null | grep -qx "$1" && return 0
+  [[ -d "$TEXMFHOME/tlpkg" ]] &&
+    tlmgr --usermode info --only-installed --data name "$1" 2>/dev/null | grep -qx "$1"
+}
+
+install_tlmgr_packages() {
+  local requested missing p year repo
+  requested=$(
+    { read_frontmatter_list "nope-tlmgr" "$INPUT_ABS"
+      [[ -f "$WORK/branding-override.yml" ]] && read_frontmatter_list "nope-tlmgr" "$WORK/branding-override.yml"
+      true
+    } | tr ' \t' '\n\n' | grep -E '^[A-Za-z0-9][A-Za-z0-9._-]*$' | sort -u | tr '\n' ' '
+  ) || true
+  [[ -n "${requested// /}" ]] || return 0
+  missing=""
+  for p in $requested; do
+    tlmgr_has "$p" || missing="$missing $p"
+  done
+  [[ -n "${missing// /}" ]] || return 0
+  echo ">>> Installing LaTeX packages:$missing"
+  timer_start
+  # Same historic-repo logic as the Dockerfiles' base package layer — keep in sync.
+  year=$(tlmgr version | sed -n 's/.*version \([0-9]\{4\}\).*/\1/p')
+  repo="https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${year}/tlnet-final"
+  [[ -d "$TEXMFHOME/tlpkg" ]] || tlmgr init-usertree >/dev/null 2>&1 || true
+  tlmgr --usermode --repository "$repo" install $missing ||
+    tlmgr --usermode install $missing ||
+    tlmgr --repository "$repo" install $missing ||
+    tlmgr install $missing || true
+  # Register font maps from user-tree installs (no-op when nothing changed).
+  updmap-user >/dev/null 2>&1 || true
+  for p in $missing; do
+    if ! tlmgr_has "$p"; then
+      echo ">>> NOPE-ERROR: LaTeX package '$p' could not be installed (nope-tlmgr)"
+      exit 1
+    fi
+  done
+  timer_end tlmgr
+}
+
 # book: true (Eisvogel's scrbook class) → map # to \part, ## to \chapter, ### to \section.
 # --top-level-division auto-sets has-frontmatter, which routes toc/abstract into
 # a branch scrbook skips, so force has-frontmatter off to keep them.
@@ -95,6 +162,9 @@ if [[ -f "$WORK/branding-override.yml" ]]; then
   echo ">>> Branding override detected: $WORK/branding-override.yml"
   EXTRA_METADATA_FILES+=(--metadata-file="$WORK/branding-override.yml")
 fi
+
+# Install nope-tlmgr packages that are not already baked into the image.
+install_tlmgr_packages
 
 # Mermaid rendering in obsidian-transclude.lua (wrap_mermaid for latex-env: mermaid) places PNGs in $WORK/mermaid/; the .tex file references them using the relative path "mermaid/<sha1>.png", which resolves correctly given that latexmk runs in $WORK.
 export MERMAID_WORK_DIR="$WORK"

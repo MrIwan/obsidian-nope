@@ -163,7 +163,7 @@ Standard Pandoc/Eisvogel keys (`lang`, `toc`, `toc-depth`, `lof`, `lot`, `geomet
 - **`abstract`** — text block, or a quoted wikilink whose note body becomes the abstract (frontmatter stripped; heading slices and embeds work). `abstract-title:` overrides the heading. No key → no abstract page.
 - **`nope-branding: "[[Branding-Note]]"`** — apply a branding note (see below). Without it the `_base.yml` defaults apply.
 - **`nope-template: "[[my-template]]"`** — use a custom `.tex` Pandoc template instead of Eisvogel (doc or branding frontmatter; without it Eisvogel is used). The template **must keep the marked `%%% NOPE-IMPORTS %%%` block** (all required packages) or tables/callouts/theorems/glossary break — the export warns if it is missing. Start from the `Create custom LaTeX template` command (`nope_minimal.tex`).
-- **`nope-tlmgr: [cancel, pgfplots]`** — tlmgr packages the document's template needs beyond the base image (doc or branding frontmatter; list or space/comma string). New names are installed into the Docker image automatically on export (one rebuild, cached afterwards); the template then uses plain `\usepackage{...}` — no `\IfFileExists` guards. The set accumulates across documents and resets with `Remove docker image`.
+- **`nope-tlmgr: [cancel, pgfplots]`** — tlmgr packages the document's template needs beyond the base image (doc or branding frontmatter; list or space/comma string). The export installs missing ones automatically into a persistent TeX user tree in the build folder: first run downloads, later runs find them on disk. The template then uses plain `\usepackage{...}` — no `\IfFileExists` guards. `Cleanup build folder` resets the tree.
 
 ### Citations
 
