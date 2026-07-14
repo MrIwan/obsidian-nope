@@ -581,7 +581,7 @@ local RESERVED_META = {
   ["gls-description"] = true, ["gls-type"] = true,
   ["citekey"] = true, ["bibtype"] = true, ["entry-type"] = true,
   ["nope-branding"] = true, ["nope-template"] = true, ["nope-chapter-autoref"] = true,
-  ["nope-blocks"] = true,
+  ["nope-blocks"] = true, ["nope-tlmgr"] = true,
   ["abstract"] = true, ["abstract-title"] = true, ["bibliography"] = true, ["csl"] = true,
 }
 

@@ -4,7 +4,7 @@ import { remote } from 'electron';
 import type NopePlugin from './main';
 import type { NopeSettings, PreflightResults } from './types';
 import { runPreflightChecks } from './utils/preflight';
-import { PREBUILT_IMAGE_REPO, buildImage, detectDockerBin, setDockerPathOverride, setExtraTexPackages, setImageTagOverride, setUsePrebuiltImage } from './utils/docker';
+import { PREBUILT_IMAGE_REPO, buildImage, detectDockerBin, setDockerPathOverride, setImageTagOverride, setUsePrebuiltImage } from './utils/docker';
 import { ProgressNotice, parseBuildStep } from './utils/progress';
 import { getPluginAbsoluteDir, getVaultAbsolutePath } from './utils/paths';
 import { cleanupBuild, installAiSkill, removeDockerImage } from './commands/maintenance';
@@ -17,13 +17,10 @@ export const DEFAULT_SETTINGS: NopeSettings = {
 	keepLatexIntermediates: false,
 	dockerPath: '',
 	previewAutoRender: false,
-	extraTexPackages: '',
+	texPackages: [],
 	usePrebuiltImage: true,
 	imageTag: '',
 };
-
-const EXTRA_TEX_PACKAGES_DESC =
-	'Space-separated tlmgr package names, installed on top of the base image (e.g. cancel pgfplots).';
 
 const USE_PREBUILT_DESC =
 	`On (default): pull the release image from ${PREBUILT_IMAGE_REPO} and only add extra LaTeX packages locally (fast, bit-identical for all users). ` +
@@ -97,7 +94,6 @@ export class NopeSettingTab extends PluginSettingTab {
 				},
 			},
 			{ type: 'group', heading: 'Docker', items: this.dockerItems() },
-			{ type: 'group', heading: 'LaTeX packages', items: this.texPackageItems() },
 			{ type: 'group', heading: 'AI conventions skill', items: this.skillItems() },
 		];
 	}
@@ -300,30 +296,13 @@ export class NopeSettingTab extends PluginSettingTab {
 					btn.setDisabled(true);
 					btn.setButtonText('Removing…');
 					try {
-						await removeDockerImage();
+						await removeDockerImage(this.plugin);
 					} finally {
 						btn.setDisabled(false);
 						btn.setButtonText('Remove');
 						await refreshChecks();
 					}
 				});
-			});
-
-		// LaTeX packages section: user tlmgr packages baked into the image on rebuild.
-		new Setting(containerEl).setName('LaTeX packages').setHeading();
-
-		new Setting(containerEl)
-			.setName('Extra LaTeX packages')
-			.setDesc(EXTRA_TEX_PACKAGES_DESC)
-			.addText((text) => {
-				text
-					.setPlaceholder('Example: cancel pgfplots algorithm2e')
-					.setValue(this.plugin.settings.extraTexPackages)
-					.onChange(async (value) => {
-						this.plugin.settings.extraTexPackages = value;
-						setExtraTexPackages(value);
-						await this.plugin.saveSettings();
-					});
 			});
 
 		// AI skill installation and status section.
@@ -502,42 +481,13 @@ export class NopeSettingTab extends PluginSettingTab {
 								btn.setDisabled(true);
 								btn.setButtonText('Removing…');
 								try {
-									await removeDockerImage();
+									await removeDockerImage(this.plugin);
 								} finally {
 									btn.setDisabled(false);
 									btn.setButtonText('Remove');
 									await this.dockerRefresh?.();
 								}
 							});
-						});
-				},
-			},
-		];
-	}
-
-	// LaTeX packages section: user tlmgr packages baked into the image on rebuild.
-	private texPackageItems(): SettingDefinition[] {
-		return [
-			{
-				name: 'Extra LaTeX packages',
-				desc: EXTRA_TEX_PACKAGES_DESC,
-				render: (setting: Setting): void => {
-					setting
-						.addText((text) => {
-							text
-								.setPlaceholder('Example: cancel pgfplots algorithm2e')
-								.setValue(this.plugin.settings.extraTexPackages)
-								.onChange(async (value) => {
-									this.plugin.settings.extraTexPackages = value;
-									setExtraTexPackages(value);
-									await this.plugin.saveSettings();
-								});
-						})
-						.addButton((btn) => {
-							btn
-								.setButtonText('Rebuild image')
-								.setTooltip('Apply the package list now instead of on the next export')
-								.onClick(() => this.runImageBuild(btn, false, 'Rebuild image'));
 						});
 				},
 			},

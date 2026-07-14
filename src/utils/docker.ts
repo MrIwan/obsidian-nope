@@ -43,7 +43,8 @@ export function setDockerPathOverride(path: string): void {
 	dockerPathOverride = path.trim();
 }
 
-// User-configured extra tlmgr packages
+// Accumulated tlmgr packages (settings.texPackages, fed by nope-tlmgr frontmatter),
+// space-joined; flows into the image hash and the EXTRA_TLMGR_PACKAGES build arg.
 let extraTexPackages = '';
 
 export function setExtraTexPackages(value: string): void {

@@ -1,6 +1,6 @@
 ---
 name: nope
-description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, nope-blocks, abstract, numbersections, book), wikilink embeds/refs, image figures, mermaid, code-block dispatch (latex passthrough, declared key:value blocks), glossary, citations, inline markup, callouts, branding and bases."
+description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, nope-blocks, nope-tlmgr, abstract, numbersections, book), wikilink embeds/refs, image figures, mermaid, code-block dispatch (latex passthrough, declared key:value blocks), glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
 last-updated: 2026-07-14
 ---
@@ -89,8 +89,8 @@ scale: 3
 
 Fenced code blocks anywhere in prose are dispatched by their language identifier — no atomic note needed:
 
-- ` ```latex ` — body goes into the PDF as **raw LaTeX, unchanged**. No escaping, no wikilink resolution, no validity check (a typo aborts the build with the usual `!`-line); packages you use must exist (custom template `\usepackage` + Settings → Extra LaTeX packages). Use for one-off constructs, e.g. a `\dirtree{…}` directory tree.
-- ` ```<identifier> ` — if declared under `nope-blocks:` (doc frontmatter or branding note, e.g. `nope-blocks: [statblock]`; list or single value, exact case-sensitive match), the body must be **flat `key: value` lines** and renders as `\begin{<identifier>}…\end{<identifier>}` with each key exposed as `\nope<key>` (identical access pattern to frontmatter forwarding in custom environments — one template env serves both the atomic `latex-env` entry and the inline fence). The environment must be defined in a custom template. Values: surrounding quotes stripped, LaTeX specials escaped; a non-`key: value` line is a **hard export error**. Macros are scoped per block.
+- ` ```latex ` — body goes into the PDF as **raw LaTeX, unchanged**. No escaping, no wikilink resolution, no validity check (a typo aborts the build with the usual `!`-line); packages you use must exist (custom template `\usepackage` + `nope-tlmgr:` declaration). Use for one-off constructs, e.g. a `\dirtree{…}` directory tree.
+- ` ```<identifier> ` — if declared under `nope-blocks:` (doc frontmatter or branding note, e.g. `nope-blocks: [statblock]`; list or single value, exact case-sensitive match), the body is **YAML-lite** and renders as `\begin{<identifier>}…\end{<identifier>}` with each key exposed as `\nope<key>` (identical access pattern to frontmatter forwarding in custom environments — one template env serves both the atomic `latex-env` entry and the inline fence). Supported body lines: `key: value` → `\nope<key>` (brackets of inline lists `[a, b]` are stripped); `key:` alone opens a list whose `- subkey: value` items become `\nope<key><N>-<subkey>` (bare `- text` items become `\nope<key><N>`); indented lines continue the previous value. This covers Fantasy-Statblock-style blocks (`traits:` / `- name:` / `desc:`) 1:1, so a ` ```statblock ` fence can be rendered live by the Fantasy Statblock plugin AND exported. The environment must be defined in a custom template. Values: surrounding quotes stripped, LaTeX specials escaped; an unparsable line is a **hard export error**. Macros are scoped per block.
 - Anything else (or no identifier) stays a normal code fence — including ` ```mermaid `, which still renders only in `latex-env: mermaid` notes.
 
 Declared blocks are **unnumbered and not referencable**; for numbering and `[[refs]]` use an atomic `latex-env` note instead.
@@ -102,6 +102,8 @@ ac: 17
 hp: 21 (6d6)
 ```
 ````
+
+A complete worked example — a two-column 5e-style document with a Fantasy-Statblock-compatible `statblock` block, raw `latex` map areas and custom `latex-env` notes — ships in `example-vault/DnD Example/`.
 
 ## Bases
 
@@ -161,6 +163,7 @@ Standard Pandoc/Eisvogel keys (`lang`, `toc`, `toc-depth`, `lof`, `lot`, `geomet
 - **`abstract`** — text block, or a quoted wikilink whose note body becomes the abstract (frontmatter stripped; heading slices and embeds work). `abstract-title:` overrides the heading. No key → no abstract page.
 - **`nope-branding: "[[Branding-Note]]"`** — apply a branding note (see below). Without it the `_base.yml` defaults apply.
 - **`nope-template: "[[my-template]]"`** — use a custom `.tex` Pandoc template instead of Eisvogel (doc or branding frontmatter; without it Eisvogel is used). The template **must keep the marked `%%% NOPE-IMPORTS %%%` block** (all required packages) or tables/callouts/theorems/glossary break — the export warns if it is missing. Start from the `Create custom LaTeX template` command (`nope_minimal.tex`).
+- **`nope-tlmgr: [cancel, pgfplots]`** — tlmgr packages the document's template needs beyond the base image (doc or branding frontmatter; list or space/comma string). New names are installed into the Docker image automatically on export (one rebuild, cached afterwards); the template then uses plain `\usepackage{...}` — no `\IfFileExists` guards. The set accumulates across documents and resets with `Remove docker image`.
 
 ### Citations
 

@@ -459,7 +459,7 @@ This sentence has ==highlighted text==.
 Fenced code blocks anywhere in flowing text are dispatched by their language identifier:
 
 - ` ```latex ` — the body is passed into the PDF as **raw LaTeX**, unchanged. No escaping, no wikilink resolution; any package you use must be available (see [Extra LaTeX packages](#extra-latex-packages)). Great for one-off constructs like a `\dirtree{…}` directory tree.
-- ` ```<identifier> ` — if the identifier is declared under `nope-blocks:` (document frontmatter or branding note), the body is parsed as flat `key: value` lines and rendered as `\begin{<identifier>}…\end{<identifier>}`, with every key exposed as a `\nope<key>` command — the same pattern as [reading note frontmatter inside an environment](#reading-note-frontmatter-inside-an-environment). The environment itself comes from your custom template.
+- ` ```<identifier> ` — if the identifier is declared under `nope-blocks:` (document frontmatter or branding note), the body is parsed as YAML-lite and rendered as `\begin{<identifier>}…\end{<identifier>}`, with every key exposed as a `\nope<key>` command — the same pattern as [reading note frontmatter inside an environment](#reading-note-frontmatter-inside-an-environment). Simple lists are supported: `key:` followed by `- subkey: value` items becomes `\nope<key><N>-<subkey>` (bare `- text` items become `\nope<key><N>`), indented lines continue the previous value and `key: [a, b]` strips the brackets. That grammar covers [Fantasy Statblock](https://plugins.javalent.com/statblocks) blocks 1:1 — the same ` ```statblock ` fence renders live in Obsidian and exports as a typeset stat block. The environment itself comes from your custom template.
 - Anything else (or no identifier) stays a normal code fence, exactly as before.
 
 Declared blocks are unnumbered and not referencable — for a numbered, referencable element use an atomic note with `latex-env`.
@@ -495,6 +495,8 @@ hp: 21 (6d6)
 ```
 
 A body line that is not `key: value` aborts the export with an error naming the block and line.
+
+A complete worked example — a two-column 5e-style document with a Fantasy-Statblock-compatible monster stat block, raw `latex` map areas and custom environments, rebuilt with thanks from the [DnD 5e LaTeX template](https://github.com/rpgtex/DND-5e-LaTeX-Template) — ships in `example-vault/DnD Example/`.
 
 ***
 
@@ -610,7 +612,16 @@ Reference a key with `\csname nope<key>\endcsname`, spelled exactly as in the fr
 
 ## Extra LaTeX packages
 
-Custom templates often need LaTeX packages that are not part of the base image (e.g. `cancel`, `pgfplots`). Add them under **Settings → LaTeX packages → Extra LaTeX packages** as a space-separated list of [tlmgr](https://ctan.org/pkg/texlive) package names. They are installed on top of the base image as an extra Docker layer.
+Custom templates often need LaTeX packages that are not part of the base image (e.g. `cancel`, `pgfplots`). Declare them in the **document frontmatter** (or the branding note) as [tlmgr](https://ctan.org/pkg/texlive) package names:
+
+```yaml
+---
+nope-template: "[[my-template]]"
+nope-tlmgr: [cancel, pgfplots]
+---
+```
+
+On export, new names are installed on top of the base image as an extra Docker layer (one automatic rebuild, cached afterwards). The set is accumulated across documents; **Remove docker image** resets it, and the next export re-installs what the exported document declares. The template can then use plain `\usepackage{...}` — no guards needed.
 
 
 ***

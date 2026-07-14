@@ -11,7 +11,7 @@ The custom template is a powerful and dangerous tool. It opens up endless export
 
 # Extra LaTeX packages
 
-Custom templates may need packages that are not part of the base Docker image — here `cancel`. The template loads it only if it is available, so the box below tells you whether the package made it into the image:
+Custom templates may need packages that are not part of the base Docker image — here `cancel`. A document declares them in its frontmatter via `nope-tlmgr:`; the export installs missing ones into the Docker image automatically. The demo template loads `cancel` only if it is available, so the box below tells you whether the package made it into the image:
 
 \begin{demobox}
 The template checks for the package with \texttt{\textbackslash IfFileExists} and switches this box between red and green.
@@ -20,7 +20,7 @@ The template checks for the package with \texttt{\textbackslash IfFileExists} an
 To test it yourself:
 
 1. Export this note once — the box is red: `cancel` is **not** installed.
-2. Enter `cancel` under Settings → LaTeX packages → Extra LaTeX packages.
+2. Add `nope-tlmgr: [cancel]` to this note's frontmatter.
 3. Export again — the image is rebuilt automatically and the box turns green.
 
-If a template requires a missing package unconditionally (plain `\usepackage{...}`), the export fails instead and the reason lands in the LaTeX log (keep intermediates via settings to inspect it).
+The `IfFileExists` dance is only for this red/green demo. A real template just declares `nope-tlmgr:` in the document (or branding note) and uses plain `\usepackage{...}` — if a package is missing anyway, the export fails and the reason lands in the LaTeX log (keep intermediates via settings to inspect it).

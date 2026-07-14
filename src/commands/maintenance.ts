@@ -2,7 +2,7 @@
 
 import { Notice } from 'obsidian';
 import type NopePlugin from '../main';
-import { cleanupBuildFolder, removeImage } from '../utils/docker';
+import { cleanupBuildFolder, removeImage, setExtraTexPackages } from '../utils/docker';
 import { getPluginAbsoluteDir, getVaultAbsolutePath } from '../utils/paths';
 import { installSkill } from '../utils/skill';
 
@@ -20,7 +20,7 @@ export function registerMaintenanceCommands(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'remove-docker-image',
 		name: 'Remove docker image',
-		callback: () => removeDockerImage(),
+		callback: () => removeDockerImage(plugin),
 	});
 
 	plugin.addCommand({
@@ -36,9 +36,16 @@ export function registerMaintenanceCommands(plugin: NopePlugin): void {
 	});
 }
 
-export async function removeDockerImage(): Promise<void> {
+export async function removeDockerImage(plugin: NopePlugin): Promise<void> {
 	try {
 		await removeImage();
+		// The accumulated nope-tlmgr set describes the removed image — reset it;
+		// the next export re-collects what the exported document actually needs.
+		if (plugin.settings.texPackages.length > 0) {
+			plugin.settings.texPackages = [];
+			await plugin.saveSettings();
+			setExtraTexPackages('');
+		}
 		new Notice('Docker image removed.');
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);

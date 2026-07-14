@@ -106,3 +106,17 @@ must-not=[Not found:
 [Book Example/Book Example.md]
 must=\part{
 must-not=[Not found:
+
+# The DnD example exercises the code-block dispatch: raw ```latex passthrough
+# (\DndArea), a declared ```statblock block in Fantasy-Statblock syntax (nope-blocks,
+# YAML-lite lists) and custom latex-env envs (dndfeat/dnditem/dndspell).
+[DnD Example/DnD Example.md]
+must=\begin{statblock}
+must=Monster Foo
+must=nopetraits1-name
+must=Create Contract (Costs 3 Actions)
+must=\DndArea{Village of Hommlet}
+must=\begin{dndspell}
+must=\begin{nopecallout}{quote}
+must=Small wooden button
+must-not=[Not found:

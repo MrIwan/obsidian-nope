@@ -19,7 +19,7 @@ export default class NopePlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		setDockerPathOverride(this.settings.dockerPath);
-		setExtraTexPackages(this.settings.extraTexPackages);
+		setExtraTexPackages(this.settings.texPackages.join(' '));
 		setUsePrebuiltImage(this.settings.usePrebuiltImage);
 		setImageTagOverride(this.settings.imageTag);
 		setPluginVersion(this.manifest.version);
@@ -53,11 +53,19 @@ export default class NopePlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<NopeSettings>,
-		);
+		const data = ((await this.loadData()) ?? {}) as Partial<NopeSettings> & {
+			extraTexPackages?: string;
+		};
+		// Migrate the removed "Extra LaTeX packages" setting into the accumulated set.
+		const legacy = data.extraTexPackages?.trim();
+		delete data.extraTexPackages;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+		if (legacy) {
+			this.settings.texPackages = [
+				...new Set([...this.settings.texPackages, ...legacy.split(/\s+/)]),
+			].sort();
+			await this.saveSettings();
+		}
 	}
 
 	async saveSettings() {

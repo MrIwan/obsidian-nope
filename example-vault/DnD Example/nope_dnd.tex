@@ -1,16 +1,14 @@
-% nope_minimal.tex — minimal NOPE custom-template starter. No overhead.
+% nope_dnd.tex — NOPE custom template in the style of the fifth edition of the
+% "world's greatest roleplaying game".
 %
-% Use it: copy this file into your vault (command "Create custom LaTeX template"),
-% then point a document (or branding note) at it via frontmatter:
-%   nope-template: "[[nope_minimal.tex]]"
-% The wikilink must include the .tex extension — without it the template is not found.
+% Rebuilt with thanks from the DnD 5e LaTeX template by the rpgTeX team (MIT):
+%   https://github.com/rpgtex/DND-5e-LaTeX-Template
+% Two-column layout, Bookman/kpfonts/Gillius fonts and 5e box styling follow the
+% original; this remains a NOPE approximation of their much prettier package.
 %
-% This is the recommended starting point for a custom template: it carries the
-% Pandoc baseline (image scaling, code highlighting, table width macros, float
-% placement) PLUS the marked NOPE-IMPORTS block below. A template written fully
-% from scratch must keep both. Keep the NOPE-IMPORTS block verbatim.
-
-\documentclass[11pt]{article}
+% Based on nope_minimal.tex; the marked NOPE-IMPORTS block is kept verbatim.
+% Point a document at it via frontmatter:  nope-template: "[[nope_dnd.tex]]"
+\documentclass[10pt,twoside,twocolumn]{article}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -24,24 +22,6 @@
 \usepackage{fvextra}
 \usepackage{hyperref}
 
-% --- Extra LaTeX packages demo -----------------------------------------------
-% "cancel" is NOT part of the base Docker image. Declare it in the document frontmatter (nope-tlmgr: [cancel]) — the export installs it and rebuilds the image;
-% the demobox in the example document then turns green and shows the package in action.
-% Without it, a red box tells you the package is missing.
-% (tcolorbox itself ships with the base image, so the box always renders.)
-\usepackage{tcolorbox}
-\IfFileExists{cancel.sty}{%
-  \usepackage{cancel}%
-  \newenvironment{demobox}%
-    {\begin{tcolorbox}[colback=green!5,colframe=green!50!black,title=cancel is installed — extra LaTeX packages work]%
-     \(\frac{\cancel{6}\cdot 5}{\cancel{6}} = 5\)\quad(rendered by the \texttt{cancel} package)\par\smallskip}%
-    {\end{tcolorbox}}%
-}{%
-  \newenvironment{demobox}%
-    {\begin{tcolorbox}[colback=red!5,colframe=red!60!black,title=cancel is NOT installed — declare it via nope-tlmgr: [cancel] in the frontmatter]}%
-    {\end{tcolorbox}}%
-}
-% ------------------------------------------------------------------------------
 
 % Pandoc helper macros that its default template provides.
 \newcommand{\passthrough}[1]{#1}
@@ -100,6 +80,189 @@ $if(csl-refs)$
 \newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{\strut#1\strut}}
 \newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
 $endif$
+
+% --- DnD 5e look — rebuilt with thanks from rpgtex/DND-5e-LaTeX-Template (MIT) ---
+% https://github.com/rpgtex/DND-5e-LaTeX-Template
+% Colors, fonts and layout follow that package (lib/dndfonts.sty, lib/dndcolors.sty);
+% all credit for the original design goes to the rpgTeX team.
+
+% Fonts as in the original pdfTeX branch: TeX Gyre Bonum (the Bookman clone) as
+% body font, kpfonts sans (jkpss) as \sffamily, Gillius ADF No 2 for stat block
+% and box bodies. The packages are declared via nope-tlmgr in the document
+% frontmatter and installed into the Docker image automatically on export.
+\usepackage{tgbonum}
+\usepackage[notext,nomath,nott]{kpfonts}
+\renewcommand{\sfdefault}{jkpss}
+\usepackage[type1]{gillius2}
+\newcommand{\dndsfbody}{\gilliustwo}
+
+% Page geometry and ragged copy as in the original.
+\usepackage[hmargin=.75in,top=.6in,bottom=.8in,columnsep=.33in]{geometry}
+\usepackage{ragged2e}
+\RaggedRight
+\setlength{\RaggedRightRightskip}{0pt plus 1em}
+\setlength{\RaggedRightParindent}{1em}
+\setlength{\parindent}{1em}
+
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable}
+
+\definecolor{DndMonsterTan}{HTML}{FDF1DC}
+\definecolor{DndDarkRed}{HTML}{58180D}
+\definecolor{DndRuleRed}{HTML}{922610}
+\definecolor{PhbLightGreen}{HTML}{E0E5C1}
+\definecolor{PhbLightCyan}{HTML}{CCE3E1}
+\definecolor{PhbMauve}{HTML}{E0D6E4}
+\definecolor{PhbTan}{HTML}{F2E5D6}
+
+% 5e section styling: unnumbered small caps in dark red.
+\setcounter{secnumdepth}{-\maxdimen}
+\usepackage{titlesec}
+\titleformat{\section}{\color{DndDarkRed}\Huge\scshape}{}{0pt}{}
+\titleformat{\subsection}{\color{DndDarkRed}\Large\scshape}{}{0pt}{}
+\titleformat{\subsubsection}{\color{DndDarkRed}\large\scshape}{}{0pt}{}
+\titleformat{\paragraph}[runin]{\bfseries\slshape}{}{0pt}{}
+\titlespacing{\section}{0pt}{1em}{0.3em}
+\titlespacing{\subsection}{0pt}{0.8em}{0.2em}
+\titlespacing{\subsubsection}{0pt}{0.6em}{0.1em}
+
+% Text boxes: read-aloud, comment and sidebar (tcolorbox options per use, e.g. colback).
+\newtcolorbox{DndReadAloud}[1][]{breakable,colback=PhbTan,colframe=DndRuleRed,
+  boxrule=0.6pt,arc=2pt,left=6pt,right=6pt,fontupper=\dndsfbody\small,#1}
+\newtcolorbox{DndComment}[1][]{breakable,colback=PhbLightGreen,colframe=PhbLightGreen,
+  boxrule=0pt,arc=0pt,left=6pt,right=6pt,fontupper=\dndsfbody\small,#1}
+\newtcolorbox{DndSidebar}[1][]{colback=PhbLightCyan,colframe=DndDarkRed,
+  boxrule=0pt,toprule=2pt,bottomrule=2pt,arc=0pt,left=6pt,right=6pt,
+  fontupper=\dndsfbody\small,#1}
+
+% Obsidian callouts → 5e boxes: quote/cite read aloud, tip/hint sidebar, rest comment.
+% Defining nopecallout in the template wins over the pipeline's guarded default.
+\makeatletter
+\def\dnd@co@quote{DndReadAloud}
+\def\dnd@co@cite{DndReadAloud}
+\def\dnd@co@tip{DndSidebar}
+\def\dnd@co@hint{DndSidebar}
+\newenvironment{nopecallout}[1]{%
+  \edef\dnd@co@env{\ifcsname dnd@co@#1\endcsname\csname dnd@co@#1\endcsname\else DndComment\fi}%
+  \csname\dnd@co@env\endcsname}%
+ {\csname end\dnd@co@env\endcsname}
+
+% Key access helpers for \nope<key> macros (frontmatter forwarding + statblock code blocks).
+\newcommand{\dnd@key}[1]{\csname nope#1\endcsname}
+\newcommand{\dnd@ifkey}[2]{\ifcsname nope#1\endcsname#2\fi}
+\newcommand{\dnd@rule}{\par\smallskip\textcolor{DndRuleRed}{\rule{\linewidth}{1pt}}\par\smallskip}
+\newcommand{\dnd@thinrule}{\par\nobreak\textcolor{DndRuleRed}{\rule{\linewidth}{0.4pt}}\par\smallskip}
+\newcommand{\dnd@section}[1]{\par\medskip\noindent{\normalfont\color{DndDarkRed}\large\scshape #1}\dnd@thinrule}
+\newcommand{\dnd@detail}[2]{\dnd@ifkey{#1}{\par\noindent\textbf{#2} \dnd@key{#1}}}
+
+% List entries from the code-block parser: \nope<key><N>-name / -desc (or bare \nope<key><N>).
+\newcommand{\dnd@entrytext}[2]{%
+  \ifcsname nope#1#2-desc\endcsname\csname nope#1#2-desc\endcsname
+  \else\ifcsname nope#1#2\endcsname\csname nope#1#2\endcsname\fi\fi}
+\newcommand{\dnd@entry}[2]{%
+  \ifcsname nope#1#2-name\endcsname
+    \par\medskip\noindent{\bfseries\itshape\csname nope#1#2-name\endcsname.}\ \dnd@entrytext{#1}{#2}%
+  \else\ifcsname nope#1#2\endcsname
+    \par\medskip\noindent\csname nope#1#2\endcsname
+  \fi\fi}
+\newcommand{\dnd@iflist}[2]{%
+  \ifcsname nope#11-name\endcsname#2\else\ifcsname nope#11\endcsname#2\fi\fi}
+
+% Ability scores: "stats: [12, 8, 13, 10, 14, 15]" → six columns "12 (+1)".
+% Modifier = floor((score-10)/2), exact for odd and even scores.
+\newcommand{\dnd@mod}[1]{\the\numexpr(#1-\ifodd\numexpr#1\relax 11\else 10\fi)/2\relax}
+\newcommand{\dnd@statcell}[1]{%
+  \the\numexpr#1\relax\
+  (\ifnum\numexpr(#1-\ifodd\numexpr#1\relax 11\else 10\fi)/2\relax<0\else+\fi\dnd@mod{#1})}
+\def\dnd@splitstats#1,#2,#3,#4,#5,#6\dnd@endstats{%
+  \begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}cccccc@{}}
+    \textbf{STR}&\textbf{DEX}&\textbf{CON}&\textbf{INT}&\textbf{WIS}&\textbf{CHA}\\
+    \dnd@statcell{#1}&\dnd@statcell{#2}&\dnd@statcell{#3}&%
+    \dnd@statcell{#4}&\dnd@statcell{#5}&\dnd@statcell{#6}%
+  \end{tabular*}}
+
+% Monster stat block — fed by a ```statblock code block (declare via nope-blocks:
+% [statblock]). Keys follow the Fantasy Statblock Obsidian plugin, so the same
+% block renders live in Obsidian: name, size, type, subtype, alignment, ac, hp,
+% hit_dice, speed, stats, senses, languages, cr, damage_* and condition_immunities,
+% plus the lists traits, actions, reactions and legendary_actions (name/desc items).
+\newtcolorbox{dnd@statbox}{breakable,colback=DndMonsterTan,colframe=DndRuleRed,
+  boxrule=0pt,toprule=2.5pt,bottomrule=2.5pt,arc=0pt,left=6pt,right=6pt}
+\newenvironment{statblock}{%
+  \begin{dnd@statbox}\dndsfbody\small
+  \noindent{\normalfont\color{DndDarkRed}\scshape\LARGE\dnd@key{name}\par}
+  \noindent{\itshape
+    \dnd@ifkey{size}{\dnd@key{size} }%
+    \dnd@ifkey{type}{\dnd@key{type}}%
+    \dnd@ifkey{subtype}{ (\dnd@key{subtype})}%
+    \dnd@ifkey{alignment}{, \dnd@key{alignment}}\par}
+  \dnd@rule
+  {\color{DndDarkRed}
+  \dnd@ifkey{ac}{\par\noindent\textbf{Armor Class} \dnd@key{ac}}
+  \dnd@ifkey{hp}{\par\noindent\textbf{Hit Points} \dnd@key{hp}\dnd@ifkey{hit_dice}{ (\dnd@key{hit_dice})}}
+  \dnd@ifkey{speed}{\par\noindent\textbf{Speed} \dnd@key{speed}}\par}
+  \dnd@ifkey{stats}{%
+    \dnd@rule
+    {\color{DndDarkRed}\expandafter\expandafter\expandafter\dnd@splitstats\csname nopestats\endcsname\dnd@endstats\par}}
+  \dnd@rule
+  {\color{DndDarkRed}
+  \dnd@detail{damage_vulnerabilities}{Damage Vulnerabilities}
+  \dnd@detail{damage_resistances}{Damage Resistances}
+  \dnd@detail{damage_immunities}{Damage Immunities}
+  \dnd@detail{condition_immunities}{Condition Immunities}
+  \dnd@detail{senses}{Senses}
+  \dnd@detail{languages}{Languages}
+  \dnd@detail{cr}{Challenge}\par}
+  \dnd@rule
+  \dnd@entry{traits}{1}\dnd@entry{traits}{2}\dnd@entry{traits}{3}%
+  \dnd@entry{traits}{4}\dnd@entry{traits}{5}\dnd@entry{traits}{6}%
+  \dnd@iflist{actions}{\dnd@section{Actions}}%
+  \dnd@entry{actions}{1}\dnd@entry{actions}{2}\dnd@entry{actions}{3}\dnd@entry{actions}{4}%
+  \dnd@entry{actions}{5}\dnd@entry{actions}{6}\dnd@entry{actions}{7}\dnd@entry{actions}{8}%
+  \dnd@iflist{reactions}{\dnd@section{Reactions}}%
+  \dnd@entry{reactions}{1}\dnd@entry{reactions}{2}\dnd@entry{reactions}{3}\dnd@entry{reactions}{4}%
+  \dnd@iflist{legendary_actions}{\dnd@section{Legendary Actions}%
+    \dnd@ifkey{legendary_description}{\par\noindent\dnd@key{legendary_description}}}%
+  \dnd@entry{legendary_actions}{1}\dnd@entry{legendary_actions}{2}%
+  \dnd@entry{legendary_actions}{3}\dnd@entry{legendary_actions}{4}%
+}{\end{dnd@statbox}}
+
+% Feats, magic items and spells — atomic notes with latex-env + frontmatter keys.
+\newcounter{dndfeat}
+\newenvironment{dndfeat}[1][]{\refstepcounter{dndfeat}\par\medskip
+  \noindent{\color{DndDarkRed}\large\scshape\dnd@key{name}\par}
+  \dnd@ifkey{prerequisite}{\noindent{\itshape Prerequisite: \dnd@key{prerequisite}}\par}
+  \smallskip\noindent\ignorespaces}{\par\medskip}
+\providecommand{\dndfeatautorefname}{Feat}
+
+\newcounter{dnditem}
+\newenvironment{dnditem}[1][]{\refstepcounter{dnditem}\par\medskip
+  \noindent{\color{DndDarkRed}\large\scshape\dnd@key{name}\par}
+  \dnd@ifkey{item-type}{\noindent{\itshape\dnd@key{item-type}}\par}
+  \smallskip\noindent\ignorespaces}{\par\medskip}
+\providecommand{\dnditemautorefname}{Item}
+
+\newcounter{dndspell}
+\newenvironment{dndspell}[1][]{\refstepcounter{dndspell}\par\medskip
+  \noindent{\color{DndDarkRed}\large\scshape\dnd@key{name}\par}
+  \dnd@ifkey{level}{\noindent{\itshape\dnd@key{level}}\par}
+  \smallskip
+  \dnd@detail{casting-time}{Casting Time:}
+  \dnd@detail{range}{Range:}
+  \dnd@detail{components}{Components:}
+  \dnd@detail{duration}{Duration:}
+  \par\smallskip\noindent\ignorespaces}{\par\medskip}
+\providecommand{\dndspellautorefname}{Spell}
+
+% Map areas with automatic numbering (\DndArea / \DndSubArea) — used via ```latex blocks.
+\newcounter{DndArea}
+\newcounter{DndSubArea}[DndArea]
+\newcommand{\DndArea}[1]{\par\medskip\refstepcounter{DndArea}%
+  \noindent{\color{DndDarkRed}\large\scshape\theDndArea.\ #1}\par\smallskip}
+\newcommand{\DndSubArea}[1]{\par\medskip\refstepcounter{DndSubArea}%
+  \noindent{\color{DndDarkRed}\scshape\theDndArea\alph{DndSubArea}.\ #1}\par\smallskip}
+\makeatother
+% --- end DnD 5e look ---
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% NOPE-IMPORTS — DO NOT CHANGE unless you know what you are doing.        %%%
@@ -280,7 +443,7 @@ $for(header-includes)$
 $header-includes$
 $endfor$
 
-\title{$title$}
+\title{$title$$if(subtitle)$\\[0.4em]\large $subtitle$$endif$}
 $if(author)$\author{$author$}$endif$
 $if(date)$\date{$date$}$endif$
 

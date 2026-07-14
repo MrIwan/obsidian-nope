@@ -7,7 +7,8 @@ export interface NopeSettings {
 	keepLatexIntermediates: boolean;
 	dockerPath: string;
 	previewAutoRender: boolean;
-	extraTexPackages: string;
+	/** Accumulated tlmgr packages requested via nope-tlmgr frontmatter; baked into the image, reset on image removal. */
+	texPackages: string[];
 	usePrebuiltImage: boolean;
 	imageTag: string;
 }
