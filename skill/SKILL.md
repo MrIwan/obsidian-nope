@@ -2,7 +2,7 @@
 name: nope
 description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract, numbersections, book), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
-last-updated: 2026-07-13
+last-updated: 2026-07-14
 ---
 
 # nope — authoring conventions
@@ -224,7 +224,7 @@ VAULT_PATH="/absolute/path/to/vault" docker compose run --rm pipeline "Folder/Do
 
 - `Export active note to PDF` — main command.
 - `Open PDF preview` / `Toggle click-to-open in PDF preview` — live PDF preview pane. Its toolbar has a one-shot editor→PDF sync button (scrolls to the cursor's anchor) plus a click-to-open toggle (also switchable via the command): while active, clicking into the PDF opens the note rendered at that spot in the last active editor tab (title page/TOC open the main document). The setting "Follow on Ctrl/Cmd+click" (on by default) enables both directions per modified click without any toggle: mod-click in an embedded note syncs the PDF, mod-click in the PDF opens the note.
-- `Add structured note` — opens a picker (table / base table / theorem / lemma / definition / proof / mermaid diagram / equation / glossary term / abbreviation); the chosen type creates an atomic note with the correct frontmatter + body skeleton next to the current note and inserts its embed (`![[…]]`) or, for glossary/abbreviation, its ref (`[[…]]`) at the cursor.
+- `Add structured note` — opens a picker (table / base table / theorem / lemma / definition / proof / mermaid diagram / equation / glossary term / abbreviation); the chosen type creates an atomic note with the correct frontmatter + body skeleton next to the current note and inserts its embed (`![[…]]`) or, for glossary/abbreviation, its ref (`[[…]]`) at the cursor. With text selected, the selection becomes the note body instead of the skeleton and is replaced by the link — extract-to-note in one step.
 - `Create branding template` / `Create custom LaTeX template` / `Create example main document` — scaffold helper files in the vault.
 - `Build docker image (with cache)` / `Remove docker image` / `Cleanup build folder` — pipeline maintenance (the image also rebuilds itself after a plugin update changes the pipeline).
 

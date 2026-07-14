@@ -643,7 +643,7 @@ This command drops the `nope_minimal.tex` starter into the vault as a base for y
 
 ### Add structured note
 
-One command for all atomic-note scaffolds: it opens a fuzzy-searchable picker with the note types — table, base table, theorem, lemma, definition, proof, mermaid diagram, equation, glossary term and abbreviation. The chosen type creates a new atomic note next to the current one with the correct frontmatter (`latex-env`, required keys like `caption`, `gls-*`) and a ready-to-fill body, then inserts the embed (`![[…]]`) or reference (`[[…]]`) at your cursor and opens the note in a new tab. Available while editing a note.
+One command for all atomic-note scaffolds: it opens a fuzzy-searchable picker with the note types — table, base table, theorem, lemma, definition, proof, mermaid diagram, equation, glossary term and abbreviation. The chosen type creates a new atomic note next to the current one with the correct frontmatter (`latex-env`, required keys like `caption`, `gls-*`) and a ready-to-fill body, then inserts the embed (`![[…]]`) or reference (`[[…]]`) at your cursor and opens the note in a new tab. If text is selected when you run the command, the selection becomes the body of the new note instead of the skeleton and is replaced by the link — extract-to-note in one step. Available while editing a note.
 
 
 ### Remove docker image

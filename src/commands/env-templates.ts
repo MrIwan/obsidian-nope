@@ -1,6 +1,7 @@
 // Scaffold command for latex-env atomic notes: one "Add structured note" command
 // opens a picker with all note types; the chosen template creates a note with the
 // correct frontmatter + body skeleton and inserts an embed/ref at the cursor.
+// A text selection becomes the note body instead of the skeleton (extract-to-note).
 
 import { Editor, FuzzySuggestModal, MarkdownFileInfo, MarkdownView, Notice, TFile, normalizePath } from 'obsidian';
 import type NopePlugin from '../main';
@@ -164,6 +165,13 @@ The acronym entry is built from the frontmatter above; this body is not exported
 	},
 ];
 
+// Selected text replaces the placeholder body; the template frontmatter stays.
+function withSelectionBody(content: string, selection: string): string {
+	const fm = content.match(/^---\n[\s\S]*?\n---\n/);
+	if (!fm) return content;
+	return `${fm[0]}\n${selection}\n`;
+}
+
 // Return next available numbered path if the target already exists.
 function pickAvailablePath(plugin: NopePlugin, candidatePath: string): string {
 	const dotIdx = candidatePath.lastIndexOf('.');
@@ -197,8 +205,12 @@ async function createEnvNote(
 	const path = pickAvailablePath(plugin, target);
 	const stem = path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '');
 
+	// A selection becomes the note body and is replaced by the link below.
+	const selection = editor.getSelection().trim();
+	const content = selection ? withSelectionBody(tpl.content, selection) : tpl.content;
+
 	try {
-		const file = await plugin.app.vault.create(path, tpl.content);
+		const file = await plugin.app.vault.create(path, content);
 		// Vault is basename-indexed, so a bare name resolves the wikilink.
 		editor.replaceSelection(tpl.embed ? `![[${stem}]]` : `[[${stem}]]`);
 		new Notice(`Created ${stem}`);
