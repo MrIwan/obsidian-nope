@@ -1,6 +1,6 @@
 ---
 name: nope
-description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, abstract, numbersections, book), wikilink embeds/refs, image figures, mermaid, glossary, citations, inline markup, callouts, branding and bases."
+description: "Use when authoring or editing Obsidian notes that are exported to PDF via the nope plugin. Covers atomic-note structure, frontmatter keys (latex-env, caption, longtable, latex-short, gls-*, citekey, nope-branding, nope-template, nope-blocks, abstract, numbersections, book), wikilink embeds/refs, image figures, mermaid, code-block dispatch (latex passthrough, declared key:value blocks), glossary, citations, inline markup, callouts, branding and bases."
 nope-version: "0.x"
 last-updated: 2026-07-14
 ---
@@ -84,6 +84,24 @@ w: "60%"
 scale: 3
 ---
 ```
+
+## Code blocks (fenced, in flowing text)
+
+Fenced code blocks anywhere in prose are dispatched by their language identifier — no atomic note needed:
+
+- ` ```latex ` — body goes into the PDF as **raw LaTeX, unchanged**. No escaping, no wikilink resolution, no validity check (a typo aborts the build with the usual `!`-line); packages you use must exist (custom template `\usepackage` + Settings → Extra LaTeX packages). Use for one-off constructs, e.g. a `\dirtree{…}` directory tree.
+- ` ```<identifier> ` — if declared under `nope-blocks:` (doc frontmatter or branding note, e.g. `nope-blocks: [statblock]`; list or single value, exact case-sensitive match), the body must be **flat `key: value` lines** and renders as `\begin{<identifier>}…\end{<identifier>}` with each key exposed as `\nope<key>` (identical access pattern to frontmatter forwarding in custom environments — one template env serves both the atomic `latex-env` entry and the inline fence). The environment must be defined in a custom template. Values: surrounding quotes stripped, LaTeX specials escaped; a non-`key: value` line is a **hard export error**. Macros are scoped per block.
+- Anything else (or no identifier) stays a normal code fence — including ` ```mermaid `, which still renders only in `latex-env: mermaid` notes.
+
+Declared blocks are **unnumbered and not referencable**; for numbering and `[[refs]]` use an atomic `latex-env` note instead.
+
+````markdown
+```statblock
+name: Goblin Boss
+ac: 17
+hp: 21 (6d6)
+```
+````
 
 ## Bases
 
@@ -237,6 +255,7 @@ DO:
 - Exactly one Pandoc table per `table` note; exactly one `$$…$$` per math note.
 - Quote wikilink values in YAML: `"[[logo.png]]"`.
 - A base embed transcludes by default; wrap it in a `latex-env: table` note to get a table.
+- Declare custom code-block identifiers in `nope-blocks:` and define the matching environment in a custom template.
 
 DON'T:
 
@@ -249,6 +268,8 @@ DON'T:
 - Don't give a logo as an absolute path — use a wikilink (`"[[logo.png]]"`) so the image is copied into the build folder; an absolute path is missing at build time.
 - Don't put more than one base embed — or a base embed plus a literal table — in one `table` wrapper.
 - In a base, `this`/`this.file` (host file object), the listed `this.file.*` properties and host frontmatter keys are supported; other `file.*` props on `this` resolve to null at export.
+- Don't expect wikilinks or `==markup==` inside ` ```latex ` or declared code blocks to resolve — fence content is raw.
+- Don't put free prose in a declared code block — only flat `key: value` lines; anything else is a hard export error.
 
 ## Example main document
 

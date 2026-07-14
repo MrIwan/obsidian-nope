@@ -454,6 +454,50 @@ This sentence has ==highlighted text==.
 
 ***
 
+## Code blocks
+
+Fenced code blocks anywhere in flowing text are dispatched by their language identifier:
+
+- ` ```latex ` — the body is passed into the PDF as **raw LaTeX**, unchanged. No escaping, no wikilink resolution; any package you use must be available (see [Extra LaTeX packages](#extra-latex-packages)). Great for one-off constructs like a `\dirtree{…}` directory tree.
+- ` ```<identifier> ` — if the identifier is declared under `nope-blocks:` (document frontmatter or branding note), the body is parsed as flat `key: value` lines and rendered as `\begin{<identifier>}…\end{<identifier>}`, with every key exposed as a `\nope<key>` command — the same pattern as [reading note frontmatter inside an environment](#reading-note-frontmatter-inside-an-environment). The environment itself comes from your custom template.
+- Anything else (or no identifier) stays a normal code fence, exactly as before.
+
+Declared blocks are unnumbered and not referencable — for a numbered, referencable element use an atomic note with `latex-env`.
+
+### Example
+
+Declare the block type once and define its environment in the custom template:
+
+```yaml
+---
+nope-blocks: [statblock]
+nope-template: "[[my-template]]"
+---
+```
+
+Then drop blocks directly into any note's prose:
+
+````markdown
+The party rounds the corner and faces trouble:
+
+```statblock
+name: Goblin Boss
+ac: 17
+hp: 21 (6d6)
+```
+````
+
+```latex
+\newenvironment{statblock}{%
+  \par\medskip\noindent\textbf{\csname nopename\endcsname}\\
+  AC \csname nopeac\endcsname\ · HP \csname nopehp\endcsname
+  \par\smallskip\ignorespaces}{\par\medskip}
+```
+
+A body line that is not `key: value` aborts the export with an error naming the block and line.
+
+***
+
 ## Branding
 
 Branding is handled through a dedicated branding note and regular frontmatter overrides. This keeps document styling configurable without hardcoding project-specific values into the content itself.
