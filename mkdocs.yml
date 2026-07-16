@@ -75,7 +75,7 @@ nav:
       - Theorems & environments: blocks/theorems.md
       - Mermaid diagrams: blocks/mermaid.md
       - Images & figures: blocks/figures.md
-      - Code blocks & stat blocks: blocks/code-blocks.md
+      - Code blocks & custom blocks: blocks/code-blocks.md
   - Knowledge:
       - Glossary & acronyms: knowledge/glossary.md
       - Citations & bibliography: knowledge/citations.md

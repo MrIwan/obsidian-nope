@@ -8,7 +8,7 @@ Standard Pandoc/Eisvogel keys (`title`, `author`, `lang`, `toc`, `toc-depth`, `l
 | --- | --- | --- |
 | `nope-template` | `"[[my-template.tex]]"` | Use a custom LaTeX template instead of Eisvogel. Must keep the `NOPE-IMPORTS` block. |
 | `nope-branding` | `"[[Branding-Note]]"` | Apply a branding note (colors, logos, title page). |
-| `nope-blocks` | `[statblock, …]` | Declare code-block identifiers rendered as template environments. |
+| `nope-blocks` | `[myblock, …]` | Declare code-block identifiers rendered as template environments. |
 | `nope-tlmgr` | `[cancel, pgfplots]` | LaTeX packages installed automatically during export. |
 | `abstract` | text or `"[[Note]]"` | Abstract page. `abstract-title:` overrides the heading. |
 | `numbersections` | `true` | Number headings **and** make chapter/section refs read "Chapter X". `secnumdepth:` tunes depth. |

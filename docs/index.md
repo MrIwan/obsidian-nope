@@ -66,9 +66,9 @@ One concept per note, one main document with embeds. Cross-references number the
 
     [Branding](styling/branding.md)
 
--   <span class="nope-emoji">🎲</span>
+-   <span class="nope-emoji">🧱</span>
 
-    **Code blocks & stat blocks.** Raw LaTeX fences and Fantasy-Statblock-compatible ` ```statblock ` blocks that render live *and* export typeset.
+    **Code blocks & custom blocks.** A fenced block's identifier decides its fate: raw LaTeX passthrough, a custom environment from your own template, or a plain code fence.
 
     [Code blocks](blocks/code-blocks.md)
 
