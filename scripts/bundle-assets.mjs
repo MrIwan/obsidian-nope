@@ -7,7 +7,7 @@
 // This lets BRAT/store installs — which only deliver main.js/manifest/styles —
 // still get the full pipeline + skill.
 //
-// Excluded: build artifacts, macOS junk, the local .env, and the high-res
+// Excluded: build artifacts, macOS junk, the local .env and the high-res
 // original images (the pipeline references the compressed *-tiny.* variants;
 // the originals stay in the repo for archival but are NOT shipped).
 

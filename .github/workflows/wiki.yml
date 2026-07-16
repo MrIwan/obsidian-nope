@@ -1,0 +1,60 @@
+# Build and deploy the versioned documentation site (MkDocs Material + mike).
+# Runs on version tags only, so the wiki always documents the latest release —
+# never master WIP. Each version lands as a folder on the gh-pages branch with
+# a version switcher in the header; `latest` points to the newest release.
+# One-time repo setup: Settings → Pages → deploy from branch `gh-pages` (root).
+name: wiki
+
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+  # Manual deploy of the current state as a given version (fixing docs typos
+  # after a release without cutting a new one).
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to (re-)deploy the docs as, e.g. 0.7.0"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # mike commits onto the gh-pages branch
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Tag must be `nope` — pipeline/docker-compose.yml runs that image.
+      - name: Build pipeline image
+        uses: docker/build-push-action@v6
+        with:
+          context: pipeline
+          tags: nope
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Export example PDFs
+        run: scripts/build-wiki-assets.sh
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Deploy versioned docs
+        run: |
+          pip install mkdocs-material mike
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          mike deploy --push --update-aliases "$VERSION" latest
+          mike set-default --push latest

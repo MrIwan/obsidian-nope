@@ -45,3 +45,6 @@ example-vault/.obsidian/plugins/
 .claude/
 
 _nope-temp-base.base
+# Wiki: generated assets and built site
+docs/assets/pdf/
+site/

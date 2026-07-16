@@ -5,45 +5,45 @@
 #   must=<string>                          generated .tex must contain the string (fixed, no regex)
 #   must-not=<string>                      generated .tex must NOT contain the string
 #
-# Every case additionally checks: exit code 0, a non-empty PDF, and that the
+# Every case additionally checks: exit code 0, a non-empty PDF and that the
 # final LaTeX log reports no undefined references.
 
 # ---- Feature documents (unit level) ----
 
-[Features/Feature-Tables.md]
+[features/feature-tables.md]
 must=Comparison of implementation variants
 must=Project phases overview
 must=\begin{longtable}
 must=\begin{nopefittable}
 must-not=[Not found:
 
-[Features/Feature-Citations.md]
+[features/feature-citations.md]
 must=Vaswani
 must=Rumelhart
 must=CSLReferences
 must-not=[Not found:
 
-[Features/Feature-Glossary.md]
+[features/feature-glossary.md]
 must=\gls{
 must=\newacronym
 must-not=[Not found:
 
-[Features/Feature-Equations.md]
+[features/feature-equations.md]
 must=\begin{equation}
 must=\label{eq:
 must-not=[Not found:
 
-[Features/Feature-Environments.md]
+[features/feature-environments.md]
 must=\begin{theorem}
 must=Pythagoras
 must-not=[Not found:
 
-[Features/Feature-Callouts.md]
+[features/feature-callouts.md]
 must=\begin{nopecallout}{
 must=Important Notice
 must-not=[Not found:
 
-[Features/Feature-Figures.md]
+[features/feature-figures.md]
 must=\begin{figure}
 must=Diagram of a Neuron
 must=\includegraphics
@@ -51,17 +51,17 @@ must-not=[Not found:
 
 # Note: the rendered PNG travels via pandoc --extract-media into media/,
 # so assert on the figure + caption, not on a mermaid/ path.
-[Features/Feature-Mermaid.md]
+[features/feature-mermaid.md]
 must=\begin{figure}
 must=The example representation from the Mermaid
 must=\includegraphics
 must-not=[Not found:
 
-[Features/Feature-Footnotes.md]
+[features/feature-footnotes.md]
 must=\footnote{
 must-not=[Not found:
 
-[Features/Feature-Slices.md]
+[features/feature-slices.md]
 # Pandoc escapes brackets/# in LaTeX output ({[}Heading not found: slice-source\#…{]}),
 # so assert on the unescaped prefix only.
 must=Middle Section
@@ -71,20 +71,20 @@ must-not=content of the first section
 must-not=content of the third section
 must-not=[Not found:
 
-[Features/Feature-Markup.md]
+[features/feature-markup.md]
 must=\nopehl{
 must=After the hidden region
 must-not=this text is hidden
 must-not=[Not found:
 
-[Features/Feature-Branding.md]
+[features/feature-branding.md]
 must=titlepage
 must=A Subsection
 must-not=[Not found:
 
 # ---- Integration documents ----
 
-[Example Document/Example Document.md]
+[example-document/example-document.md]
 must=Vaswani
 must=Rumelhart
 must=\begin{theorem}
@@ -99,18 +99,18 @@ must-not=content of the first section
 must-not=this text is hidden
 must-not=[Not found:
 
-[Minimal LaTex/Example Custom LaTeX.md]
+[minimal-latex/example-custom-latex.md]
 must=demobox
 must-not=[Not found:
 
-[Book Example/Book Example.md]
+[book-example/book-example.md]
 must=\part{
 must-not=[Not found:
 
 # The DnD example exercises the code-block dispatch: raw ```latex passthrough
 # (\DndArea), a declared ```statblock block in Fantasy-Statblock syntax (nope-blocks,
 # YAML-lite lists) and custom latex-env envs (dndfeat/dnditem/dndspell).
-[DnD Example/DnD Example.md]
+[dnd-example/dnd-example.md]
 must=\begin{statblock}
 must=Monster Foo
 must=nopetraits1-name

@@ -2,8 +2,8 @@
 
 Headless export tests against the example vault. Two levels:
 
-- **Feature level** — `example-vault/Features/Feature-*.md`: one small document per feature, each just frontmatter + embeds of the existing `HelperFiles` notes. Precise failure localization, and users can export them individually as living documentation.
-- **Integration level** — `Example Document`, `Example Custom LaTeX`, `Book Example`: cross-feature interactions (counters across embeds, glossary + citeproc, branding, book mode) that no single-feature document exercises.
+- **Feature level** — `example-vault/features/feature-*.md`: one small document per feature, mostly frontmatter plus inlined content or embeds of the `helper-files` notes. Precise failure localization; users can export them individually as living documentation.
+- **Integration level** — `example-document`, `example-custom-latex`, `book-example`: cross-feature interactions (counters across embeds, glossary + citeproc, branding, book mode) that no single-feature document exercises.
 
 ## How a test works
 
@@ -16,18 +16,18 @@ Headless export tests against the example vault. Two levels:
 
 ```bash
 tests/run-tests.sh            # all cases (~1 min with a built image)
-tests/run-tests.sh Tables     # only cases whose path contains "Tables"
+tests/run-tests.sh tables     # only cases whose path contains "tables"
 ```
 
 Requires the `nope` Docker image. `NOPE_TEST_VAULT` overrides the vault (default: `example-vault`). CI runs the suite on every push (`.github/workflows/pipeline-tests.yml`, image layer-cached. logs uploaded as artifact on failure).
 
 ## Adding a test
 
-1. Create a document in `example-vault/Features/` — reuse existing `HelperFiles` notes via embeds; the basename must be vault-unique (hence the `Feature-` prefix).
+1. Create a document in `example-vault/features/` — reuse existing `helper-files` notes via embeds; the basename must be vault-unique (hence the `feature-` prefix).
 2. Add a manifest block:
 
    ```
-   [Features/Feature-X.md]
+   [features/feature-x.md]
    must=<string that proves the feature rendered>
    must-not=[Not found:
    ```
@@ -36,4 +36,4 @@ Requires the `nope` Docker image. `NOPE_TEST_VAULT` overrides the vault (default
 
 ## Not covered
 
-Bases (need the Obsidian API), the plugin UI/preview, and visual fidelity (mermaid/layout changes need an eyeball on the PDF).
+Bases (need the Obsidian API), the plugin UI/preview and visual fidelity (mermaid/layout changes need an eyeball on the PDF).

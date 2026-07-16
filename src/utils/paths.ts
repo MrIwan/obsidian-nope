@@ -34,7 +34,7 @@ export function getVaultAbsolutePath(app: App): string {
 	return adapter.getBasePath();
 }
 
-// Resolve final PDF output path; supports ~, absolute, and vault-relative paths.
+// Resolve final PDF output path; supports ~, absolute and vault-relative paths.
 export function resolveOutputPath(
 	outputPath: string,
 	sourceNoteAbsPath: string,

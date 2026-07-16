@@ -1,0 +1,10 @@
+# Local wiki preview, all in Docker (no host install).
+# Build:  Use scripts/preview-wiki.sh
+FROM python:3.12-slim
+
+RUN pip install --no-cache-dir mkdocs-material
+
+WORKDIR /docs
+EXPOSE 8000
+
+CMD ["mkdocs", "serve", "-a", "0.0.0.0:8000"]

@@ -55,7 +55,7 @@ A missing required block (table/math) or missing `caption` (table/mermaid) is a 
 
 Any `latex-env` value that isn't built-in (theorem family, `table`, `mermaid`, math) is wrapped generically into `\begin{<name>}…\end{<name>}`, with `latex-short:` as the optional argument and `[[…]]` refs resolving via `\autoref`. The environment only has to be **defined** somewhere.
 
-Define it in a **custom LaTeX template, not in `header-includes`** — raw LaTeX inside YAML frontmatter is brittle (quoting and escaping bite you, and it does not carry over between documents). A template is far more robust and reusable. Run `Create custom LaTeX template` (gives `nope_minimal.tex`), add your environment next to the existing `\newtheorem` block and point the document at it with `nope-template: "[[my-template]]"`:
+Define it in a **custom LaTeX template, not in `header-includes`** — raw LaTeX inside YAML frontmatter is brittle (quoting and escaping bite you — and it does not carry over between documents). A template is far more robust and reusable. Run `Create custom LaTeX template` (gives `nope_minimal.tex`), add your environment next to the existing `\newtheorem` block and point the document at it with `nope-template: "[[my-template]]"`:
 
 ```latex
 % own counter per type → \autoref prints the right name, numbered "Praxisfall 1.1"
@@ -114,7 +114,7 @@ Embed an Obsidian base view with `![[Base.base#View]]`. What it produces depends
 
 The query (filters, formulas, sort, columns) is evaluated by Obsidian's real Bases engine at export — what the view shows is what you get. `#View` is optional (first view otherwise). Requires the core **Bases** plugin enabled (Obsidian ≥ 1.10).
 
-**`this` (host-note context).** Filters and formulas may reference the note the base is embedded in via `this`. At export the embedding note's values are frozen into the query, so e.g. `status == this.status` or `file.inFolder(this.file.folder)` resolve against that note, and a `this.file.link` formula column renders a link to it. Supported references:
+**`this` (host-note context).** Filters and formulas may reference the note the base is embedded in via `this`. At export the embedding note's values are frozen into the query, so e.g. `status == this.status` or `file.inFolder(this.file.folder)` resolve against that note; a `this.file.link` formula column renders a link to it. Supported references:
 
 - a bare `this` or `this.file` — the host **file object**, so `file.hasLink(this)` (and `file.hasLink(this.file)`) work, e.g. to pull in every note that links back to the current one
 - `this.file.path`, `this.file.name`, `this.file.basename`, `this.file.folder`, `this.file.ext`, `this.file.link`
@@ -200,7 +200,7 @@ Recognized fields: `author`, `editor`, `title`, `year`, `month`, `journal`, `boo
 
 ### Branding notes
 
-One `.md` per customer/project with frontmatter overrides; the body is ignored on export. **Quote every wikilink value** (`"[[logo.png]]"`) — unquoted, YAML parses it as a list and fails. Logo wikilinks in header/footer slots (`header-left/center/right`, `footer-left/center/right`) auto-expand to `\nopelogo{<path>}` (a raised `\includegraphics`); default height `0.7cm`, override with `"[[logo.png|h=1.2cm]]"`. `titlepage-logo`/`titlepage-background` take a plain path (substitution only). SVG logos are unsupported under pdflatex — use PNG/PDF.
+One `.md` per document type (thesis, client report, book, …) with frontmatter overrides; the body is ignored on export. **Quote every wikilink value** (`"[[logo.png]]"`) — unquoted, YAML parses it as a list and fails. Logo wikilinks in header/footer slots (`header-left/center/right`, `footer-left/center/right`) auto-expand to `\nopelogo{<path>}` (a raised `\includegraphics`); default height `0.7cm`, override with `"[[logo.png|h=1.2cm]]"`. `titlepage-logo`/`titlepage-background` take a plain path (substitution only). SVG logos are unsupported under pdflatex — use PNG/PDF.
 
 **Always reference a logo by wikilink, never by an absolute path.** The export copies the linked image into the per-document build folder and rewrites the path to point there, so the LaTeX run finds it. An absolute path (e.g. `/Users/me/logo.png`) is *not* copied and lives outside the build sandbox, so the image is missing and the build fails. Use `"[[logo.png]]"`; the file may sit anywhere in the vault.
 
@@ -279,7 +279,7 @@ DON'T:
 ```markdown
 ---
 title: "My Report"
-nope-branding: "[[Branding-Customer1]]"
+nope-branding: "[[Branding-Report]]"
 toc: true
 abstract: "[[My-Abstract]]"
 ---

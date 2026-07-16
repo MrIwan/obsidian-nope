@@ -18,7 +18,7 @@ This is the **host note**
 The base is embedded directly here, so `this` resolves against **this** note
 (`project: Phoenix`). 
 
-![[Project-Tasks.base#Tasks]]
+![[project-tasks.base#Tasks]]
 
 ## Table form — host is the wrapper note
 
@@ -27,7 +27,7 @@ against the **wrapper** (which also sets `project: Phoenix`). The `host` column
 is a `this.file.link` formula and must link back to the wrapper in every row —
 proving `this.file.link` resolves instead of breaking.
 
-![[Project-Tasks-Table]]
+![[project-tasks-table]]
 
 # `this.<anything>` and `file.hasLink(this)`
 
@@ -35,14 +35,14 @@ proving `this.file.link` resolves instead of breaking.
 ## `this.<key>` — transclude form, host is this document
 
 
-![[Books-by-Shelf.base#Shelf]]
+![[books-by-shelf.base#Shelf]]
 
 ## `this.<key>` — table form, host is the wrapper note
 
 
-![[Books-by-Shelf-Table]]
+![[books-by-shelf-table]]
 
 ## `file.hasLink(this)` — host is the reading-list note
 
 
-![[Reading-List-2026]]
+![[reading-list-2026]]

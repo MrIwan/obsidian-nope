@@ -1,5 +1,5 @@
 -- Recursively expand ![[Note]] and ![[Image]] embeds; resolve wikilinks to embedded targets.
--- Supports heading slices (#Heading), block IDs (#^block-id), and image figures with captions.
+-- Supports heading slices (#Heading), block IDs (#^block-id) and image figures with captions.
 -- Frontmatter-driven wraps: latex-env (theorem/table/mermaid), auto-heading-shift, glossary terms.
 -- After expansion, wikilinks resolve to \autoref (default display) or \hyperref (custom text).
 
@@ -324,7 +324,7 @@ local function meta_bool(doc_meta, key, default)
   return default
 end
 
--- LaTeX environment wrappers for math (equation/align/etc.), tables, mermaid, and block envs.
+-- LaTeX environment wrappers for math (equation/align/etc.), tables, mermaid and block envs.
 
 local MATH_ENVS = {
   equation = true, ["equation*"] = true,
@@ -509,7 +509,7 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
   return annotated
 end
 
--- Render mermaid diagram to PNG figure with frontmatter caption, scale, and width hints.
+-- Render mermaid diagram to PNG figure with frontmatter caption, scale and width hints.
 local function wrap_mermaid(notename, env_name, sliced, doc_meta)
   local caption_inlines = meta_to_inlines(doc_meta.caption)
   if not caption_inlines or #caption_inlines == 0 then
@@ -726,7 +726,7 @@ local function flush_glossary_entries(doc)
   doc.meta["has-glossary"] = pandoc.MetaBool(true)
 end
 
--- Load and process a note embed; handle slicing, shifting, and env wraps.
+-- Load and process a note embed; handle slicing, shifting and env wraps.
 local function load_note(src, host_level)
   host_level = host_level or 0
   local notename, anchor_type, anchor_value = parse_anchor(src)

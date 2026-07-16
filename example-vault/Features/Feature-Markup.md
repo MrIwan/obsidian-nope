@@ -1,6 +1,8 @@
 ---
 title: "Feature: Obsidian Markup"
 author: MrIwan
+notitlepage: true
+toc: false
 ---
 
 # Obsidian Markup

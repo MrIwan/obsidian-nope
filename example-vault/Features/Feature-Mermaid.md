@@ -1,6 +1,8 @@
 ---
 title: "Feature: Mermaid"
 author: MrIwan
+notitlepage: true
+toc: false
 ---
 
 # Mermaid

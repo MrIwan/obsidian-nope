@@ -1,6 +1,8 @@
 ---
 title: "Feature: Slice Embeds & Wikilinks"
 author: MrIwan
+notitlepage: true
+toc: false
 ---
 
 # Slice Embeds

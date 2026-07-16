@@ -1,6 +1,8 @@
 ---
 title: "Feature: Tables"
 author: MrIwan
+notitlepage: true
+toc: false
 ---
 
 # Tables
@@ -9,10 +11,10 @@ Atomic table notes (`latex-env: table`, caption from frontmatter) embedded as nu
 
 ![[tables-test]]
 
-![[Table-Large]]
+![[table-large]]
 
-As shown in [[Table-Large]].
+As shown in [[table-large]].
 
-![[Table-Large-Longtable]]
+![[table-large-longtable]]
 
-As shown in [[Table-Large-Longtable]].
+As shown in [[table-large-longtable]].

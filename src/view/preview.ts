@@ -941,7 +941,7 @@ export class NopePreviewView extends ItemView {
 		this.requestRender();
 	}
 
-	// Single entry point for manual clicks, auto triggers, and toggle-on renders.
+	// Single entry point for manual clicks, auto triggers and toggle-on renders.
 	private requestRender(): void {
 		if (this.rendering) {
 			this.pending = true;

@@ -1,0 +1,93 @@
+site_name: NOPE
+site_description: Not anOther Pdf Exporter — publication-ready PDFs from Obsidian notes.
+site_url: https://mriwan.github.io/obsidian-nope/
+repo_url: https://github.com/MrIwan/obsidian-nope
+repo_name: MrIwan/obsidian-nope
+edit_uri: edit/master/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/extra.css
+
+# Version switcher (mike deploys one folder per release on gh-pages).
+extra:
+  version:
+    provider: mike
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Writing:
+      - Atomic notes, embeds & refs: writing/concept.md
+      - Slices & block embeds: writing/slices.md
+      - Inline markup & comments: writing/markup.md
+      - Callouts: writing/callouts.md
+      - Footnotes: writing/footnotes.md
+      - Bases (dynamic embeds): writing/bases.md
+  - Structured blocks:
+      - Tables: blocks/tables.md
+      - Equations & math: blocks/equations.md
+      - Theorems & environments: blocks/theorems.md
+      - Mermaid diagrams: blocks/mermaid.md
+      - Images & figures: blocks/figures.md
+      - Code blocks & stat blocks: blocks/code-blocks.md
+  - Knowledge:
+      - Glossary & acronyms: knowledge/glossary.md
+      - Citations & bibliography: knowledge/citations.md
+  - Styling:
+      - Branding: styling/branding.md
+      - Custom LaTeX templates: styling/templates.md
+      - Extra LaTeX packages: styling/tlmgr.md
+  - Showcase:
+      - DnD 5e rebuild: showcase/dnd.md
+      - Book & chapters: showcase/book.md
+      - The complete test document: showcase/integration.md
+  - Reference:
+      - Frontmatter keys: reference/frontmatter.md
+      - Commands: reference/commands.md
+      - Troubleshooting: reference/troubleshooting.md

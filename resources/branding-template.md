@@ -18,9 +18,9 @@ header-left: "[[logo.png]]"
 > [!note] The text below is documentation only and has **no effect** on the
 > branding. Only the frontmatter keys above are read by `nope`. Edit those.
 
-This file defines **branding overrides** for `nope`. Duplicate it per customer
-(e.g., `Branding-Customer1.md`) and edit the frontmatter keys above. Enable
-branding in an export note by adding `nope-branding: "[[Branding-Customer1]]"`
+This file defines **branding overrides** for `nope`. Duplicate it per document type — a thesis, a client report, a book
+(e.g., `Branding-Report.md`) — and edit the frontmatter keys above. Enable
+branding in an export note by adding `nope-branding: "[[Branding-Report]]"`
 to its frontmatter — or run the command **Set branding for this note**, which
 writes the key for you. If unset, the plugin uses defaults from `_base.yml`.
 
@@ -60,13 +60,13 @@ writes the key for you. If unset, the plugin uses defaults from `_base.yml`.
 ### Header and footer
 
 For `header-left`, `header-center`, `header-right`, `footer-left`,
-`footer-center`, and `footer-right`:
+`footer-center` and `footer-right`:
 
 - **Plain text**: `header-left: "Draft"` renders text directly.
 - **Logo via wikilink**: `header-left: "[[logo.png]]"` auto-expands to
   `\nopelogo{<path>}` (a raised `\includegraphics`). Default
   height is `0.7cm`; override with an optional `|h=<value>` suffix:
-  `"[[logo.png|h=1.2cm]]"`. Accepted units: `cm`, `mm`, `pt`, `em`, and LaTeX
+  `"[[logo.png|h=1.2cm]]"`. Accepted units: `cm`, `mm`, `pt`, `em` and LaTeX
   lengths like `0.5\textheight`.
 - **Mixed mode (text + logo)**: write the LaTeX snippet manually; embedded
   `[[…]]` still resolve to container paths, e.g.
@@ -112,7 +112,7 @@ Eisvogel forwards all standard Pandoc variables. The most useful:
 - Avoid underscores (`_`) in logo/background filenames — LaTeX chokes on them;
   use hyphens (`-`) instead.
 - Store branding assets (logos, backgrounds) in one folder, e.g.
-  `/branding/customer-1/`, to keep the vault organized.
+  `/branding/report/`, to keep the vault organized.
 - Full key reference: Eisvogel README → "Custom Template Variables"
   (<https://github.com/Wandmalfarbe/pandoc-latex-template>) and the Pandoc
   manual → "Variables for LaTeX"
