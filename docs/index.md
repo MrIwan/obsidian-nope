@@ -5,7 +5,6 @@ Write in [Obsidian](https://obsidian.md/), publish as a **typeset PDF**. NOPE ex
 One concept per note, one main document with embeds. Cross-references number themselves, glossaries and bibliographies build themselves, branding comes from a note.
 
 [Get started](getting-started.md){ .md-button .md-button--primary }
-[See the DnD showcase](showcase/dnd.md){ .md-button }
 
 <video class="nope-demo" controls muted autoplay loop playsinline src="https://github.com/user-attachments/assets/962cc7c4-eca4-4ed5-a45c-2170d8e9f676"></video>
 

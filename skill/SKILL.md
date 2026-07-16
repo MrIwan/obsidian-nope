@@ -103,7 +103,6 @@ hp: 21 (6d6)
 ```
 ````
 
-A complete worked example — a two-column 5e-style document with a Fantasy-Statblock-compatible `statblock` block, raw `latex` map areas and custom `latex-env` notes — ships in `example-vault/DnD Example/`.
 
 ## Bases
 

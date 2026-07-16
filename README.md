@@ -20,7 +20,6 @@ https://github.com/user-attachments/assets/962cc7c4-eca4-4ed5-a45c-2170d8e9f676
 - [Atomic notes, embeds & refs](https://mriwan.github.io/obsidian-nope/writing/concept/): the concept everything builds on
 - [Structured blocks](https://mriwan.github.io/obsidian-nope/blocks/tables/): tables, math, theorems, mermaid, figures, code blocks & stat blocks
 - [Branding & custom templates](https://mriwan.github.io/obsidian-nope/styling/branding/): reusable looks per document type, own LaTeX templates, per-document packages
-- [DnD 5e showcase](https://mriwan.github.io/obsidian-nope/showcase/dnd/): a full two-column 5e book from ordinary notes
 - [Reference](https://mriwan.github.io/obsidian-nope/reference/frontmatter/): every frontmatter key, all commands, troubleshooting
 
 ## Install
@@ -49,7 +48,7 @@ toc: true
 ![[Chapter-Results]]
 ```
 
-Each embedded note holds its own prose, figures, theorems and tables. `[[wikilinks]]` between them resolve to numbered cross-references in the PDF. Open the repo's [`example-vault/`](example-vault/) in Obsidian to try it. It has one small document per feature, plus the full [DnD 5e showcase](https://mriwan.github.io/obsidian-nope/showcase/dnd/).
+Each embedded note holds its own prose, figures, theorems and tables. `[[wikilinks]]` between them resolve to numbered cross-references in the PDF. Open the repo's [`example-vault/`](example-vault/) in Obsidian to try it. It has one small document per feature.
 
 The pipeline also runs headless without Obsidian. See [the wiki](https://mriwan.github.io/obsidian-nope/reference/troubleshooting/#reproducing-without-obsidian).
 

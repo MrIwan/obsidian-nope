@@ -18,4 +18,4 @@ During the export, the pipeline installs missing packages into a **persistent Te
 **Cleanup build folder** removes the tree. The next export re-installs what the document declares.
 
 !!! example "See it in action"
-    The [custom template demo](templates.md) flips a box from red to green when `cancel` is declared. The [DnD showcase](../showcase/dnd.md) pulls in its entire 5e font stack (`tex-gyre`, `kpfonts`, `gillius`) this way.
+    The [custom template demo](templates.md) flips a box from red to green when `cancel` is declared.

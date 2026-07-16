@@ -84,7 +84,6 @@ nav:
       - Custom LaTeX templates: styling/templates.md
       - Extra LaTeX packages: styling/tlmgr.md
   - Showcase:
-      - DnD 5e rebuild: showcase/dnd.md
       - Book & chapters: showcase/book.md
       - The complete test document: showcase/integration.md
   - Reference:

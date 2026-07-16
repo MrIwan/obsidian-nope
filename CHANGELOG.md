@@ -7,7 +7,6 @@ Fenced code blocks now export. The image hash changes, so the first export rebui
 - **Raw LaTeX blocks.** A ` ```latex ` fence goes into the PDF unchanged. Good for one-off constructs like a `\dirtree{…}` tree. A typo aborts the build with a normal LaTeX error. The fence is only for convenience. Plain LaTeX commands written straight into the text are passed through the same way.
 - **Custom code blocks via `nope-blocks`.** Two steps. First declare the identifier in the frontmatter (`nope-blocks: [statblock]`) so the pipeline expects that environment in the `.tex`. Then define the matching environment in your `.tex` template. Each `key: value` line becomes a `\nope<key>` command.
 - **Per-document LaTeX packages via `nope-tlmgr`.** List packages in the frontmatter (`nope-tlmgr: [cancel, pgfplots]`). The export installs missing ones into a persistent TeX tree. First run downloads, later runs reuse them.
-- **DnD 5e example.** `example-vault/dnd-example/` rebuilds the [DnD 5e LaTeX template](https://github.com/rpgtex/DND-5e-LaTeX-Template) (MIT) as a NOPE document. Two-column layout, 5e boxes from callouts, a Fantasy-Statblock monster, feat/item/spell environments, raw-LaTeX maps.
 - **Documentation site.** The [NOPE wiki](https://mriwan.github.io/obsidian-nope/) documents every feature. It is built by the pipeline on each release and versioned.
 
 ## Changed

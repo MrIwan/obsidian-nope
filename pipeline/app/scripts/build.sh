@@ -44,9 +44,9 @@ read_frontmatter() {
 # from the leading YAML frontmatter block; prints whitespace-separated values.
 read_frontmatter_list() {
   awk -v key="$1" '
-    NR==1 && $0!="---" { exit }
-    NR==1 { next }
-    $0=="---" || $0=="..." { exit }
+    NR==1 { yaml = ($0=="---") ? 0 : 1; if (!yaml) next }  # md: skip opening ---
+    !yaml && ($0=="---" || $0=="...") { exit }             # md: end of frontmatter
+    /^[[:space:]]*#/ { next }                              # skip YAML comments
     collect && /^[[:space:]]*-[[:space:]]*/ {
       sub(/^[[:space:]]*-[[:space:]]*/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; next
     }

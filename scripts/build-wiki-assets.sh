@@ -31,7 +31,6 @@ DOCS=(
   "features/feature-branding.md|feature-branding"
   "minimal-latex/example-custom-latex.md|example-custom-latex"
   "book-example/book-example.md|book-example"
-  "dnd-example/dnd-example.md|dnd-example"
 )
 
 for entry in "${DOCS[@]}"; do
