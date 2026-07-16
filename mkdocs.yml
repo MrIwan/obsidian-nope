@@ -91,3 +91,4 @@ nav:
       - Frontmatter keys: reference/frontmatter.md
       - Commands: reference/commands.md
       - Troubleshooting: reference/troubleshooting.md
+  - Changelog: changelog.md
