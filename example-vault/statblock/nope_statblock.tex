@@ -1,0 +1,240 @@
+% nope_statblock.tex — minimal custom template that defines a `statblock`
+% environment for the nope-blocks demo. Based on nope_minimal.tex; the marked
+% NOPE-IMPORTS block is kept verbatim. Point a document at it via frontmatter:
+%   nope-blocks: [statblock]
+%   nope-template: "[[nope_statblock.tex]]"
+%
+% The `statblock` fence format follows the Fantasy Statblock Obsidian plugin, and
+% the typeset look is inspired by the DnD 5e LaTeX template by the rpgTeX team
+% (MIT, https://github.com/rpgtex/DND-5e-LaTeX-Template). Thanks to both.
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[english]{babel} % change to ngerman for German documents
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{calc}
+\usepackage{fancyvrb}
+\usepackage{fvextra}
+\usepackage{hyperref}
+
+% Pandoc helper macros that its default template provides.
+\newcommand{\passthrough}[1]{#1}
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\nonumberline}{}
+\setlength{\emergencystretch}{3em}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{%
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi%
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+\makeatother
+
+% Syntax highlighting for fenced code blocks (Shaded/Highlighting environments).
+$if(highlighting-macros)$
+$highlighting-macros$
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,fontsize=\small,commandchars=\\\{\}}
+$endif$
+
+% Citeproc citations + bibliography (CSLReferences environment).
+$if(csl-refs)$
+\NewDocumentCommand\citeproctext{}{}
+\NewDocumentCommand\citeproc{mm}{%
+  \begingroup\def\citeproctext{#2}\cite{#1}\endgroup}
+\makeatletter
+ \let\@cite@ofmt\@firstofone
+ \def\@biblabel#1{}
+ \def\@cite#1#2{{#1\if@tempswa , #2\fi}}
+\makeatother
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newlength{\csllabelwidth}
+\setlength{\csllabelwidth}{3em}
+\newenvironment{CSLReferences}[2]
+  {\begin{list}{}{%
+   \setlength{\itemindent}{0pt}
+   \setlength{\leftmargin}{0pt}
+   \setlength{\parsep}{0pt}
+   \ifodd #1
+    \setlength{\leftmargin}{\cslhangindent}
+    \setlength{\itemindent}{-1\cslhangindent}
+   \fi
+   \setlength{\itemsep}{#2\baselineskip}}}
+  {\end{list}}
+\newcommand{\CSLBlock}[1]{\hfill\break\parbox[t]{\linewidth}{\strut\ignorespaces#1\strut}}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
+$endif$
+
+% --- Stat block environment ----------------------------------------------------
+% Fed by a ```statblock code block (nope-blocks: [statblock]). Each scalar key is
+% exposed as \nope<key>; a block list like traits: becomes \nope<key><N>-<subkey>.
+% The macros are defined by the pipeline just before \begin{statblock}, so this
+% environment reads them in its begin part; the body itself stays empty.
+%
+% Self-contained 5e-inspired look (tan box, dark-red small-caps title, rules, an
+% ability-score row with computed modifiers). Modelled on the DnD 5e LaTeX
+% template by the rpgTeX team (MIT, https://github.com/rpgtex/DND-5e-LaTeX-Template)
+% but rebuilt standalone here, so it needs only tcolorbox, no dndbook package.
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable}
+\definecolor{DndMonsterTan}{HTML}{FDF1DC}
+\definecolor{DndDarkRed}{HTML}{58180D}
+\definecolor{DndRuleRed}{HTML}{922610}
+
+\newcommand{\sbkey}[1]{\csname nope#1\endcsname}
+\newcommand{\sbif}[2]{\ifcsname nope#1\endcsname#2\fi}
+\newcommand{\sbrule}{\par\smallskip\textcolor{DndRuleRed}{\rule{\linewidth}{1pt}}\par\smallskip}
+\newcommand{\sbthinrule}{\par\nobreak\textcolor{DndRuleRed}{\rule{\linewidth}{0.4pt}}\par\smallskip}
+\newcommand{\sbsection}[1]{\par\medskip\noindent{\color{DndDarkRed}\large\scshape #1}\sbthinrule}
+% List entry N of <key>: name/desc → \nope<key><N>-name / -desc.
+\newcommand{\sbentry}[2]{%
+  \ifcsname nope#1#2-name\endcsname
+    \par\smallskip\noindent{\bfseries\itshape\csname nope#1#2-name\endcsname.}\ %
+    \ifcsname nope#1#2-desc\endcsname\csname nope#1#2-desc\endcsname\fi
+  \fi}
+\newcommand{\sbiflist}[2]{\ifcsname nope#11-name\endcsname#2\fi}
+% Ability scores: "stats: [12, 8, 13, 10, 14, 15]" → six columns "12 (+1)".
+\newcommand{\sbmod}[1]{\the\numexpr(#1-\ifodd\numexpr#1\relax 11\else 10\fi)/2\relax}
+\newcommand{\sbstatcell}[1]{%
+  \the\numexpr#1\relax\
+  (\ifnum\numexpr(#1-\ifodd\numexpr#1\relax 11\else 10\fi)/2\relax<0\else+\fi\sbmod{#1})}
+\def\sbsplitstats#1,#2,#3,#4,#5,#6\sbendstats{%
+  \begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}cccccc@{}}
+    \textbf{STR}&\textbf{DEX}&\textbf{CON}&\textbf{INT}&\textbf{WIS}&\textbf{CHA}\\
+    \sbstatcell{#1}&\sbstatcell{#2}&\sbstatcell{#3}&%
+    \sbstatcell{#4}&\sbstatcell{#5}&\sbstatcell{#6}%
+  \end{tabular*}}
+\newtcolorbox{sb@box}{breakable,colback=DndMonsterTan,colframe=DndRuleRed,
+  boxrule=0pt,toprule=2.5pt,bottomrule=2.5pt,arc=0pt,left=6pt,right=6pt}
+\newenvironment{statblock}{%
+  \begin{sb@box}\small
+  \noindent{\color{DndDarkRed}\scshape\LARGE \sbkey{name}\par}
+  \noindent{\itshape\sbif{size}{\sbkey{size} }\sbif{type}{\sbkey{type}}%
+    \sbif{alignment}{, \sbkey{alignment}}\par}
+  \sbrule
+  {\color{DndDarkRed}%
+   \sbif{ac}{\par\noindent\textbf{Armor Class} \sbkey{ac}}%
+   \sbif{hp}{\par\noindent\textbf{Hit Points} \sbkey{hp}}%
+   \sbif{speed}{\par\noindent\textbf{Speed} \sbkey{speed}}\par}%
+  \sbif{stats}{\sbrule{\color{DndDarkRed}%
+    \expandafter\expandafter\expandafter\sbsplitstats\csname nopestats\endcsname\sbendstats\par}}%
+  \sbif{cr}{\sbrule{\color{DndDarkRed}\noindent\textbf{Challenge} \sbkey{cr}\par}}%
+  \sbrule
+  \sbentry{traits}{1}\sbentry{traits}{2}\sbentry{traits}{3}%
+  \sbiflist{actions}{\sbsection{Actions}}%
+  \sbentry{actions}{1}\sbentry{actions}{2}\sbentry{actions}{3}%
+}{\end{sb@box}}
+% ------------------------------------------------------------------------------
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% NOPE-IMPORTS — DO NOT CHANGE unless you know what you are doing.        %%%
+%%% Everything NOPE's pipeline needs: tables, callouts, theorems, glossary, %%%
+%%% cross-reference names. Keep this block verbatim in any custom template. %%%
+%%% Must sit after hyperref and BEFORE header-includes.                     %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{graphicx}
+\usepackage{longtable,booktabs,array}
+\usepackage{amsmath,amssymb} % math + task-list checkboxes (\square/\boxtimes)
+\usepackage{float}  % [H] placement: fit-tables (filter emits table[H]) + figures
+\floatplacement{figure}{$if(float-placement-figure)$$float-placement-figure$$else$H$endif$}
+
+% Unicode fallbacks
+\DeclareUnicodeCharacter{2212}{\ensuremath{-}}        % minus sign
+\DeclareUnicodeCharacter{2264}{\ensuremath{\leq}}
+\DeclareUnicodeCharacter{2265}{\ensuremath{\geq}}
+\DeclareUnicodeCharacter{2260}{\ensuremath{\neq}}
+\DeclareUnicodeCharacter{2192}{\ensuremath{\rightarrow}}
+\DeclareUnicodeCharacter{03B1}{\ensuremath{\alpha}}
+\DeclareUnicodeCharacter{03B2}{\ensuremath{\beta}}
+\DeclareUnicodeCharacter{03BC}{\ensuremath{\mu}}
+\DeclareUnicodeCharacter{03C0}{\ensuremath{\pi}}
+\DeclareUnicodeCharacter{2080}{\textsubscript{0}}
+\DeclareUnicodeCharacter{2082}{\textsubscript{2}}
+
+% Callouts (callouts.lua → awesomebox) and highlights (==text== → soul \hl).
+\usepackage{awesomebox}
+\usepackage{soul}
+\usepackage{soulutf8}
+
+% SVG logos/images.
+\usepackage{svg}
+
+% Theorem-family environments (latex-env: theorem/lemma/...).
+\usepackage{amsthm}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{proposition}{Proposition}[section]
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{example}{Example}[section]
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+\newtheorem*{note}{Note}
+\providecommand{\theoremautorefname}{Theorem}
+\providecommand{\lemmaautorefname}{Lemma}
+\providecommand{\corollaryautorefname}{Corollary}
+\providecommand{\propositionautorefname}{Proposition}
+\providecommand{\definitionautorefname}{Definition}
+\providecommand{\exampleautorefname}{Example}
+
+% Glossary + acronyms (gls-* notes). Must precede the injected entries.
+\usepackage[acronym, toc, nonumberlist]{glossaries}
+\makeglossaries
+
+% Language-aware \autoref names (figure/table/equation/... per babel language).
+\AtBeginDocument{%
+  \IfPackageLoadedTF{babel}{%
+    \iflanguage{ngerman}{%
+      \renewcommand{\figureautorefname}{Abbildung}%
+      \renewcommand{\tableautorefname}{Tabelle}%
+      \renewcommand{\equationautorefname}{Gleichung}%
+      \renewcommand{\sectionautorefname}{Abschnitt}%
+      \renewcommand{\contentsname}{Inhaltsverzeichnis}%
+    }{}%
+    \iflanguage{english}{%
+      \renewcommand{\figureautorefname}{Figure}%
+      \renewcommand{\tableautorefname}{Table}%
+      \renewcommand{\equationautorefname}{Equation}%
+      \renewcommand{\sectionautorefname}{Section}%
+    }{}%
+  }{}%
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% END NOPE-IMPORTS                                                        %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+\title{$title$}
+$if(author)$\author{$author$}$endif$
+$if(date)$\date{$date$}$endif$
+
+\begin{document}
+
+$if(title)$\maketitle$endif$
+$if(toc)$\tableofcontents\newpage$endif$
+
+$body$
+
+$if(has-glossary)$
+\clearpage
+\printglossary[type=\acronymtype, title={Acronyms}]
+\printglossary[title={Glossary}]
+$endif$
+
+\end{document}

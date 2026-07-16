@@ -82,6 +82,14 @@ must=titlepage
 must=A Subsection
 must-not=[Not found:
 
+# nope-blocks: a ```statblock fence declared in the doc, rendered by the
+# statblock environment in the co-located custom template.
+[statblock/statblock-example.md]
+must=Goblin
+must=Nimble Escape
+must=Scimitar
+must-not=[Not found:
+
 # ---- Integration documents ----
 
 [example-document/example-document.md]
@@ -105,18 +113,4 @@ must-not=[Not found:
 
 [book-example/book-example.md]
 must=\part{
-must-not=[Not found:
-
-# The DnD example exercises the code-block dispatch: raw ```latex passthrough
-# (\DndArea), a declared ```statblock block in Fantasy-Statblock syntax (nope-blocks,
-# YAML-lite lists) and custom latex-env envs (dndfeat/dnditem/dndspell).
-[dnd-example/dnd-example.md]
-must=\begin{statblock}
-must=Monster Foo
-must=nopetraits1-name
-must=Create Contract (Costs 3 Actions)
-must=\DndArea{Village of Hommlet}
-must=\begin{dndspell}
-must=\begin{nopecallout}{quote}
-must=Small wooden button
 must-not=[Not found:
