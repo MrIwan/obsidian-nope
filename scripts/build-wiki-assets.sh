@@ -25,6 +25,7 @@ DOCS=(
   "features/feature-equations.md|feature-equations"
   "features/feature-environments.md|feature-environments"
   "features/feature-mermaid.md|feature-mermaid"
+  "features/feature-tikz.md|feature-tikz"
   "features/feature-figures.md|feature-figures"
   "features/feature-glossary.md|feature-glossary"
   "features/feature-citations.md|feature-citations"

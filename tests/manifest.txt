@@ -57,6 +57,14 @@ must=The example representation from the Mermaid
 must=\includegraphics
 must-not=[Not found:
 
+# latex-env: tikz — the ```tikz block's preamble is hoisted, the picture becomes a
+# numbered figure. pgfplots comes in via nope-tlmgr.
+[features/feature-tikz.md]
+must=\begin{tikzpicture}
+must=\begin{axis}
+must=\usepackage{pgfplots}
+must-not=[Not found:
+
 [features/feature-footnotes.md]
 must=\footnote{
 must-not=[Not found:

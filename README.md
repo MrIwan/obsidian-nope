@@ -14,7 +14,7 @@ https://github.com/user-attachments/assets/962cc7c4-eca4-4ed5-a45c-2170d8e9f676
 
 ## Documentation
 
-**Everything lives in the [NOPE wiki](https://mriwan.github.io/obsidian-nope/).** Feature pages show the Markdown source next to the exported PDF, built by the pipeline itself:
+**See [NOPE wiki](https://mriwan.github.io/obsidian-nope/).** Feature pages show the Markdown source next to the exported PDF, built by the pipeline itself:
 
 - [Getting started](https://mriwan.github.io/obsidian-nope/getting-started/): install, first export, live preview
 - [Atomic notes, embeds & refs](https://mriwan.github.io/obsidian-nope/writing/concept/): the concept everything builds on
@@ -31,26 +31,6 @@ https://github.com/user-attachments/assets/962cc7c4-eca4-4ed5-a45c-2170d8e9f676
 3. Run **Export active note to PDF** from the command palette.
 
 The first export pulls the prebuilt pipeline image from `ghcr.io/mriwan/nope-pipeline` (1–3 minutes). After that, exporting is a single command. The settings page runs preflight checks and pinpoints anything missing.
-
-## A taste
-
-A main document is mostly frontmatter plus embeds:
-
-```markdown
----
-title: "My Report"
-nope-branding: "[[Branding-Report]]"
-toc: true
----
-
-![[Chapter-Introduction]]
-
-![[Chapter-Results]]
-```
-
-Each embedded note holds its own prose, figures, theorems and tables. `[[wikilinks]]` between them resolve to numbered cross-references in the PDF. Open the repo's [`example-vault/`](example-vault/) in Obsidian to try it. It has one small document per feature.
-
-The pipeline also runs headless without Obsidian. See [the wiki](https://mriwan.github.io/obsidian-nope/reference/troubleshooting/#reproducing-without-obsidian).
 
 ## AI skill integration
 

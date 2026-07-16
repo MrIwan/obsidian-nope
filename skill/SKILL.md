@@ -11,7 +11,7 @@ nope exports Obsidian notes to PDF through a Pandoc/LaTeX pipeline. The model is
 
 **Cross-references auto-number.** If a note is embedded in the document, `[[Note]]` resolves to its number ("Theorem 1.1", "Table 5", "Figure 2", "Equation 1"). A ref to a note that is *not* embedded falls back to plain text — no crash, so you can link freely while drafting.
 
-**Every atomic note starts with `# Title` (H1).** Auto-heading-shift moves that H1 to the right depth for wherever it is embedded — never adjust heading levels by hand. **Exception:** `latex-env` notes (theorem family, `table`, `mermaid`, math) contain **no headings**; their body is wrapped in a LaTeX environment and the title/caption come from frontmatter.
+**Every atomic note starts with `# Title` (H1).** Auto-heading-shift moves that H1 to the right depth for wherever it is embedded — never adjust heading levels by hand. **Exception:** `latex-env` notes (theorem family, `table`, `mermaid`, `tikz`, math) contain **no headings**; their body is wrapped in a LaTeX environment and the title/caption come from frontmatter.
 
 ## Embeds and refs
 
@@ -47,13 +47,14 @@ Set on an atomic note (no headings in the body):
 - **`proof`, `remark`, `note`** — unnumbered; a ref to them is a clickable hyperlink showing the note title, not a number. Embedding works normally.
 - **`table`** — requires `caption:`; body is exactly one Pandoc table. Refs give "Table N". Layout via `longtable:` (see below).
 - **`mermaid`** — requires `caption:`; body is exactly one ` ```mermaid ` block (Obsidian renders it live; export rasterises it to a numbered figure). Optional `w:`/`width:` (like image `|w=`) and `scale:` (1–5, default 2 ≈ 1600px; raise for large/sharp diagrams, bigger PNG). Identical diagram sources are cached. Inline ` ```mermaid ` blocks in notes *without* `latex-env: mermaid` are **not** rendered (they stay as a code fence).
+- **`tikz`** — requires `caption:`; body is exactly one ` ```tikz ` block in [obsidian-tikzjax](https://github.com/artisticat1/obsidian-tikzjax) syntax (Obsidian renders it live; export compiles it natively to a numbered, referencable vector figure). The block's preamble (everything before `\begin{document}`: `\usepackage`, `\usetikzlibrary`, `\pgfplotsset`) is hoisted into the document preamble, deduped; the picture between `\begin{document}` and `\end{document}` becomes the figure body. Declare the packages the block needs via `nope-tlmgr:` (e.g. `[pgfplots]`).
 - **Math** — `equation`, `align`, `gather`, `multline`, `alignat` (+ `*` variants); body is exactly one `$$…$$` block. `align`/`gather` may use `&` and `\\` (one number per line); `equation` with an inner `aligned` is multi-line with one number. Refs give "Equation N".
 
-A missing required block (table/math) or missing `caption` (table/mermaid) is a hard export error.
+A missing required block (table/math/tikz) or missing `caption` (table/mermaid/tikz) is a hard export error.
 
 ### Custom environments
 
-Any `latex-env` value that isn't built-in (theorem family, `table`, `mermaid`, math) is wrapped generically into `\begin{<name>}…\end{<name>}`, with `latex-short:` as the optional argument and `[[…]]` refs resolving via `\autoref`. The environment only has to be **defined** somewhere.
+Any `latex-env` value that isn't built-in (theorem family, `table`, `mermaid`, `tikz`, math) is wrapped generically into `\begin{<name>}…\end{<name>}`, with `latex-short:` as the optional argument and `[[…]]` refs resolving via `\autoref`. The environment only has to be **defined** somewhere.
 
 Define it in a **custom LaTeX template, not in `header-includes`** — raw LaTeX inside YAML frontmatter is brittle (quoting and escaping bite you — and it does not carry over between documents). A template is far more robust and reusable. Run `Create custom LaTeX template` (gives `nope_minimal.tex`), add your environment next to the existing `\newtheorem` block and point the document at it with `nope-template: "[[my-template]]"`:
 

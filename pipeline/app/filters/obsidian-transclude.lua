@@ -372,6 +372,15 @@ local function is_mermaid_code(b)
   return false
 end
 
+-- Check for tikz code block (class "tikz"), tikzjax-compatible.
+local function is_tikz_code(b)
+  if b.t ~= "CodeBlock" then return false end
+  for _, cls in ipairs(b.classes or {}) do
+    if cls == "tikz" then return true end
+  end
+  return false
+end
+
 -- Wrap first DisplayMath block in LaTeX equation environment with label.
 local function wrap_math(notename, env_name, sliced, doc_meta)
   local label, first_embed = register_target(notename, "eq")
@@ -566,6 +575,59 @@ local function wrap_mermaid(notename, env_name, sliced, doc_meta)
   )
 
   return { figure }
+end
+
+-- Collected tikz preamble lines
+local tikz_preamble = {}
+local tikz_preamble_seen = {}
+local function collect_tikz_preamble(text)
+  for line in (text .. "\n"):gmatch("(.-)\r?\n") do
+    local t = line:gsub("^%s+", ""):gsub("%s+$", "")
+    if t ~= "" and not t:match("^%%") and not tikz_preamble_seen[t] then
+      tikz_preamble_seen[t] = true
+      tikz_preamble[#tikz_preamble + 1] = t
+    end
+  end
+end
+
+-- Render a latex-env: tikz note as a native, numbered vector figure.
+local function wrap_tikz(notename, env_name, sliced, doc_meta)
+  local caption_inlines = meta_to_inlines(doc_meta.caption)
+  if not caption_inlines or #caption_inlines == 0 then
+    error("[obsidian-transclude] Note '" .. notename
+      .. "' hat latex-env: tikz, aber kein 'caption:' im Frontmatter.")
+  end
+
+  local _, code_block = find_block(sliced, is_tikz_code)
+  if not code_block then
+    error("[obsidian-transclude] Note '" .. notename
+      .. "' hat latex-env: tikz, aber keinen ```tikz-Block im Inhalt gefunden.")
+  end
+
+  -- Split the tikzjax body: preamble → hoisted, picture → figure body.
+  local text = code_block.text
+  local body = text
+  local ds = text:find("\\begin{document}", 1, true)
+  if ds then
+    collect_tikz_preamble(text:sub(1, ds - 1))
+    local rest = text:sub(ds + #"\\begin{document}")
+    local de = rest:find("\\end{document}", 1, true)
+    body = de and rest:sub(1, de - 1) or rest
+  end
+  body = body:gsub("^%s+", ""):gsub("%s+$", "")
+
+  local label, first_embed = register_target(notename, "fig")
+  local caption_tex = blocks_to_latex_line({ pandoc.Plain(caption_inlines) })
+  local label_tex = first_embed and ("\\label{" .. label .. "}") or ""
+  local tex = table.concat({
+    "\\begin{figure}[H]",
+    "\\centering",
+    body,
+    "\\caption{" .. caption_tex .. "}" .. label_tex,
+    "\\end{figure}",
+  }, "\n")
+
+  return { pandoc.RawBlock("latex", tex) }
 end
 
 -- Wrap content in generic LaTeX environment with optional short title and label.
@@ -783,6 +845,8 @@ local function load_note(src, host_level)
         return wrap_table(notename, env_name, sliced, doc.meta)
       elseif env_name == "mermaid" then
         return wrap_mermaid(notename, env_name, sliced, doc.meta)
+      elseif env_name == "tikz" then
+        return wrap_tikz(notename, env_name, sliced, doc.meta)
       else
         return wrap_block(notename, env_name, sliced, doc.meta)
       end
@@ -1072,6 +1136,7 @@ function Pandoc(doc)
   -- Phase 3: Inject glossary entries and table defaults to header-includes.
   flush_glossary_entries(doc)
   if needs_table_defs then append_header_includes(doc, TABLE_DEFS) end
+  if #tikz_preamble > 0 then append_header_includes(doc, table.concat(tikz_preamble, "\n")) end
   append_header_includes(doc,
     "\\providecommand{\\nopelogo}[2][0.7cm]{\\raisebox{-0.3\\height}{\\includegraphics[height=#1]{#2}}}")
   return doc

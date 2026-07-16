@@ -48,6 +48,12 @@ One concept per note, one main document with embeds. Cross-references number the
 
     [Mermaid](blocks/mermaid.md)
 
+-   <span class="nope-emoji">📈</span>
+
+    **TikZ & PGFPlots.** A ` ```tikz ` block that renders live in Obsidian and exports as a native, numbered vector figure.
+
+    [TikZ](blocks/tikz.md)
+
 -   <span class="nope-emoji">📐</span>
 
     **Theorems & environments.** LaTeX theorem environments with their own counters, plus fully custom environments fed by note frontmatter.

@@ -74,6 +74,7 @@ nav:
       - Equations & math: blocks/equations.md
       - Theorems & environments: blocks/theorems.md
       - Mermaid diagrams: blocks/mermaid.md
+      - TikZ diagrams: blocks/tikz.md
       - Images & figures: blocks/figures.md
       - Code blocks & custom blocks: blocks/code-blocks.md
   - Knowledge:
