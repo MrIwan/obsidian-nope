@@ -7,42 +7,34 @@ toc: false
 
 # Slice Embeds
 
-Embeds can pull in a whole note, a heading section or a single block.
-
-## Heading-Slice
-
-Only the "Middle Section" including its sub-headings should appear:
+## Heading slice
 
 ![[slice-source#Middle Section]]
 
-## Block-ID-Slice
-
-Only the single paragraphs marked with `^para-first` / `^para-second`:
+## Block-id slice
 
 ![[slice-para#^para-first]]
 
 ![[slice-para#^para-second]]
 
-## Fallback for Broken Anchor
-
-A plain-text notice instead of the whole note:
+## Broken anchor fallback
 
 ![[slice-source#Does-Not-Exist]]
 
 ![[slice-source#^block-does-not-exist]]
 
-## Full Embed
+## Full embed
 
 ![[slice-full]]
 
 # Wikilinks
 
-Note link without anchor: [[slice-source]] — jumps to the first embed.
+Link without anchor: [[slice-source]].
 
-Note link with display alias: [[slice-source|alternative display]].
+Link with alias: [[slice-source|alternative display]].
 
-Heading link to embedded heading: [[slice-source#Middle Section]].
+Link to an embedded heading: [[slice-source#Middle Section]].
 
-Block-ID link: [[slice-para#^para-first]].
+Block-id link: [[slice-para#^para-first]].
 
-Link to non-embedded note: [[A-Note-We-Did-Not-Embed]] — plain text fallback.
+Link to a non-embedded note: [[A-Note-We-Did-Not-Embed]].

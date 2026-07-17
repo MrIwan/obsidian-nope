@@ -7,9 +7,7 @@ toc: false
 
 # Callouts
 
-Obsidian callouts (`> [!note] …`) render as coloured awesomebox blocks.
-
-This section tests every callout type the Lua filter supports. Each block should render as a coloured box with an icon — not as a grey blockquote.
+Write a callout with `> [!type] Title`. One block per type below.
 
 > [!note] Important Notice This is a simple note callout with a title.
 > The second line belongs to the same block.

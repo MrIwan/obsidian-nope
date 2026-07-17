@@ -7,16 +7,10 @@ toc: false
 
 # LaTeX Environments
 
-Notes with `latex-env` frontmatter (theorem, lemma, definition, proof, …) render as the corresponding LaTeX environment; wikilinks to them become typed, numbered references.
-
-This document tests the `latex-env` frontmatter feature. The source note is `Pythagorean-Theorem.md` with `latex-env: theorem` and `latex-short: Pythagoras` in the frontmatter.
-
-**Template prerequisite:** `\usepackage{amsthm}` plus a `\newtheorem{theorem}{Theorem}` must be defined in `eisvogel.tex`, otherwise pdflatex fails with "Environment theorem undefined".
+Source note `Pythagorean-Theorem.md` carries `latex-env: theorem` and `latex-short: Pythagoras`.
 
 ![[thm-pythagorean-theorem]]
 
-The environment can then be referenced. From [[thm-pythagorean-theorem]] the statement follows directly.
+Reference it with a wikilink. From [[thm-pythagorean-theorem]] the statement follows.
 
-The displayed text is easy to override. By [[thm-pythagorean-theorem|the Pythagorean theorem]], the statement follows directly — the link points to the same theorem.
-
-The `.md` is wrapped in an environment only when the whole node is linked. Otherwise everything is embedded following the logic in [[example-document#Slice-Embed]].
+Override the link text: by [[thm-pythagorean-theorem|the Pythagorean theorem]] the statement follows.

@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/962cc7c4-eca4-4ed5-a45c-2170d8e9f676
 
 1. Install [Docker](https://www.docker.com/) (Docker Desktop or any compatible runtime).
 2. Install the **Nope** plugin from the Obsidian community plugins and enable it.
-3. Run **Export active note to PDF** from the command palette.
+3. Run **Open PDF preview** from the command palette.
 
 The first export pulls the prebuilt pipeline image from `ghcr.io/mriwan/nope-pipeline` (1–3 minutes). After that, exporting is a single command. The settings page runs preflight checks and pinpoints anything missing.
 

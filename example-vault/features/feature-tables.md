@@ -7,8 +7,6 @@ toc: false
 
 # Tables
 
-Atomic table notes (`latex-env: table`, caption from frontmatter) embedded as numbered floats. See [[tables-test]] for the conventions.
-
 ![[tables-test]]
 
 ![[table-large]]
