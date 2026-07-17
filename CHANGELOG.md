@@ -1,3 +1,11 @@
+# nope 0.7.2
+
+An attestation-only release. Nothing changes in the plugin itself.
+
+## Fixed
+
+- `main.js` and `styles.css` are now attested separately and old attestations are removed.
+
 # nope 0.7.1
 
 A packaging and documentation release. Nothing changes in how the plugin exports.
