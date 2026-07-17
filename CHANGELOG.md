@@ -1,3 +1,22 @@
+# nope 0.7.1
+
+A packaging and documentation release. Nothing changes in how the plugin exports.
+
+## Fixed
+
+- Release assets now carry a valid build-provenance attestation. 0.7.0 attested `main.js` and `styles.css` with the wrong action, so the verification failed. The release workflow now also verifies the attestation before it publishes.
+
+## Documentation
+
+- New Placeholders page: reuse a frontmatter value in the running text through a custom template.
+- Developer docs reworked. `ARCHITECTURE.md` is a map into the code, `CONTRIBUTING.md` is the single contributor guide, `AGENTS.md` is a short agent entry, plus a `ROADMAP.md`.
+- README now points at the Open PDF preview command.
+
+## Internal
+
+- Every pipeline filter and plugin module carries a header docstring.
+- The tlmgr repository resolution lives in one shared script instead of two copies.
+
 # nope 0.7.0
 
 Fenced code blocks now export. The image hash changes, so the first export rebuilds once.
