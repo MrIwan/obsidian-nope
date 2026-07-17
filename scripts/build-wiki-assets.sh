@@ -31,6 +31,7 @@ DOCS=(
   "features/feature-citations.md|feature-citations"
   "features/feature-branding.md|feature-branding"
   "minimal-latex/example-custom-latex.md|example-custom-latex"
+  "placeholders/example-placeholders.md|example-placeholders"
   "book-example/book-example.md|book-example"
   "statblock/statblock-example.md|statblock-example"
 )

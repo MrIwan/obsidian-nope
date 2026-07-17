@@ -68,6 +68,7 @@ nav:
       - Inline markup & comments: writing/markup.md
       - Callouts: writing/callouts.md
       - Footnotes: writing/footnotes.md
+      - Placeholders: writing/placeholders.md
       - Bases (dynamic embeds): writing/bases.md
   - Structured blocks:
       - Tables: blocks/tables.md

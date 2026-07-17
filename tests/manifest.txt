@@ -119,6 +119,12 @@ must-not=[Not found:
 must=demobox
 must-not=[Not found:
 
+[placeholders/example-placeholders.md]
+must=Projekt Alpha
+must=Nordwind GmbH
+must-not=[Projekt]
+must-not=[Not found:
+
 [book-example/book-example.md]
 must=\part{
 must-not=[Not found:
