@@ -1,3 +1,17 @@
+# nope 0.7.3
+
+A pipeline maintenance release. Nothing changes in how the plugin exports. The image hash changes, so the first export pulls the new image once.
+
+## Fixed
+
+- Image builds no longer break while the image's TeX Live year is the current release. The repo resolution now probes whether the frozen historic repo exists and uses plain CTAN otherwise. 0.7.2's image build failed exactly there: `tlnet-final` for TeX Live 2026 does not exist yet.
+- `tlmgr update --self` runs against the resolved repo before the package install. The base image's tlmgr lags behind the repo and refused to install.
+
+## Internal
+
+- All image builds (release, tests, wiki) share one BuildKit cache scope. Layers rebuild once per change instead of once per workflow.
+- The pipeline tests run weekly without cache. Time-dependent breakage like a TeX Live year rollover surfaces there instead of during a release build.
+
 # nope 0.7.2
 
 An attestation-only release. Nothing changes in the plugin itself.
