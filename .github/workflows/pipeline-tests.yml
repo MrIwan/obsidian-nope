@@ -1,9 +1,14 @@
 # Headless pipeline tests
 name: pipeline-tests
 
+# The weekly run builds without cache: time-dependent breakage (TeX Live year
+# rollover, dead mirrors) hides in cached layers and only surfaces when a layer
+# actually re-executes — otherwise that happens at release time.
 on:
   push:
   workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1" # Mondays 05:17 UTC
 
 jobs:
   test:
@@ -14,14 +19,17 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       # Tag must be `nope` — pipeline/docker-compose.yml runs that image.
+      # Cache scope matches docker-image.yml (linux-amd64), so every test run
+      # also warms the cache the release build pulls from.
       - name: Build pipeline image
         uses: docker/build-push-action@v6
         with:
           context: pipeline
           tags: nope
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: ${{ github.event_name == 'schedule' }}
+          cache-from: type=gha,scope=linux-amd64
+          cache-to: type=gha,mode=max,scope=linux-amd64
 
       - name: Run pipeline tests
         run: tests/run-tests.sh
