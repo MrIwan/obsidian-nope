@@ -1,0 +1,1999 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Not anOther Pdf Exporter — publication-ready PDFs from Obsidian notes.">
+      
+      
+      
+        <link rel="canonical" href="https://mriwan.github.io/obsidian-nope/0.7.2/blocks/code-blocks/">
+      
+      
+        <link rel="prev" href="../figures/">
+      
+      
+        <link rel="next" href="../../knowledge/glossary/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Code blocks & custom blocks - NOPE</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#code-blocks-custom-blocks" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="NOPE" class="md-header__button md-logo" aria-label="NOPE" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NOPE
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Code blocks & custom blocks
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="deep-orange"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="deep-orange"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/MrIwan/obsidian-nope" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MrIwan/obsidian-nope
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="NOPE" class="md-nav__button md-logo" aria-label="NOPE" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    NOPE
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/MrIwan/obsidian-nope" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MrIwan/obsidian-nope
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Writing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../writing/concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Atomic notes, embeds & refs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../writing/slices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slices & block embeds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../writing/markup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inline markup & comments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../writing/callouts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Callouts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../writing/footnotes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Footnotes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../writing/placeholders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Placeholders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../writing/bases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bases (dynamic embeds)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structured blocks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Structured blocks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../equations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Equations & math
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theorems/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theorems & environments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mermaid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mermaid diagrams
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tikz/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TikZ diagrams
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../figures/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Images & figures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code blocks & custom blocks
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code blocks & custom blocks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-a-custom-block-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a custom block works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#demo-a-stat-block" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Demo: a stat block
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Knowledge
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../knowledge/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary & acronyms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../knowledge/citations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citations & bibliography
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Styling
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Styling
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../styling/branding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Branding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../styling/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom LaTeX templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../styling/tlmgr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extra LaTeX packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Showcase
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Showcase
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/book/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Book & chapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The complete test document
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/frontmatter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frontmatter keys
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-a-custom-block-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a custom block works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#demo-a-stat-block" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Demo: a stat block
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/MrIwan/obsidian-nope/edit/master/docs/blocks/code-blocks.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="code-blocks-custom-blocks">Code blocks &amp; custom blocks<a class="headerlink" href="#code-blocks-custom-blocks" title="Permanent link">&para;</a></h1>
+<p>A fenced code block's <strong>identifier</strong> decides how NOPE handles it on export. There are three behaviors:</p>
+<ul>
+<li><code>```latex</code> passes its body into the PDF as raw LaTeX, unchanged.</li>
+<li>An identifier you declared in <code>nope-blocks:</code> renders as a LaTeX <strong>environment of that name</strong>, with the block body forwarded to your template as <code>\nope&lt;key&gt;</code> commands.</li>
+<li>Anything else stays an ordinary code fence, shown verbatim.</li>
+</ul>
+<p>The middle one is the point of this page. You invent an identifier, declare it once, and define what it renders to in your custom template. That turns a readable <code>key: value</code> block in your note into any typeset output you want. The same block can render live in Obsidian through a plugin that understands it and export through your environment, from one source.</p>
+<div class="admonition note">
+<p class="admonition-title">Inline LaTeX works too</p>
+<p>The <code>```latex</code> fence is only for convenience. LaTeX commands written straight into the running text are passed through the same way (for example a bare <code>\newpage</code>). The fence just keeps larger raw blocks readable and stops Markdown from touching them.</p>
+</div>
+<h2 id="how-a-custom-block-works">How a custom block works<a class="headerlink" href="#how-a-custom-block-works" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Needs a custom template</p>
+<p>Custom blocks only work with a custom LaTeX template. The environment a declared identifier renders to is defined there. See <a href="../../styling/templates/">Custom LaTeX templates</a>. The <code>latex</code> passthrough and plain fences work without one.</p>
+</div>
+<p>Two steps:</p>
+<ol>
+<li>Declare the identifier in the document (or branding) frontmatter: <code>nope-blocks: [myblock]</code>. The pipeline now knows a <code>```myblock</code> fence maps to a LaTeX environment called <code>myblock</code>.</li>
+<li>Define that environment in your custom <code>.tex</code> template. Everything the block needs to render lives there, so the block's appearance is entirely yours.</li>
+</ol>
+<p>The block body is YAML-lite and each line is forwarded as a command:</p>
+<ul>
+<li><code>key: value</code> becomes <code>\nope&lt;key&gt;</code>.</li>
+<li><code>key:</code> on its own opens a list. Its <code>- subkey: value</code> items become <code>\nope&lt;key&gt;&lt;N&gt;-&lt;subkey&gt;</code>, and bare <code>- value</code> items become <code>\nope&lt;key&gt;&lt;N&gt;</code>.</li>
+<li>Inline lists <code>[a, b]</code> have their brackets stripped. Indented lines continue the previous value.</li>
+</ul>
+<p>Inside the environment you read those commands and lay them out however you like. An unparsable line is a hard export error. Declared blocks are unnumbered and not referencable. For numbering and <code>[[refs]]</code> use an atomic <code>latex-env</code> note instead.</p>
+<h2 id="demo-a-stat-block">Demo: a stat block<a class="headerlink" href="#demo-a-stat-block" title="Permanent link">&para;</a></h2>
+<p>This is only a demonstration of the mechanism above. The identifier happens to be <code>statblock</code>, but the same approach works for any block you invent.</p>
+<p>The note holds a plain <code>statblock</code> fence and renders live in Obsidian through the <a href="https://plugins.javalent.com/statblocks">Fantasy Statblock</a> plugin. The <code>statblock</code> environment in the co-located template turns the forwarded <code>\nope&lt;key&gt;</code> commands into the typeset output, from one source.</p>
+<p><a class="md-button" href="../../assets/pdf/statblock-example.pdf">Open PDF</a></p>
+<p><strong>Source</strong></p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">statblock-example.md</label><label for="__tabbed_1_2">nope_statblock.tex</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>---
+title: &quot;Stat blocks&quot;
+author: MrIwan
+toc: false
+nope-blocks:
+<span class="w">  </span><span class="k">-</span><span class="w"> </span>statblock
+nope-tlmgr:
+<span class="w">  </span><span class="k">-</span><span class="w"> </span>tcolorbox
+<span class="gu">nope-template: &quot;[[nope_statblock.tex]]&quot;</span>
+<span class="gu">---</span>
+
+<span class="gh"># Stat blocks</span>
+
+A <span class="sb">`statblock`</span> fence in [<span class="nt">Fantasy Statblock</span>](<span class="na">https://plugins.javalent.com/statblocks</span>) syntax renders live in Obsidian and exports through the <span class="sb">`statblock`</span> environment defined in the custom template, from one source. Each scalar key becomes <span class="sb">`\nope&lt;key&gt;`</span>; a block list like <span class="sb">`traits:`</span> becomes numbered <span class="sb">`\nope&lt;key&gt;&lt;N&gt;-&lt;subkey&gt;`</span> commands.
+
+The stat block look is inspired by the [<span class="nt">DnD 5e LaTeX template</span>](<span class="na">https://github.com/rpgtex/DND-5e-LaTeX-Template</span>) by the rpgTeX team (MIT). Thanks for the groundwork.
+
+<span class="sb">```statblock</span>
+<span class="s">name: Goblin</span>
+<span class="s">size: Small</span>
+<span class="s">type: humanoid</span>
+<span class="s">alignment: neutral evil</span>
+<span class="s">ac: 15</span>
+<span class="s">hp: 7 (2d6)</span>
+<span class="s">speed: 30 ft.</span>
+<span class="s">stats: [8, 14, 10, 10, 8, 8]</span>
+<span class="s">cr: &quot;1/4&quot;</span>
+<span class="s">traits:</span>
+<span class="s">  - name: Nimble Escape</span>
+<span class="s">    desc: The goblin can take the Disengage or Hide action as a bonus action.</span>
+<span class="s">actions:</span>
+<span class="s">  - name: Scimitar</span>
+<span class="s">    desc: Melee weapon attack, reach 5 ft., one target. Hit 5 (1d6+2) slashing damage.</span>
+<span class="sb">```</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="c">% nope_statblock.tex — minimal custom template that defines a `statblock`</span>
+<span class="c">% environment for the nope-blocks demo. Based on nope_minimal.tex; the marked</span>
+<span class="c">% NOPE-IMPORTS block is kept verbatim. Point a document at it via frontmatter:</span>
+<span class="c">%   nope-blocks: [statblock]</span>
+<span class="c">%   nope-template: &quot;[[nope_statblock.tex]]&quot;</span>
+<span class="c">%</span>
+<span class="c">% The `statblock` fence format follows the Fantasy Statblock Obsidian plugin, and</span>
+<span class="c">% the typeset look is inspired by the DnD 5e LaTeX template by the rpgTeX team</span>
+<span class="c">% (MIT, https://github.com/rpgtex/DND-5e-LaTeX-Template). Thanks to both.</span>
+<span class="k">\documentclass</span><span class="na">[11pt]</span><span class="nb">{</span>article<span class="nb">}</span>
+
+<span class="k">\usepackage</span><span class="na">[T1]</span><span class="nb">{</span>fontenc<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="na">[utf8]</span><span class="nb">{</span>inputenc<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>lmodern<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>microtype<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="na">[english]</span><span class="nb">{</span>babel<span class="nb">}</span> <span class="c">% change to ngerman for German documents</span>
+<span class="k">\usepackage</span><span class="nb">{</span>xcolor<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>graphicx<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>calc<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>fancyvrb<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>fvextra<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>hyperref<span class="nb">}</span>
+
+<span class="c">% Pandoc helper macros that its default template provides.</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\passthrough</span><span class="nb">}</span>[1]<span class="nb">{</span>#1<span class="nb">}</span>
+<span class="k">\providecommand</span><span class="nb">{</span><span class="k">\tightlist</span><span class="nb">}{</span><span class="k">\setlength</span><span class="nb">{</span><span class="k">\itemsep</span><span class="nb">}{</span>0pt<span class="nb">}</span><span class="k">\setlength</span><span class="nb">{</span><span class="k">\parskip</span><span class="nb">}{</span>0pt<span class="nb">}}</span>
+<span class="k">\providecommand</span><span class="nb">{</span><span class="k">\nonumberline</span><span class="nb">}{}</span>
+<span class="k">\setlength</span><span class="nb">{</span><span class="k">\emergencystretch</span><span class="nb">}{</span>3em<span class="nb">}</span>
+<span class="k">\makeatletter</span>
+<span class="k">\newsavebox\pandoc@box</span>
+<span class="k">\newcommand*\pandocbounded</span><span class="na">[1]</span><span class="nb">{</span><span class="c">%</span>
+  <span class="k">\sbox\pandoc@box</span><span class="nb">{</span>#1<span class="nb">}</span><span class="c">%</span>
+  <span class="k">\Gscale@div\@tempa</span><span class="nb">{</span><span class="k">\textheight</span><span class="nb">}{</span><span class="k">\dimexpr\ht\pandoc@box</span>+<span class="k">\dp\pandoc@box\relax</span><span class="nb">}</span><span class="c">%</span>
+  <span class="k">\Gscale@div\@tempb</span><span class="nb">{</span><span class="k">\linewidth</span><span class="nb">}{</span><span class="k">\wd\pandoc@box</span><span class="nb">}</span><span class="c">%</span>
+  <span class="k">\ifdim\@tempb\p@</span>&lt;<span class="k">\@tempa\p@\let\@tempa\@tempb\fi</span><span class="c">%</span>
+  <span class="k">\ifdim\@tempa\p@</span>&lt;<span class="k">\p@\scalebox</span><span class="nb">{</span><span class="k">\@tempa</span><span class="nb">}{</span><span class="k">\usebox\pandoc@box</span><span class="nb">}</span><span class="c">%</span>
+  <span class="k">\else\usebox</span><span class="nb">{</span><span class="k">\pandoc@box</span><span class="nb">}</span><span class="c">%</span>
+  <span class="k">\fi</span><span class="c">%</span>
+<span class="nb">}</span>
+<span class="k">\makeatother</span>
+
+<span class="c">% Syntax highlighting for fenced code blocks (Shaded/Highlighting environments).</span>
+<span class="s">$</span><span class="nb">if</span><span class="o">(</span><span class="nb">highlighting</span><span class="o">-</span><span class="nb">macros</span><span class="o">)</span><span class="s">$</span>
+<span class="s">$</span><span class="nb">highlighting</span><span class="o">-</span><span class="nb">macros</span><span class="s">$</span>
+<span class="k">\DefineVerbatimEnvironment</span><span class="nb">{</span>Highlighting<span class="nb">}{</span>Verbatim<span class="nb">}{</span>breaklines,fontsize=<span class="k">\small</span>,commandchars=<span class="k">\\\{\}</span><span class="nb">}</span>
+<span class="s">$</span><span class="nb">endif</span><span class="s">$</span>
+
+<span class="c">% Citeproc citations + bibliography (CSLReferences environment).</span>
+<span class="s">$</span><span class="nb">if</span><span class="o">(</span><span class="nb">csl</span><span class="o">-</span><span class="nb">refs</span><span class="o">)</span><span class="s">$</span>
+<span class="k">\NewDocumentCommand\citeproctext</span><span class="nb">{}{}</span>
+<span class="k">\NewDocumentCommand\citeproc</span><span class="nb">{</span>mm<span class="nb">}{</span><span class="c">%</span>
+  <span class="k">\begingroup\def\citeproctext</span><span class="nb">{</span>#2<span class="nb">}</span><span class="k">\cite</span><span class="nb">{</span>#1<span class="nb">}</span><span class="k">\endgroup</span><span class="nb">}</span>
+<span class="k">\makeatletter</span>
+ <span class="k">\let\@cite@ofmt\@firstofone</span>
+ <span class="k">\def\@biblabel</span>#1<span class="nb">{}</span>
+ <span class="k">\def\@cite</span>#1#2<span class="nb">{{</span>#1<span class="k">\if@tempswa</span> , #2<span class="k">\fi</span><span class="nb">}}</span>
+<span class="k">\makeatother</span>
+<span class="k">\newlength</span><span class="nb">{</span><span class="k">\cslhangindent</span><span class="nb">}</span>
+<span class="k">\setlength</span><span class="nb">{</span><span class="k">\cslhangindent</span><span class="nb">}{</span>1.5em<span class="nb">}</span>
+<span class="k">\newlength</span><span class="nb">{</span><span class="k">\csllabelwidth</span><span class="nb">}</span>
+<span class="k">\setlength</span><span class="nb">{</span><span class="k">\csllabelwidth</span><span class="nb">}{</span>3em<span class="nb">}</span>
+<span class="k">\newenvironment</span><span class="nb">{</span>CSLReferences<span class="nb">}</span>[2]
+  <span class="nb">{</span><span class="k">\begin</span><span class="nb">{</span>list<span class="nb">}{}{</span><span class="c">%</span>
+   <span class="k">\setlength</span><span class="nb">{</span><span class="k">\itemindent</span><span class="nb">}{</span>0pt<span class="nb">}</span>
+   <span class="k">\setlength</span><span class="nb">{</span><span class="k">\leftmargin</span><span class="nb">}{</span>0pt<span class="nb">}</span>
+   <span class="k">\setlength</span><span class="nb">{</span><span class="k">\parsep</span><span class="nb">}{</span>0pt<span class="nb">}</span>
+   <span class="k">\ifodd</span> #1
+    <span class="k">\setlength</span><span class="nb">{</span><span class="k">\leftmargin</span><span class="nb">}{</span><span class="k">\cslhangindent</span><span class="nb">}</span>
+    <span class="k">\setlength</span><span class="nb">{</span><span class="k">\itemindent</span><span class="nb">}{</span>-1<span class="k">\cslhangindent</span><span class="nb">}</span>
+   <span class="k">\fi</span>
+   <span class="k">\setlength</span><span class="nb">{</span><span class="k">\itemsep</span><span class="nb">}{</span>#2<span class="k">\baselineskip</span><span class="nb">}}}</span>
+  <span class="nb">{</span><span class="k">\end</span><span class="nb">{</span>list<span class="nb">}}</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\CSLBlock</span><span class="nb">}</span>[1]<span class="nb">{</span><span class="k">\hfill\break\parbox</span><span class="na">[t]</span><span class="nb">{</span><span class="k">\linewidth</span><span class="nb">}{</span><span class="k">\strut\ignorespaces</span>#1<span class="k">\strut</span><span class="nb">}}</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\CSLLeftMargin</span><span class="nb">}</span>[1]<span class="nb">{</span><span class="k">\parbox</span><span class="na">[t]</span><span class="nb">{</span><span class="k">\csllabelwidth</span><span class="nb">}{</span><span class="k">\strut</span>#1<span class="k">\strut</span><span class="nb">}}</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\CSLRightInline</span><span class="nb">}</span>[1]<span class="nb">{</span><span class="k">\parbox</span><span class="na">[t]</span><span class="nb">{</span><span class="k">\linewidth</span> - <span class="k">\csllabelwidth</span><span class="nb">}{</span><span class="k">\strut</span>#1<span class="k">\strut</span><span class="nb">}}</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\CSLIndent</span><span class="nb">}</span>[1]<span class="nb">{</span><span class="k">\hspace</span><span class="nb">{</span><span class="k">\cslhangindent</span><span class="nb">}</span>#1<span class="nb">}</span>
+<span class="s">$</span><span class="nb">endif</span><span class="s">$</span>
+
+<span class="c">% --- Stat block environment ----------------------------------------------------</span>
+<span class="c">% Fed by a ```statblock code block (nope-blocks: [statblock]). Each scalar key is</span>
+<span class="c">% exposed as \nope&lt;key&gt;; a block list like traits: becomes \nope&lt;key&gt;&lt;N&gt;-&lt;subkey&gt;.</span>
+<span class="c">% The macros are defined by the pipeline just before \begin{statblock}, so this</span>
+<span class="c">% environment reads them in its begin part; the body itself stays empty.</span>
+<span class="c">%</span>
+<span class="c">% Self-contained 5e-inspired look (tan box, dark-red small-caps title, rules, an</span>
+<span class="c">% ability-score row with computed modifiers). Modelled on the DnD 5e LaTeX</span>
+<span class="c">% template by the rpgTeX team (MIT, https://github.com/rpgtex/DND-5e-LaTeX-Template)</span>
+<span class="c">% but rebuilt standalone here, so it needs only tcolorbox, no dndbook package.</span>
+<span class="k">\usepackage</span><span class="nb">{</span>tcolorbox<span class="nb">}</span>
+<span class="k">\tcbuselibrary</span><span class="nb">{</span>breakable<span class="nb">}</span>
+<span class="k">\definecolor</span><span class="nb">{</span>DndMonsterTan<span class="nb">}{</span>HTML<span class="nb">}{</span>FDF1DC<span class="nb">}</span>
+<span class="k">\definecolor</span><span class="nb">{</span>DndDarkRed<span class="nb">}{</span>HTML<span class="nb">}{</span>58180D<span class="nb">}</span>
+<span class="k">\definecolor</span><span class="nb">{</span>DndRuleRed<span class="nb">}{</span>HTML<span class="nb">}{</span>922610<span class="nb">}</span>
+
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\sbkey</span><span class="nb">}</span>[1]<span class="nb">{</span><span class="k">\csname</span> nope#1<span class="k">\endcsname</span><span class="nb">}</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\sbif</span><span class="nb">}</span>[2]<span class="nb">{</span><span class="k">\ifcsname</span> nope#1<span class="k">\endcsname</span>#2<span class="k">\fi</span><span class="nb">}</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\sbrule</span><span class="nb">}{</span><span class="k">\par\smallskip\textcolor</span><span class="nb">{</span>DndRuleRed<span class="nb">}{</span><span class="k">\rule</span><span class="nb">{</span><span class="k">\linewidth</span><span class="nb">}{</span>1pt<span class="nb">}}</span><span class="k">\par\smallskip</span><span class="nb">}</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\sbthinrule</span><span class="nb">}{</span><span class="k">\par\nobreak\textcolor</span><span class="nb">{</span>DndRuleRed<span class="nb">}{</span><span class="k">\rule</span><span class="nb">{</span><span class="k">\linewidth</span><span class="nb">}{</span>0.4pt<span class="nb">}}</span><span class="k">\par\smallskip</span><span class="nb">}</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\sbsection</span><span class="nb">}</span>[1]<span class="nb">{</span><span class="k">\par\medskip\noindent</span><span class="nb">{</span><span class="k">\color</span><span class="nb">{</span>DndDarkRed<span class="nb">}</span><span class="k">\large\scshape</span> #1<span class="nb">}</span><span class="k">\sbthinrule</span><span class="nb">}</span>
+<span class="c">% List entry N of &lt;key&gt;: name/desc → \nope&lt;key&gt;&lt;N&gt;-name / -desc.</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\sbentry</span><span class="nb">}</span>[2]<span class="nb">{</span><span class="c">%</span>
+  <span class="k">\ifcsname</span> nope#1#2-name<span class="k">\endcsname</span>
+    <span class="k">\par\smallskip\noindent</span><span class="nb">{</span><span class="k">\bfseries\itshape\csname</span> nope#1#2-name<span class="k">\endcsname</span>.<span class="nb">}</span><span class="k">\</span> <span class="c">%</span>
+    <span class="k">\ifcsname</span> nope#1#2-desc<span class="k">\endcsname\csname</span> nope#1#2-desc<span class="k">\endcsname\fi</span>
+  <span class="k">\fi</span><span class="nb">}</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\sbiflist</span><span class="nb">}</span>[2]<span class="nb">{</span><span class="k">\ifcsname</span> nope#11-name<span class="k">\endcsname</span>#2<span class="k">\fi</span><span class="nb">}</span>
+<span class="c">% Ability scores: &quot;stats: [12, 8, 13, 10, 14, 15]&quot; → six columns &quot;12 (+1)&quot;.</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\sbmod</span><span class="nb">}</span>[1]<span class="nb">{</span><span class="k">\the\numexpr</span>(#1-<span class="k">\ifodd\numexpr</span>#1<span class="k">\relax</span> 11<span class="k">\else</span> 10<span class="k">\fi</span>)/2<span class="k">\relax</span><span class="nb">}</span>
+<span class="k">\newcommand</span><span class="nb">{</span><span class="k">\sbstatcell</span><span class="nb">}</span>[1]<span class="nb">{</span><span class="c">%</span>
+  <span class="k">\the\numexpr</span>#1<span class="k">\relax\</span>
+  (<span class="k">\ifnum\numexpr</span>(#1-<span class="k">\ifodd\numexpr</span>#1<span class="k">\relax</span> 11<span class="k">\else</span> 10<span class="k">\fi</span>)/2<span class="k">\relax</span>&lt;0<span class="k">\else</span>+<span class="k">\fi\sbmod</span><span class="nb">{</span>#1<span class="nb">}</span>)<span class="nb">}</span>
+<span class="k">\def\sbsplitstats</span>#1,#2,#3,#4,#5,#6<span class="k">\sbendstats</span><span class="nb">{</span><span class="c">%</span>
+  <span class="k">\begin</span><span class="nb">{</span>tabular*<span class="nb">}{</span><span class="k">\linewidth</span><span class="nb">}{</span>@<span class="nb">{</span><span class="k">\extracolsep</span><span class="nb">{</span><span class="k">\fill</span><span class="nb">}}</span>cccccc@<span class="nb">{}}</span>
+    <span class="k">\textbf</span><span class="nb">{</span>STR<span class="nb">}&amp;</span><span class="k">\textbf</span><span class="nb">{</span>DEX<span class="nb">}&amp;</span><span class="k">\textbf</span><span class="nb">{</span>CON<span class="nb">}&amp;</span><span class="k">\textbf</span><span class="nb">{</span>INT<span class="nb">}&amp;</span><span class="k">\textbf</span><span class="nb">{</span>WIS<span class="nb">}&amp;</span><span class="k">\textbf</span><span class="nb">{</span>CHA<span class="nb">}</span><span class="k">\\</span>
+    <span class="k">\sbstatcell</span><span class="nb">{</span>#1<span class="nb">}&amp;</span><span class="k">\sbstatcell</span><span class="nb">{</span>#2<span class="nb">}&amp;</span><span class="k">\sbstatcell</span><span class="nb">{</span>#3<span class="nb">}&amp;</span><span class="c">%</span>
+    <span class="k">\sbstatcell</span><span class="nb">{</span>#4<span class="nb">}&amp;</span><span class="k">\sbstatcell</span><span class="nb">{</span>#5<span class="nb">}&amp;</span><span class="k">\sbstatcell</span><span class="nb">{</span>#6<span class="nb">}</span><span class="c">%</span>
+  <span class="k">\end</span><span class="nb">{</span>tabular*<span class="nb">}}</span>
+<span class="k">\newtcolorbox</span><span class="nb">{</span>sb@box<span class="nb">}{</span>breakable,colback=DndMonsterTan,colframe=DndRuleRed,
+  boxrule=0pt,toprule=2.5pt,bottomrule=2.5pt,arc=0pt,left=6pt,right=6pt<span class="nb">}</span>
+<span class="k">\newenvironment</span><span class="nb">{</span>statblock<span class="nb">}{</span><span class="c">%</span>
+  <span class="k">\begin</span><span class="nb">{</span>sb@box<span class="nb">}</span><span class="k">\small</span>
+  <span class="k">\noindent</span><span class="nb">{</span><span class="k">\color</span><span class="nb">{</span>DndDarkRed<span class="nb">}</span><span class="k">\scshape\LARGE</span> <span class="k">\sbkey</span><span class="nb">{</span>name<span class="nb">}</span><span class="k">\par</span><span class="nb">}</span>
+  <span class="k">\noindent</span><span class="nb">{</span><span class="k">\itshape\sbif</span><span class="nb">{</span>size<span class="nb">}{</span><span class="k">\sbkey</span><span class="nb">{</span>size<span class="nb">}</span> <span class="nb">}</span><span class="k">\sbif</span><span class="nb">{</span>type<span class="nb">}{</span><span class="k">\sbkey</span><span class="nb">{</span>type<span class="nb">}}</span><span class="c">%</span>
+    <span class="k">\sbif</span><span class="nb">{</span>alignment<span class="nb">}{</span>, <span class="k">\sbkey</span><span class="nb">{</span>alignment<span class="nb">}}</span><span class="k">\par</span><span class="nb">}</span>
+  <span class="k">\sbrule</span>
+  <span class="nb">{</span><span class="k">\color</span><span class="nb">{</span>DndDarkRed<span class="nb">}</span><span class="c">%</span>
+   <span class="k">\sbif</span><span class="nb">{</span>ac<span class="nb">}{</span><span class="k">\par\noindent\textbf</span><span class="nb">{</span>Armor Class<span class="nb">}</span> <span class="k">\sbkey</span><span class="nb">{</span>ac<span class="nb">}}</span><span class="c">%</span>
+   <span class="k">\sbif</span><span class="nb">{</span>hp<span class="nb">}{</span><span class="k">\par\noindent\textbf</span><span class="nb">{</span>Hit Points<span class="nb">}</span> <span class="k">\sbkey</span><span class="nb">{</span>hp<span class="nb">}}</span><span class="c">%</span>
+   <span class="k">\sbif</span><span class="nb">{</span>speed<span class="nb">}{</span><span class="k">\par\noindent\textbf</span><span class="nb">{</span>Speed<span class="nb">}</span> <span class="k">\sbkey</span><span class="nb">{</span>speed<span class="nb">}}</span><span class="k">\par</span><span class="nb">}</span><span class="c">%</span>
+  <span class="k">\sbif</span><span class="nb">{</span>stats<span class="nb">}{</span><span class="k">\sbrule</span><span class="nb">{</span><span class="k">\color</span><span class="nb">{</span>DndDarkRed<span class="nb">}</span><span class="c">%</span>
+    <span class="k">\expandafter\expandafter\expandafter\sbsplitstats\csname</span> nopestats<span class="k">\endcsname\sbendstats\par</span><span class="nb">}}</span><span class="c">%</span>
+  <span class="k">\sbif</span><span class="nb">{</span>cr<span class="nb">}{</span><span class="k">\sbrule</span><span class="nb">{</span><span class="k">\color</span><span class="nb">{</span>DndDarkRed<span class="nb">}</span><span class="k">\noindent\textbf</span><span class="nb">{</span>Challenge<span class="nb">}</span> <span class="k">\sbkey</span><span class="nb">{</span>cr<span class="nb">}</span><span class="k">\par</span><span class="nb">}}</span><span class="c">%</span>
+  <span class="k">\sbrule</span>
+  <span class="k">\sbentry</span><span class="nb">{</span>traits<span class="nb">}{</span>1<span class="nb">}</span><span class="k">\sbentry</span><span class="nb">{</span>traits<span class="nb">}{</span>2<span class="nb">}</span><span class="k">\sbentry</span><span class="nb">{</span>traits<span class="nb">}{</span>3<span class="nb">}</span><span class="c">%</span>
+  <span class="k">\sbiflist</span><span class="nb">{</span>actions<span class="nb">}{</span><span class="k">\sbsection</span><span class="nb">{</span>Actions<span class="nb">}}</span><span class="c">%</span>
+  <span class="k">\sbentry</span><span class="nb">{</span>actions<span class="nb">}{</span>1<span class="nb">}</span><span class="k">\sbentry</span><span class="nb">{</span>actions<span class="nb">}{</span>2<span class="nb">}</span><span class="k">\sbentry</span><span class="nb">{</span>actions<span class="nb">}{</span>3<span class="nb">}</span><span class="c">%</span>
+<span class="nb">}{</span><span class="k">\end</span><span class="nb">{</span>sb@box<span class="nb">}}</span>
+<span class="c">% ------------------------------------------------------------------------------</span>
+
+<span class="c">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+<span class="c">%%% NOPE-IMPORTS — DO NOT CHANGE unless you know what you are doing.        %%%</span>
+<span class="c">%%% Everything NOPE&#39;s pipeline needs: tables, callouts, theorems, glossary, %%%</span>
+<span class="c">%%% cross-reference names. Keep this block verbatim in any custom template. %%%</span>
+<span class="c">%%% Must sit after hyperref and BEFORE header-includes.                     %%%</span>
+<span class="c">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+<span class="k">\usepackage</span><span class="nb">{</span>graphicx<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>longtable,booktabs,array<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>amsmath,amssymb<span class="nb">}</span> <span class="c">% math + task-list checkboxes (\square/\boxtimes)</span>
+<span class="k">\usepackage</span><span class="nb">{</span>float<span class="nb">}</span>  <span class="c">% [H] placement: fit-tables (filter emits table[H]) + figures</span>
+<span class="k">\floatplacement</span><span class="nb">{</span>figure<span class="nb">}{</span><span class="s">$</span><span class="nb">if</span><span class="o">(</span><span class="nb">float</span><span class="o">-</span><span class="nb">placement</span><span class="o">-</span><span class="nb">figure</span><span class="o">)</span><span class="s">$$</span><span class="nb">float</span><span class="o">-</span><span class="nb">placement</span><span class="o">-</span><span class="nb">figure</span><span class="s">$$</span><span class="nb">else</span><span class="s">$</span>H<span class="s">$</span><span class="nb">endif</span><span class="s">$</span><span class="nb">}</span>
+
+<span class="c">% Unicode fallbacks</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>2212<span class="nb">}{</span><span class="k">\ensuremath</span><span class="nb">{</span>-<span class="nb">}}</span>        <span class="c">% minus sign</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>2264<span class="nb">}{</span><span class="k">\ensuremath</span><span class="nb">{</span><span class="k">\leq</span><span class="nb">}}</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>2265<span class="nb">}{</span><span class="k">\ensuremath</span><span class="nb">{</span><span class="k">\geq</span><span class="nb">}}</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>2260<span class="nb">}{</span><span class="k">\ensuremath</span><span class="nb">{</span><span class="k">\neq</span><span class="nb">}}</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>2192<span class="nb">}{</span><span class="k">\ensuremath</span><span class="nb">{</span><span class="k">\rightarrow</span><span class="nb">}}</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>03B1<span class="nb">}{</span><span class="k">\ensuremath</span><span class="nb">{</span><span class="k">\alpha</span><span class="nb">}}</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>03B2<span class="nb">}{</span><span class="k">\ensuremath</span><span class="nb">{</span><span class="k">\beta</span><span class="nb">}}</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>03BC<span class="nb">}{</span><span class="k">\ensuremath</span><span class="nb">{</span><span class="k">\mu</span><span class="nb">}}</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>03C0<span class="nb">}{</span><span class="k">\ensuremath</span><span class="nb">{</span><span class="k">\pi</span><span class="nb">}}</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>2080<span class="nb">}{</span><span class="k">\textsubscript</span><span class="nb">{</span>0<span class="nb">}}</span>
+<span class="k">\DeclareUnicodeCharacter</span><span class="nb">{</span>2082<span class="nb">}{</span><span class="k">\textsubscript</span><span class="nb">{</span>2<span class="nb">}}</span>
+
+<span class="c">% Callouts (callouts.lua → awesomebox) and highlights (==text== → soul \hl).</span>
+<span class="k">\usepackage</span><span class="nb">{</span>awesomebox<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>soul<span class="nb">}</span>
+<span class="k">\usepackage</span><span class="nb">{</span>soulutf8<span class="nb">}</span>
+
+<span class="c">% SVG logos/images.</span>
+<span class="k">\usepackage</span><span class="nb">{</span>svg<span class="nb">}</span>
+
+<span class="c">% Theorem-family environments (latex-env: theorem/lemma/...).</span>
+<span class="k">\usepackage</span><span class="nb">{</span>amsthm<span class="nb">}</span>
+<span class="k">\theoremstyle</span><span class="nb">{</span>plain<span class="nb">}</span>
+<span class="k">\newtheorem</span><span class="nb">{</span>theorem<span class="nb">}{</span>Theorem<span class="nb">}</span>[section]
+<span class="k">\newtheorem</span><span class="nb">{</span>lemma<span class="nb">}{</span>Lemma<span class="nb">}</span>[section]
+<span class="k">\newtheorem</span><span class="nb">{</span>corollary<span class="nb">}{</span>Corollary<span class="nb">}</span>[section]
+<span class="k">\newtheorem</span><span class="nb">{</span>proposition<span class="nb">}{</span>Proposition<span class="nb">}</span>[section]
+<span class="k">\theoremstyle</span><span class="nb">{</span>definition<span class="nb">}</span>
+<span class="k">\newtheorem</span><span class="nb">{</span>definition<span class="nb">}{</span>Definition<span class="nb">}</span>[section]
+<span class="k">\newtheorem</span><span class="nb">{</span>example<span class="nb">}{</span>Example<span class="nb">}</span>[section]
+<span class="k">\theoremstyle</span><span class="nb">{</span>remark<span class="nb">}</span>
+<span class="k">\newtheorem*</span><span class="nb">{</span>remark<span class="nb">}{</span>Remark<span class="nb">}</span>
+<span class="k">\newtheorem*</span><span class="nb">{</span>note<span class="nb">}{</span>Note<span class="nb">}</span>
+<span class="k">\providecommand</span><span class="nb">{</span><span class="k">\theoremautorefname</span><span class="nb">}{</span>Theorem<span class="nb">}</span>
+<span class="k">\providecommand</span><span class="nb">{</span><span class="k">\lemmaautorefname</span><span class="nb">}{</span>Lemma<span class="nb">}</span>
+<span class="k">\providecommand</span><span class="nb">{</span><span class="k">\corollaryautorefname</span><span class="nb">}{</span>Corollary<span class="nb">}</span>
+<span class="k">\providecommand</span><span class="nb">{</span><span class="k">\propositionautorefname</span><span class="nb">}{</span>Proposition<span class="nb">}</span>
+<span class="k">\providecommand</span><span class="nb">{</span><span class="k">\definitionautorefname</span><span class="nb">}{</span>Definition<span class="nb">}</span>
+<span class="k">\providecommand</span><span class="nb">{</span><span class="k">\exampleautorefname</span><span class="nb">}{</span>Example<span class="nb">}</span>
+
+<span class="c">% Glossary + acronyms (gls-* notes). Must precede the injected entries.</span>
+<span class="k">\usepackage</span><span class="na">[acronym, toc, nonumberlist]</span><span class="nb">{</span>glossaries<span class="nb">}</span>
+<span class="k">\makeglossaries</span>
+
+<span class="c">% Language-aware \autoref names (figure/table/equation/... per babel language).</span>
+<span class="k">\AtBeginDocument</span><span class="nb">{</span><span class="c">%</span>
+  <span class="k">\IfPackageLoadedTF</span><span class="nb">{</span>babel<span class="nb">}{</span><span class="c">%</span>
+    <span class="k">\iflanguage</span><span class="nb">{</span>ngerman<span class="nb">}{</span><span class="c">%</span>
+      <span class="k">\renewcommand</span><span class="nb">{</span><span class="k">\figureautorefname</span><span class="nb">}{</span>Abbildung<span class="nb">}</span><span class="c">%</span>
+      <span class="k">\renewcommand</span><span class="nb">{</span><span class="k">\tableautorefname</span><span class="nb">}{</span>Tabelle<span class="nb">}</span><span class="c">%</span>
+      <span class="k">\renewcommand</span><span class="nb">{</span><span class="k">\equationautorefname</span><span class="nb">}{</span>Gleichung<span class="nb">}</span><span class="c">%</span>
+      <span class="k">\renewcommand</span><span class="nb">{</span><span class="k">\sectionautorefname</span><span class="nb">}{</span>Abschnitt<span class="nb">}</span><span class="c">%</span>
+      <span class="k">\renewcommand</span><span class="nb">{</span><span class="k">\contentsname</span><span class="nb">}{</span>Inhaltsverzeichnis<span class="nb">}</span><span class="c">%</span>
+    <span class="nb">}{}</span><span class="c">%</span>
+    <span class="k">\iflanguage</span><span class="nb">{</span>english<span class="nb">}{</span><span class="c">%</span>
+      <span class="k">\renewcommand</span><span class="nb">{</span><span class="k">\figureautorefname</span><span class="nb">}{</span>Figure<span class="nb">}</span><span class="c">%</span>
+      <span class="k">\renewcommand</span><span class="nb">{</span><span class="k">\tableautorefname</span><span class="nb">}{</span>Table<span class="nb">}</span><span class="c">%</span>
+      <span class="k">\renewcommand</span><span class="nb">{</span><span class="k">\equationautorefname</span><span class="nb">}{</span>Equation<span class="nb">}</span><span class="c">%</span>
+      <span class="k">\renewcommand</span><span class="nb">{</span><span class="k">\sectionautorefname</span><span class="nb">}{</span>Section<span class="nb">}</span><span class="c">%</span>
+    <span class="nb">}{}</span><span class="c">%</span>
+  <span class="nb">}{}</span><span class="c">%</span>
+<span class="nb">}</span>
+<span class="c">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+<span class="c">%%% END NOPE-IMPORTS                                                        %%%</span>
+<span class="c">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+
+<span class="s">$</span><span class="nb">for</span><span class="o">(</span><span class="nb">header</span><span class="o">-</span><span class="nb">includes</span><span class="o">)</span><span class="s">$</span>
+<span class="s">$</span><span class="nb">header</span><span class="o">-</span><span class="nb">includes</span><span class="s">$</span>
+<span class="s">$</span><span class="nb">endfor</span><span class="s">$</span>
+
+<span class="k">\title</span><span class="nb">{</span><span class="s">$</span><span class="nb">title</span><span class="s">$</span><span class="nb">}</span>
+<span class="s">$</span><span class="nb">if</span><span class="o">(</span><span class="nb">author</span><span class="o">)</span><span class="s">$</span><span class="k">\author</span><span class="nb">{</span><span class="s">$</span><span class="nb">author</span><span class="s">$</span><span class="nb">}</span><span class="s">$</span><span class="nb">endif</span><span class="s">$</span>
+<span class="s">$</span><span class="nb">if</span><span class="o">(</span><span class="nb">date</span><span class="o">)</span><span class="s">$</span><span class="k">\date</span><span class="nb">{</span><span class="s">$</span><span class="nb">date</span><span class="s">$</span><span class="nb">}</span><span class="s">$</span><span class="nb">endif</span><span class="s">$</span>
+
+<span class="k">\begin</span><span class="nb">{</span>document<span class="nb">}</span>
+
+<span class="s">$</span><span class="nb">if</span><span class="o">(</span><span class="nb">title</span><span class="o">)</span><span class="s">$</span><span class="k">\maketitle</span><span class="s">$</span><span class="nb">endif</span><span class="s">$</span>
+<span class="s">$</span><span class="nb">if</span><span class="o">(</span><span class="nb">toc</span><span class="o">)</span><span class="s">$</span><span class="k">\tableofcontents\newpage</span><span class="s">$</span><span class="nb">endif</span><span class="s">$</span>
+
+<span class="s">$</span><span class="nb">body</span><span class="s">$</span>
+
+<span class="s">$</span><span class="nb">if</span><span class="o">(</span><span class="nb">has</span><span class="o">-</span><span class="nb">glossary</span><span class="o">)</span><span class="s">$</span>
+<span class="k">\clearpage</span>
+<span class="k">\printglossary</span><span class="na">[type=\acronymtype, title={Acronyms}]</span>
+<span class="k">\printglossary</span><span class="na">[title={Glossary}]</span>
+<span class="s">$</span><span class="nb">endif</span><span class="s">$</span>
+
+<span class="k">\end</span><span class="nb">{</span>document<span class="nb">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Thanks</p>
+<p>The <code>statblock</code> demo format follows the <a href="https://plugins.javalent.com/statblocks">Fantasy Statblock</a> plugin, and its typeset look is modelled on the <a href="https://github.com/rpgtex/DND-5e-LaTeX-Template">DnD 5e LaTeX template</a> by the rpgTeX team (MIT). Thanks to both.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../figures/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Images &amp; figures">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Images & figures
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../knowledge/glossary/" class="md-footer__link md-footer__link--next" aria-label="Next: Glossary &amp; acronyms">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Glossary & acronyms
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "navigation.footer", "navigation.indexes", "search.suggest", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
