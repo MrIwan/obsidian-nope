@@ -40,8 +40,8 @@ jobs:
           context: pipeline
           tags: nope
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=linux-amd64
+          cache-to: type=gha,mode=max,scope=linux-amd64
 
       - name: Export example PDFs
         run: scripts/build-wiki-assets.sh

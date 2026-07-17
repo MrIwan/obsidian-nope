@@ -21,24 +21,22 @@ RUN printf 'flowchart LR\n  A-->B\n' > /tmp/smoke.mmd && \
     rm /tmp/smoke.mmd /tmp/smoke.png
 
 # Repo resolution is shared with build.sh via tlmgr-repo.sh (nope_tlmgr_repo).
-# kpsewhich at the end verifies the install: tlmgr can exit 0 without installing
-# and BuildKit would then cache the broken layer. Add new packages to this check.
+# update --self runs against the resolved repo before the install: the base
+# image's tlmgr lags behind CTAN (current year) or behind tlnet-final (frozen
+# year), and an outdated tlmgr refuses to install. `|| true` keeps a flaky
+# update from killing the build — the kpsewhich check at the end verifies the
+# install, because tlmgr can exit 0 without installing and BuildKit would then
+# cache the broken layer. Add new packages to this check.
 COPY app/scripts/tlmgr-repo.sh /usr/local/lib/nope/tlmgr-repo.sh
 RUN . /usr/local/lib/nope/tlmgr-repo.sh && repo="$(nope_tlmgr_repo)" && \
-    { tlmgr --repository "$repo" install \
+    { tlmgr --repository "$repo" update --self || true; } && \
+    tlmgr --repository "$repo" install \
         glossaries \
         ragged2e \
         awesomebox \
         svg \
         background \
-        setspace || \
-      { tlmgr update --self && tlmgr install \
-        glossaries \
-        ragged2e \
-        awesomebox \
-        svg \
-        background \
-        setspace; }; } && \
+        setspace && \
     kpsewhich ragged2e.sty glossaries.sty awesomebox.sty svg.sty background.sty setspace.sty
 ENTRYPOINT []
 WORKDIR /build
