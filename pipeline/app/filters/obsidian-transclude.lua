@@ -1,7 +1,12 @@
--- Recursively expand ![[Note]] and ![[Image]] embeds; resolve wikilinks to embedded targets.
--- Supports heading slices (#Heading), block IDs (#^block-id) and image figures with captions.
--- Frontmatter-driven wraps: latex-env (theorem/table/mermaid), auto-heading-shift, glossary terms.
--- After expansion, wikilinks resolve to \autoref (default display) or \hyperref (custom text).
+--- Expand ![[Note]] and ![[Image]] embeds and resolve wikilinks to numbered refs.
+-- The first and heaviest pipeline filter. Three phases: expand embeds and fill
+-- available_targets, transclude a wikilink abstract, then resolve wikilinks on
+-- the expanded AST and flush glossary entries. Handles heading and block-id
+-- slices, image figures, auto-heading-shift and the latex-env wraps (theorem
+-- family, table, math, mermaid, tikz).
+-- Cross-file invariants (passive-embed rewrite mirrored in build.sh, citeproc
+-- flag order) live in ARCHITECTURE.md.
+-- @module obsidian-transclude
 
 local image_exts = {
   png=true, jpg=true, jpeg=true, gif=true, svg=true,
@@ -335,6 +340,8 @@ local MATH_ENVS = {
 }
 
 -- Register embed target with label prefix; set autoref for default-display links ("Equation N" etc.).
+--- Register a note as a cross-reference target with a label prefix.
+-- no_autoref keeps the anchor but excludes it from \autoref (unnumbered envs).
 local function register_target(notename, label_prefix, no_autoref)
   local label = label_prefix .. ":" .. sanitize_label_id(notename)
   local first_embed = (available_targets[notename] == nil)
@@ -382,6 +389,7 @@ local function is_tikz_code(b)
 end
 
 -- Wrap first DisplayMath block in LaTeX equation environment with label.
+--- Wrap a one-block display-math note in \begin{<env>}\label{eq:X}...\end{<env>}.
 local function wrap_math(notename, env_name, sliced, doc_meta)
   local label, first_embed = register_target(notename, "eq")
   local annotated = annotate_with_labels(sliced, notename, true)
@@ -473,6 +481,8 @@ local function render_fit_table(table_block, caption_inlines, label, first_embed
 end
 
 -- Attach frontmatter caption and label to table; caption required in frontmatter.
+--- Wrap a table note. longtable:true keeps the Pandoc longtable, false renders a
+-- shrink-to-fit booktabs tabular. A missing caption is a hard error.
 local function wrap_table(notename, env_name, sliced, doc_meta)
   local caption_inlines = meta_to_inlines(doc_meta.caption)
   if not caption_inlines or #caption_inlines == 0 then
@@ -519,6 +529,7 @@ local function wrap_table(notename, env_name, sliced, doc_meta)
 end
 
 -- Render mermaid diagram to PNG figure with frontmatter caption, scale and width hints.
+--- Render the note's mermaid fence to a cached PNG and wrap it as a numbered figure.
 local function wrap_mermaid(notename, env_name, sliced, doc_meta)
   local caption_inlines = meta_to_inlines(doc_meta.caption)
   if not caption_inlines or #caption_inlines == 0 then
@@ -554,6 +565,8 @@ local function wrap_mermaid(notename, env_name, sliced, doc_meta)
     img_attrs["width"] = pandoc.utils.stringify(width_meta)
   end
 
+  -- png_abs must stay absolute: the mermaid work dir is not on Pandoc's resource
+  -- path, so a relative src would make the LaTeX writer drop the image.
   -- Alt-text from note name; flows into \includegraphics accessibility metadata.
   local img = pandoc.Image(
     { pandoc.Str(notename) },
@@ -591,6 +604,7 @@ local function collect_tikz_preamble(text)
 end
 
 -- Render a latex-env: tikz note as a native, numbered vector figure.
+--- Hoist the tikz block's preamble and wrap the picture as a numbered figure.
 local function wrap_tikz(notename, env_name, sliced, doc_meta)
   local caption_inlines = meta_to_inlines(doc_meta.caption)
   if not caption_inlines or #caption_inlines == 0 then
@@ -664,6 +678,8 @@ local function build_meta_defs(doc_meta)
   return table.concat(parts)
 end
 
+--- Default wrap for theorem-family and custom amsthm envs. Forwards non-reserved
+-- frontmatter keys as \nope<key> macros inside a \begingroup scope.
 local function wrap_block(notename, env_name, sliced, doc_meta)
   local env_short = doc_meta["latex-short"]
     and pandoc.utils.stringify(doc_meta["latex-short"]) or nil
@@ -789,6 +805,9 @@ local function flush_glossary_entries(doc)
 end
 
 -- Load and process a note embed; handle slicing, shifting and env wraps.
+--- Load, slice and wrap an embedded note, dispatching on its latex-env. Applies
+-- auto-heading-shift and recurses into nested embeds. The core embed path.
+-- @tparam string src wikilink target, optional #anchor @tparam integer host_level
 local function load_note(src, host_level)
   host_level = host_level or 0
   local notename, anchor_type, anchor_value = parse_anchor(src)
@@ -904,6 +923,7 @@ local function extract_width_hint(inlines)
   return inlines, nil
 end
 
+--- Recognize a single-image figure, append \label{fig:X} and register it as a target.
 local function register_image_figure(figure_block)
   if figure_block.t ~= "Figure" or #figure_block.content ~= 1 then return nil end
   local inner = figure_block.content[1]
@@ -952,6 +972,7 @@ local function register_image_figure(figure_block)
   return figure_block
 end
 
+--- Expand every ![[...]] embed found in a paragraph, in place.
 local function process_para(el, host_level)
   host_level = host_level or 0
   local has = false
@@ -1026,6 +1047,8 @@ local function is_wikilink_like(target)
 end
 
 -- Resolve wikilinks: glossary → \gls{}, embed targets → \autoref/\hyperref, else plain text.
+--- Resolve a [[...]] link. Precedence: glossary, citation, embed target
+-- (\autoref or \hyperref), then plain-text fallback for non-embedded notes.
 local function resolve_wikilink(link)
   if not is_wikilink_like(link.target) then return nil end
 
@@ -1098,6 +1121,7 @@ local function meta_solo_wikilink(meta_value)
 end
 
 -- Expand a solo-wikilink abstract into the target note's blocks.
+--- If the abstract frontmatter is a solo wikilink, transclude that note as the abstract.
 local function expand_abstract(meta)
   if not meta.abstract then return end
   local target = meta_solo_wikilink(meta.abstract)
@@ -1118,6 +1142,8 @@ local function resolve_abstract_links(meta)
 end
 
 -- Main entry: expand embeds, resolve wikilinks, flush glossary entries.
+--- Entry point. Phase 1 expand embeds, 1b abstract, 2 resolve wikilinks,
+-- 3 flush glossary entries into header-includes.
 function Pandoc(doc)
   -- numbersections drives numbered cross-references: when section numbering is on,
   -- references to embedded headings resolve to \autoref ("Chapter 2", "Section 2.1");

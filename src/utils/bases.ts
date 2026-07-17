@@ -1,5 +1,9 @@
-// Bases-Embed support. A base embed ![[X.base#view]] is content; 
-// the containing note's latex-env decides the wrap: `table` → rendered table, else → transclusion 
+/**
+ * Bases embed support. A ![[X.base#view]] embed is content, resolved through the
+ * real Bases engine (needs the Obsidian API, so this stays in TS). The containing
+ * note's latex-env decides the wrap: table gives a rendered table, otherwise a
+ * transclusion. Freezes `this` context into the query before a headless mount.
+ */
 
 import {
 	App,
@@ -46,7 +50,7 @@ class NopeExportView extends BasesView {
 	}
 }
 
-// Register the capturing view; no-op effect if the core Bases plugin is disabled.
+/** Register the capturing view; no-op effect if the core Bases plugin is disabled. */
 export function registerBasesExportView(plugin: Plugin): void {
 	registered = plugin.registerBasesView(VIEW_ID, {
 		name: 'NOPE export',
@@ -347,7 +351,7 @@ async function ensureTempBase(app: App, content: string): Promise<TFile> {
 	return app.vault.create(TEMP_BASE_PATH, content);
 }
 
-// Walk the embed graph from the export file
+/** Walk the embed graph from the export file */
 export async function prepareBases(app: App, file: TFile, workDir: string): Promise<string[]> {
 	const extraDeps = new Set<string>();
 	const visited = new Set<string>();

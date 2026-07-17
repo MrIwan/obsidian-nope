@@ -1,8 +1,10 @@
+/** Command: export the active note to PDF. */
 import { Notice, TFile } from 'obsidian';
 import type NopePlugin from '../main';
 import { ProgressNotice } from '../utils/progress';
 import { runExport } from '../utils/export';
 
+/** Register the "Export active note to PDF" command. */
 export function registerExportCommand(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'export-active-note',

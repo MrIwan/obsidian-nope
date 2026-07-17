@@ -9,13 +9,9 @@ toc: true
 numbersections: true
 ---
 
-`book: true` switches to the book class (`scrbook`): `#` becomes a **part**, `##` a **chapter**, `###` a **section**.
-
-**Toggle the numbering:** `numbersections: true` in the frontmatter above numbers parts, chapters and sections (Part I, 1 Chapter, 1.1 Section) — and, with the same switch, turns cross-references into numbered references ("Chapter 2") instead of plain jump links. Set it to `false` (or delete the line) and export → no numbers and plain jump links. Control the depth with `secnumdepth:` (default 5, i.e. down to the finest level).
-
 # Foundations
 
-Introduction to the first part. The embedded atomic notes below become chapters automatically, because they sit under a `#` part. 
+Introduction to the first part.
 
 ![[book-chapter-intro]]
 
@@ -25,4 +21,4 @@ Introduction to the first part. The embedded atomic notes below become chapters 
 
 ## Cross-references
 
-With `numbersections: true` these links resolve to numbered references: see [[book-chapter-intro]] and [[book-chapter-methods]]. With numbering off they would stay plain jump links showing the note title as text. 
+See [[book-chapter-intro]] and [[book-chapter-methods]].

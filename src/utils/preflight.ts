@@ -1,4 +1,4 @@
-// Chained status checks for the settings tab: CLI -> daemon -> image.
+/** Chained Docker status checks for the settings tab: CLI, then daemon, then image. */
 
 import { execFile, ExecException } from 'child_process';
 import type { PreflightResults, PreflightCheckResult } from '../types';
@@ -22,8 +22,11 @@ function execFilePromise(cmd: string, args: string[], timeout = 5000): Promise<{
 	});
 }
 
-// Checks form a dependency chain; a failed stage marks later stages as skipped
-// so the UI can show "fix this first" instead of three unrelated errors.
+/**
+ * Run the CLI, daemon and image checks in order. A failed stage marks later
+ * stages skipped so the UI shows "fix this first" instead of unrelated errors.
+ * @returns the check results with an all_passed flag
+ */
 export async function runPreflightChecks(): Promise<PreflightResults> {
 	const checks: PreflightCheckResult[] = [];
 	const bin = getDockerBin();

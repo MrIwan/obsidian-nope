@@ -1,3 +1,4 @@
+/** The settings tab and the default settings. */
 import { App, ButtonComponent, Notice, PluginSettingTab, Setting, SettingGroup, TextComponent } from 'obsidian';
 import type { SettingDefinition, SettingDefinitionItem } from 'obsidian';
 import { remote } from 'electron';
@@ -10,6 +11,7 @@ import { getPluginAbsoluteDir, getVaultAbsolutePath } from './utils/paths';
 import { cleanupBuild, installAiSkill, removeDockerImage } from './commands/maintenance';
 import { getSkillStatus, type SkillStatus } from './utils/skill';
 
+/** Default plugin settings. */
 export const DEFAULT_SETTINGS: NopeSettings = {
 	outputPath: '',
 	autoOpenPdf: false,
@@ -28,6 +30,11 @@ const USE_PREBUILT_DESC =
 const IMAGE_TAG_DESC =
 	'Prebuilt image only. Empty = tag matching the plugin version. Set a specific tag (e.g. test-x) to try a CI build without a release.';
 
+/**
+ * The NOPE settings tab: preflight chips, Docker path and image controls, the AI
+ * skill status and the general toggles. Implements getSettingDefinitions() (Obsidian
+ * 1.13+) plus a display() fallback. Both must be patched when settings change.
+ */
 export class NopeSettingTab extends PluginSettingTab {
 	plugin: NopePlugin;
 	// Shared across render callbacks so docker actions can re-run the preflight chain.

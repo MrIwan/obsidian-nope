@@ -1,4 +1,4 @@
-// Manage AI conventions skill installation and versioning in the vault.
+/** Manage the AI conventions skill: install it into the vault and report its status. */
 
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
@@ -16,7 +16,7 @@ export function getSkillTargetPath(vaultPath: string): string {
 	return join(vaultPath, SKILL_RELATIVE_TARGET);
 }
 
-// Compare source and installed skill; return 'missing', 'outdated', or 'current'.
+/** Compare source and installed skill. Returns 'missing', 'outdated' or 'current'. */
 export function getSkillStatus(pluginDir: string, vaultPath: string): SkillStatus {
 	const source = getSkillSourcePath(pluginDir);
 	const target = getSkillTargetPath(vaultPath);
@@ -25,7 +25,7 @@ export function getSkillStatus(pluginDir: string, vaultPath: string): SkillStatu
 	return readFileSync(source).equals(readFileSync(target)) ? 'current' : 'outdated';
 }
 
-// Install or update skill in vault; overwrites existing file.
+/** Install or update the skill in the vault, overwriting any existing file. Throws if the source is missing. */
 export function installSkill(pluginDir: string, vaultPath: string): void {
 	const source = getSkillSourcePath(pluginDir);
 	const target = getSkillTargetPath(vaultPath);

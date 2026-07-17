@@ -1,5 +1,8 @@
---   %%text%%   --> removed
---   ==text==   --> wrapped in \nopehl{...} (default: soul \hl, injected below).
+--- Inline markup: strip %%comments%% and wrap ==highlights== in \nopehl{}.
+-- %%text%% is removed and works across blank lines and blocks. ==text== becomes
+-- \nopehl{...} (default soul \hl, guarded-injected below), paragraph-scoped.
+-- An unbalanced == is reverted to a literal. Runs after strip-unsupported.
+-- @module obsidian-inline
 
 local doc_state = { hidden = false }
 local has_highlight = false
@@ -20,6 +23,9 @@ local function recurse_inline(inline)
 	return inline
 end
 
+--- Walk a list of inlines, dropping %% comments and wrapping == highlights.
+-- @tparam table inlines
+-- @treturn table rewritten inlines
 process_inlines = function(inlines)
 	local out = {}
 	local marked = nil  -- nil = not buffering a highlight, table = buffering
@@ -110,6 +116,9 @@ end
 local process_block  -- forward declaration
 local walk_blocks
 
+--- Apply the inline processing to every block recursively.
+-- @tparam table blocks
+-- @treturn table
 walk_blocks = function(blocks)
 	local out = {}
 	for _, block in ipairs(blocks) do

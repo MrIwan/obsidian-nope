@@ -1,3 +1,4 @@
+/** Filesystem path helpers: plugin dir, vault root and the resolved PDF output path. */
 import { App, FileSystemAdapter, Plugin } from 'obsidian';
 import { homedir } from 'os';
 import { basename, dirname, join } from 'path';
@@ -9,7 +10,7 @@ declare module 'obsidian' {
 	}
 }
 
-// Resolve plugin directory absolute path.
+/** Absolute path to the plugin directory. Throws if the adapter is not a FileSystemAdapter. */
 export function getPluginAbsoluteDir(plugin: Plugin): string {
 	const adapter = plugin.app.vault.adapter;
 	if (!(adapter instanceof FileSystemAdapter)) {
@@ -25,7 +26,7 @@ export function getPluginAbsoluteDir(plugin: Plugin): string {
 	return join(basePath, plugin.app.vault.configDir, 'plugins', plugin.manifest.id);
 }
 
-// Resolve vault root directory absolute path.
+/** Absolute path to the vault root. Throws if the adapter is not a FileSystemAdapter. */
 export function getVaultAbsolutePath(app: App): string {
 	const adapter = app.vault.adapter;
 	if (!(adapter instanceof FileSystemAdapter)) {
@@ -34,7 +35,11 @@ export function getVaultAbsolutePath(app: App): string {
 	return adapter.getBasePath();
 }
 
-// Resolve final PDF output path; supports ~, absolute and vault-relative paths.
+/**
+ * Resolve the final PDF output path from the configured outputPath.
+ * Supports ~, absolute and vault-relative forms. Appends the filename when the
+ * path is a directory, saves next to the source note when the path is empty.
+ */
 export function resolveOutputPath(
 	outputPath: string,
 	sourceNoteAbsPath: string,

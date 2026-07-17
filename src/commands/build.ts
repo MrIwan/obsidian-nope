@@ -1,8 +1,10 @@
+/** Commands to build the Docker pipeline image, with and without cache. */
 import type NopePlugin from '../main';
 import { buildImage } from '../utils/docker';
 import { getPluginAbsoluteDir } from '../utils/paths';
 import { ProgressNotice, parseBuildStep } from '../utils/progress';
 
+/** Register the "Build docker image (with cache)" command. */
 export function registerBuildCommand(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'build-docker-image',
@@ -13,6 +15,7 @@ export function registerBuildCommand(plugin: NopePlugin): void {
 	});
 }
 
+/** Register the "Build docker image (no cache)" command. */
 export function registerBuildCommandnoCache(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'build-docker-image-no-cache',

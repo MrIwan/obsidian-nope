@@ -1,7 +1,15 @@
--- Strip characters the pdflatex engine can't typeset (emoji & pictographs)
+--- Strip characters the pdflatex engine cannot typeset (emoji and pictographs).
+-- Runs after obsidian-transclude and before inline and callouts, so it also
+-- covers meta-inlines like title and caption. A run of codepoints counts as one
+-- symbol and the count is reported via ">>> NOPE-STRIPPED N" on stderr.
+-- Task-list checkboxes and mapped Unicode (Greek, math operators) are kept.
+-- @module strip-unsupported
 
 local removed = 0
 
+--- Test whether a codepoint sits in a strip range (emoji, pictographs, arrows).
+-- @tparam integer cp
+-- @treturn boolean
 local function should_strip(cp)
   -- Keep task-list checkboxes ☐/☑/☒ — Pandoc renders them as $\square$ etc. (amssymb)
   if cp >= 0x2610 and cp <= 0x2612 then return false end
@@ -14,6 +22,9 @@ local function should_strip(cp)
     or cp == 0x20E3                           -- combining enclosing keycap
 end
 
+--- Remove strippable codepoints from a string, counting removed runs.
+-- @tparam string s
+-- @treturn string
 local function strip(s)
   -- Fast path: nothing multi-byte means pure ASCII, nothing to strip.
   if not s:find("[\194-\244]") then return s end

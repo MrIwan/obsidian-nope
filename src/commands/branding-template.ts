@@ -1,4 +1,4 @@
-// Generate branding template file with documented frontmatter keys.
+/** Command: scaffold a branding template note in the vault from the bundled source. */
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -10,6 +10,7 @@ const TEMPLATE_FILENAME = 'Branding-Template.md';
 // Source of truth lives on disk (bundled + materialized by ensureBundledAssets).
 const TEMPLATE_SOURCE = join('resources', 'branding-template.md');
 
+/** Register the "Create branding template" command. */
 export function registerBrandingTemplateCommand(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'create-branding-template',

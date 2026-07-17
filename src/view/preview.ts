@@ -1,5 +1,8 @@
-// PDF preview view: renders the active note via the export pipeline and shows the build PDF inline.
-// Auto mode watches the dependency set from the last render and re-renders on changes.
+/**
+ * PDF preview view. Renders the active note through the export pipeline and shows
+ * the build PDF inline via pdf.js. Auto mode watches the dependency set from the
+ * last render and re-renders on changes. Also does editor-to-PDF and click-to-open sync.
+ */
 
 import { ItemView, Keymap, MarkdownView, Menu, Notice, TFile, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
 import type { App, Debouncer, Editor, ViewStateResult } from 'obsidian';
@@ -22,6 +25,7 @@ pdfjsLib.GlobalWorkerOptions.workerPort = new Worker(
 	{ type: 'module' },
 );
 
+/** View type id for the PDF preview leaf. */
 export const NOPE_PREVIEW_VIEW_TYPE = 'nope-pdf-preview';
 
 const RENDER_DEBOUNCE_MS = 3000;
@@ -65,6 +69,7 @@ function destTop(dest: unknown[]): number | null {
 	return typeof v === 'number' ? v : null;
 }
 
+/** The PDF preview view: pipeline render, inline pdf.js display, auto-render and two-way editor sync. */
 export class NopePreviewView extends ItemView {
 	private plugin: NopePlugin;
 	private filePath: string | null = null;
@@ -1000,6 +1005,7 @@ export class NopePreviewView extends ItemView {
 	}
 }
 
+/** Register the "Open PDF preview" command. */
 export function registerPreviewCommand(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'open-pdf-preview',
@@ -1036,6 +1042,7 @@ export function registerPreviewCommand(plugin: NopePlugin): void {
 	});
 }
 
+/** Register the "Toggle click-to-open in PDF preview" command. */
 export function registerPreviewClickOpenToggleCommand(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'toggle-preview-click-open',

@@ -1,7 +1,7 @@
 # Introduction
 
-An atomic chapter note. Its H1 becomes a `\chapter` via auto-heading-shift when embedded under a part (`#`).
+An atomic chapter note.
 
 ## Motivation
 
-A subsection of this note — rendered as a `\section` in the book (e.g. "1.1").
+A subsection of this note.

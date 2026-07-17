@@ -1,10 +1,26 @@
 #!/bin/bash
-# build.sh — Obsidian Markdown to PDF via Pandoc + LaTeX
-# Runs in container with mounts: /app (templates/assets), /vault (vault), /build (output)
+# build.sh: Obsidian Markdown to PDF via Pandoc and LaTeX. Orchestrates the export.
+# Runs in the container with mounts /app (templates and assets), /vault, /build (output).
 # Usage: docker compose run --rm pipeline /app/scripts/build.sh <path-relative-to-vault>
+#
+# Stages, in order:
+#   1. rewrite passive embeds +[[...]] to ![[...]] on the top-level file
+#      (also done in obsidian-transclude.lua for nested notes, keep both in sync)
+#   2. nope-prepare.lua pass: template, branding, bibliography, citation notes, tlmgr
+#   3. main pandoc pass with strip-unsupported, obsidian-transclude, obsidian-inline,
+#      callouts, obsidian-codeblocks (order matters)
+#   4. citeproc flags come AFTER the lua-filter flags, else embed citations are missed
+#   5. latexmk to PDF, then copy the PDF to the output path
+# See ARCHITECTURE.md for the cross-file invariants.
 
 set -e
+# UTF-8 locale must be set before the first pandoc or lua call. The container
+# defaults to POSIX, where pandoc mangles non-ASCII argv: umlaut paths become
+# U+FFFD and their embeds are not found. Keep this line here, above everything.
 export LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+# Shared tlmgr historic-repo resolution (also used by the Dockerfile base layer).
+. "$(dirname "$0")/tlmgr-repo.sh"
 
 INPUT="$1"
 
@@ -88,9 +104,7 @@ install_tlmgr_packages() {
   [[ -n "${missing// /}" ]] || return 0
   echo ">>> Installing LaTeX packages:$missing"
   timer_start
-  # Same historic-repo logic as the Dockerfiles' base package layer — keep in sync.
-  year=$(tlmgr version | sed -n 's/.*version \([0-9]\{4\}\).*/\1/p')
-  repo="https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${year}/tlnet-final"
+  repo="$(nope_tlmgr_repo)"
   [[ -d "$TEXMFHOME/tlpkg" ]] || tlmgr init-usertree >/dev/null 2>&1 || true
   tlmgr --usermode --repository "$repo" install $missing ||
     tlmgr --usermode install $missing ||

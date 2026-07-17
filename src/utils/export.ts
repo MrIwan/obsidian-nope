@@ -1,4 +1,8 @@
-// Reusable export pipeline shared by the export command and the (future) preview view.
+/**
+ * The reusable export pipeline, shared by the export command and the preview view.
+ * Orchestrates asset extraction, Docker readiness, the optional image build, the
+ * container prepare step and the pipeline run, then copies out the PDF.
+ */
 
 import { Notice, TFile, normalizePath } from 'obsidian';
 import { shell } from 'electron';
@@ -11,13 +15,14 @@ import { PhaseTimer, appendTimerCsv, parseBuildStep, parsePipelinePhase, parsePi
 import { prepareBases } from './bases';
 import { ensureBundledAssets } from './assets';
 
-// Minimal progress surface; ProgressNotice satisfies it, the preview view brings its own.
+/** Minimal progress surface. ProgressNotice satisfies it, the preview view brings its own. */
 export interface ProgressReporter {
 	update(message: string): void;
 	succeed(message: string): void;
 	fail(message: string): void;
 }
 
+/** Options for a single export run. */
 export interface ExportOptions {
 	reporter: ProgressReporter;
 	/** Overrides settings.keepLatexIntermediates when set. */
@@ -28,10 +33,15 @@ export interface ExportOptions {
 	openPdf?: boolean;
 }
 
+/** Result of an export run: paths and dependency list on success. */
 export type ExportResult =
 	| { ok: true; pdfPath: string; destPath: string | null; workDir: string; deps: string[] }
 	| { ok: false; deps?: string[] };
 
+/**
+ * Run one export end to end for the given note.
+ * @returns the PDF path, destination and dependency list on success, ok:false otherwise
+ */
 export async function runExport(plugin: NopePlugin, file: TFile, opts: ExportOptions): Promise<ExportResult> {
 	const { reporter } = opts;
 	const copyToDestination = opts.copyToDestination ?? true;

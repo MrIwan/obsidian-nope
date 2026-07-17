@@ -1,7 +1,9 @@
-// Scaffold command for latex-env atomic notes: one "Add structured note" command
-// opens a picker with all note types; the chosen template creates a note with the
-// correct frontmatter + body skeleton and inserts an embed/ref at the cursor.
-// A text selection becomes the note body instead of the skeleton (extract-to-note).
+/**
+ * Scaffold command for latex-env atomic notes. "Add structured note" opens a
+ * picker with all note types. The chosen template creates a note with the right
+ * frontmatter and a body skeleton, then inserts an embed or ref at the cursor.
+ * A text selection becomes the note body instead of the skeleton (extract-to-note).
+ */
 
 import { Editor, FuzzySuggestModal, MarkdownFileInfo, MarkdownView, Notice, TFile, normalizePath } from 'obsidian';
 import type NopePlugin from '../main';
@@ -249,6 +251,7 @@ class EnvTemplateModal extends FuzzySuggestModal<EnvTemplate> {
 	}
 }
 
+/** Register the "Add structured note" command that opens the note-type picker. */
 export function registerEnvTemplateCommands(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'add-env-note',

@@ -1,4 +1,8 @@
-// Extract bundled pipeline/ + skill/ files to disk.
+/**
+ * Extract the bundled pipeline/ and skill/ files to disk.
+ * They ship base64-encoded in src/generated and are materialized into the
+ * plugin folder on load, once per plugin version.
+ */
 
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
@@ -6,7 +10,7 @@ import { BUNDLED_ASSETS } from '../generated/bundled-assets';
 
 const VERSION_MARKER = '.bundled-assets-version';
 
-// Write bundled assets into pluginDir unless they are already current for this plugin version.
+/** Write the bundled assets into pluginDir unless already current for this version. */
 export function ensureBundledAssets(pluginDir: string, version: string): void {
 	const markerPath = join(pluginDir, VERSION_MARKER);
 

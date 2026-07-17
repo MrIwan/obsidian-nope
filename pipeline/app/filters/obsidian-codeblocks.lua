@@ -1,7 +1,8 @@
--- Code fence dispatch, runs after obsidian-transclude (embeds expanded) and
--- strip-unsupported (emoji already removed from fence text before it turns raw):
--- ```latex passes through unchanged, identifiers declared via nope-blocks become
--- generic environments with key:value macros, everything else stays a code fence.
+--- Code fence dispatch. Runs after obsidian-transclude (embeds expanded) and
+-- strip-unsupported (emoji removed before a fence turns raw). A ```latex fence
+-- passes through unchanged, an identifier declared in nope-blocks becomes a
+-- generic environment with \nope<key> macros, everything else stays a fence.
+-- @module obsidian-codeblocks
 
 local declared = {}
 
@@ -11,6 +12,8 @@ local function meta_escape(s)
 end
 
 -- Collect declared identifiers from merged metadata (_base.yml < branding < doc); exact match, no case folding.
+--- Read nope-blocks from the merged doc meta into a set of declared identifiers.
+-- @treturn table set of identifier strings
 local function collect_declared(meta)
   local v = meta["nope-blocks"]
   if not v then return end
@@ -29,6 +32,9 @@ end
 --   <indented> subkey: value (inside an item) → \nope<key><N>-<subkey>
 --   <indented> text     → continuation, appended to the previous value
 -- Macros are scoped around \begin{<id>}, same access pattern as frontmatter forwarding.
+--- Render a declared fence body (YAML-lite) into a RawBlock: \nope<key> macros
+-- wrapped in \begin{id}...\end{id}. An unparsable line is a hard export error.
+-- @tparam string id @tparam string text @treturn table RawBlock
 local function render_command_block(id, text)
   local order, values = {}, {}
   local function fail(lineno, line)
@@ -96,6 +102,8 @@ local function render_command_block(id, text)
   return pandoc.RawBlock("latex", table.concat(parts, "\n"))
 end
 
+--- Dispatch a code block: latex passthrough, declared environment or untouched fence.
+-- @treturn table|nil replacement block, or nil to leave the fence as is
 local function dispatch(el)
   local id = el.classes[1]
   if not id then return nil end

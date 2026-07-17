@@ -1,6 +1,8 @@
--- Convert Obsidian callouts ([!type] Title \n> Content) to \begin{nopecallout}{<type>} blocks.
--- Type→awesomebox mapping lives in the injected LaTeX defaults below; a custom
--- template can predefine nopecallout to restyle callouts without touching Lua.
+--- Convert Obsidian callouts to \begin{nopecallout}{<type>} blocks.
+-- The type to awesomebox mapping lives in the injected LaTeX defaults below.
+-- A custom template can predefine nopecallout to restyle callouts without
+-- touching this filter. Runs after the transclude filter.
+-- @module callouts
 
 local has_callout = false
 
@@ -44,6 +46,8 @@ local CALLOUT_DEFS = [[
 \makeatother]]
 
 -- Detect a callout marker: expects a leading "[!type]" string.
+--- Read the [!type] marker from a blockquote's first line.
+-- @treturn string|nil lowercased type, or nil if not a callout
 local function parse_callout_marker(inlines)
   if #inlines == 0 then return nil end
   local first = inlines[1]
@@ -89,6 +93,8 @@ local function split_at_first_break(inlines)
   return title, rest
 end
 
+--- Turn a callout blockquote into a nopecallout environment.
+-- A plain blockquote without a marker is left untouched.
 function BlockQuote(el)
   if #el.content == 0 then return nil end
 

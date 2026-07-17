@@ -1,6 +1,6 @@
 # Methods
 
-A second chapter note. It also becomes a numbered chapter.
+A second atomic chapter note.
 
 ## Approach
 

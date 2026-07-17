@@ -1,9 +1,10 @@
-// Persistent, updatable notice
+/** Progress reporting: a persistent updatable notice, pipeline phase parsing and per-phase timing. */
 
 import { Notice } from 'obsidian';
 import { appendFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
+/** A persistent Notice whose message updates in place, then is replaced by an auto-hiding success or failure message. */
 export class ProgressNotice {
 	private notice: Notice;
 	private span!: HTMLSpanElement;
@@ -45,7 +46,7 @@ export class ProgressNotice {
 	}
 }
 
-// Map a chunk of pipeline output (build.sh / pandoc / latexmk) to a short human-readable phase label
+/** Map a chunk of pipeline output to a short human-readable phase label. */
 export function parsePipelinePhase(chunk: string): string | null {
 	let phase: string | null = null;
 	for (const line of chunk.split('\n')) {
@@ -67,7 +68,7 @@ export function parsePipelinePhase(chunk: string): string | null {
 	return phase;
 }
 
-// Parse ">>> NOPE-TIMING <label> <ms>" lines (emitted by build.sh) into per-phase durations.
+/** Parse ">>> NOPE-TIMING <label> <ms>" lines from build.sh into per-phase durations. */
 export function parsePipelineTimings(chunk: string): { label: string; ms: number }[] {
 	const out: { label: string; ms: number }[] = [];
 	for (const line of chunk.split('\n')) {
@@ -80,7 +81,7 @@ export function parsePipelineTimings(chunk: string): { label: string; ms: number
 	return out;
 }
 
-// Collects per-phase durations across one export and formats a compact one-line summary.
+/** Collect per-phase durations across one export and format a compact one-line summary. */
 export class PhaseTimer {
 	private readonly start = Date.now();
 	private last = this.start;
@@ -127,7 +128,7 @@ const TIMER_CSV_PHASES = [
 	'overhead',
 ] as const;
 
-// Append one row of per-phase timings to <buildDir>/timer.csv, writing the header on first use.
+/** Append one row of per-phase timings to <buildDir>/timer.csv, writing the header on first use. */
 export function appendTimerCsv(buildDir: string, document: string, timer: PhaseTimer): void {
 	const { marks, totalMs } = timer.snapshot();
 	const byLabel = new Map(marks.map((m) => [m.label, m.ms]));
@@ -149,7 +150,7 @@ export function appendTimerCsv(buildDir: string, document: string, timer: PhaseT
 	appendFileSync(csvFile, lines.join('\n') + '\n');
 }
 
-// Map docker BuildKit output to a short build-step label ("step 5/6: tlmgr …").
+/** Map docker BuildKit output to a short build-step label. */
 export function parseBuildStep(chunk: string): string | null {
 	let step: string | null = null;
 	for (const line of chunk.split('\n')) {

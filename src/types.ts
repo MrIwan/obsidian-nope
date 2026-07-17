@@ -1,4 +1,6 @@
+/** Shared settings and preflight type definitions. */
 
+/** Persisted plugin settings. */
 export interface NopeSettings {
 	/** Absolute or vault-relative path where the final PDF is copied after a successful build. */
 	outputPath: string;
@@ -11,6 +13,7 @@ export interface NopeSettings {
 	imageTag: string;
 }
 
+/** Outcome of a single preflight check. */
 export interface PreflightCheckResult {
 	name: string;
 	passed: boolean;
@@ -18,6 +21,7 @@ export interface PreflightCheckResult {
 	skipped?: boolean;
 }
 
+/** Aggregated result of a preflight run. */
 export interface PreflightResults {
 	all_passed: boolean;
 	checks: PreflightCheckResult[];

@@ -1,3 +1,4 @@
+/** Plugin entry point. Wires settings, assets, the preview view and all commands. */
 import { Notice, Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, NopeSettingTab } from './settings';
 import type { NopeSettings } from './types';
@@ -13,6 +14,11 @@ import { ensureBundledAssets } from './utils/assets';
 import { setDockerPathOverride, setImageTagOverride, setPluginVersion, setUsePrebuiltImage } from './utils/docker';
 import { registerBasesExportView } from './utils/bases';
 
+/**
+ * The NOPE plugin. Lifecycle only: load settings, materialize bundled assets,
+ * register the preview view, the commands and the settings tab. Feature logic
+ * lives in the command and util modules.
+ */
 export default class NopePlugin extends Plugin {
 	settings!: NopeSettings;
 

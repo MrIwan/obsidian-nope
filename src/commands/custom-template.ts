@@ -1,4 +1,4 @@
-// Copy the nope_minimal.tex starter into the vault as a custom-template base.
+/** Command: copy the nope_minimal.tex starter into the vault as a custom-template base. */
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -9,6 +9,7 @@ import { getPluginAbsoluteDir } from '../utils/paths';
 const TEMPLATE_FILENAME = 'nope_minimal.tex';
 const TEMPLATE_SOURCE = join('pipeline', 'app', 'template', 'nope_minimal.tex');
 
+/** Register the "Create custom LaTeX template" command. */
 export function registerCustomTemplateCommand(plugin: NopePlugin): void {
 	plugin.addCommand({
 		id: 'create-custom-latex-template',

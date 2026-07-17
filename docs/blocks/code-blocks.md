@@ -13,6 +13,9 @@ The middle one is the point of this page. You invent an identifier, declare it o
 
 ## How a custom block works
 
+!!! note "Needs a custom template"
+    Custom blocks only work with a custom LaTeX template. The environment a declared identifier renders to is defined there. See [Custom LaTeX templates](../styling/templates.md). The `latex` passthrough and plain fences work without one.
+
 Two steps:
 
 1. Declare the identifier in the document (or branding) frontmatter: `nope-blocks: [myblock]`. The pipeline now knows a ` ```myblock ` fence maps to a LaTeX environment called `myblock`.

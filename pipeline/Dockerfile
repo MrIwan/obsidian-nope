@@ -20,11 +20,11 @@ RUN printf 'flowchart LR\n  A-->B\n' > /tmp/smoke.mmd && \
     merman-cli render -i /tmp/smoke.mmd -o /tmp/smoke.png -b transparent -s 2 && \
     rm /tmp/smoke.mmd /tmp/smoke.png
 
-# CTAN serviert nur das aktuelle TL-Release — die gepinnte pandoc-Base braucht ihr
-# eingefrorenes Historic-Repo, CTAN bleibt Fallback solange das Release aktuell ist.
-# kpsewhich am Ende verifiziert die Installation.
-RUN year=$(tlmgr version | sed -n 's/.*version \([0-9]\{4\}\).*/\1/p') && \
-    repo="https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${year}/tlnet-final" && \
+# Repo resolution is shared with build.sh via tlmgr-repo.sh (nope_tlmgr_repo).
+# kpsewhich at the end verifies the install: tlmgr can exit 0 without installing
+# and BuildKit would then cache the broken layer. Add new packages to this check.
+COPY app/scripts/tlmgr-repo.sh /usr/local/lib/nope/tlmgr-repo.sh
+RUN . /usr/local/lib/nope/tlmgr-repo.sh && repo="$(nope_tlmgr_repo)" && \
     { tlmgr --repository "$repo" install \
         glossaries \
         ragged2e \

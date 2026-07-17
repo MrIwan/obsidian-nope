@@ -4,7 +4,7 @@ Custom templates often need LaTeX packages beyond the base image, like fonts, `p
 
 ```yaml
 ---
-nope-template: "[[my-template]]"
+nope-template: "[[my-template.tex]]"
 nope-tlmgr: [cancel, pgfplots]
 ---
 ```

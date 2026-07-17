@@ -1,4 +1,4 @@
-// Docker CLI wrapper and configuration.
+/** Docker CLI wrapper and configuration: binary detection, readiness, image freshness, build and run. */
 
 import { execFile, spawn } from 'child_process';
 import { createHash } from 'crypto';
@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { delimiter, join } from 'path';
 
 export const DOCKER_IMAGE_NAME = 'nope';
-// Label carrying the Dockerfile hash the image was built from (freshness check).
+/** Label carrying the Dockerfile hash the image was built from (freshness check). */
 export const IMAGE_HASH_LABEL = 'nope.image-hash';
 function dockerSearchDirs(): string[] {
 	switch (process.platform) {
@@ -26,14 +26,14 @@ function dockerSearchDirs(): string[] {
 	}
 }
 
-// Augment PATH so a bare `docker` and our candidate dirs resolve in Electron.
+/** Augment PATH so a bare `docker` and our candidate dirs resolve in Electron. */
 export function getDockerEnv(): typeof process.env {
 	const existingPath = process.env.PATH ?? '';
 	const newPath = [...dockerSearchDirs(), existingPath].filter(Boolean).join(delimiter);
 	return { ...process.env, PATH: newPath };
 }
 
-// Bare binary name; used as PATH fallback when no candidate or override matches.
+/** Bare binary name; used as PATH fallback when no candidate or override matches. */
 export const DOCKER_BIN = process.platform === 'win32' ? 'docker.exe' : 'docker';
 
 // User-configured docker path; set from settings on load and on change.
@@ -43,7 +43,7 @@ export function setDockerPathOverride(path: string): void {
 	dockerPathOverride = path.trim();
 }
 
-// Prebuilt image published by CI on tag pushes (docker-image.yml).
+/** Prebuilt image published by CI on tag pushes (docker-image.yml). */
 export const PREBUILT_IMAGE_REPO = 'ghcr.io/mriwan/nope-pipeline';
 
 // Prebuilt mode pulls from GHCR via Dockerfile.pull; off = full local build.
@@ -71,7 +71,7 @@ export function prebuiltImageTag(): string {
 	return imageTagOverride || pluginVersion;
 }
 
-// First existing candidate from the search dirs, or null if none exists.
+/** First existing candidate from the search dirs, or null if none exists. */
 export function detectDockerBin(): string | null {
 	for (const dir of dockerSearchDirs()) {
 		const candidate = join(dir, DOCKER_BIN);
@@ -80,8 +80,10 @@ export function detectDockerBin(): string | null {
 	return null;
 }
 
-// Resolution order: explicit override -> detected candidate -> bare name via PATH.
-// Resolved per call so install changes between runs are picked up.
+/**
+ * Resolution order: explicit override -> detected candidate -> bare name via PATH.
+ * Resolved per call so install changes between runs are picked up.
+ */
 export function getDockerBin(): string {
 	if (dockerPathOverride) return dockerPathOverride;
 	return detectDockerBin() ?? DOCKER_BIN;
@@ -98,7 +100,7 @@ function tryDocker(args: string[], timeout: number): Promise<boolean> {
 	});
 }
 
-// Verify Docker is usable before building/running
+/** Verify Docker is usable before building/running */
 export async function checkDockerReady(): Promise<DockerReadiness> {
 	if (!(await tryDocker(['--version'], 4000))) {
 		return {
@@ -116,7 +118,7 @@ export async function checkDockerReady(): Promise<DockerReadiness> {
 	return { ok: true };
 }
 
-// Check if the Docker image exists.
+/** Check if the Docker image exists. */
 export async function imageExists(): Promise<boolean> {
 	return new Promise<boolean>((resolve) => {
 		const proc = execFile(
@@ -131,8 +133,10 @@ export async function imageExists(): Promise<boolean> {
 	});
 }
 
-// Short hash of the image-relevant inputs — a change makes the image stale and triggers a rebuild.
-// Prebuilt mode: registry tag; local build: Dockerfile content.
+/**
+ * Short hash of the image-relevant inputs — a change makes the image stale and triggers a rebuild.
+ * Prebuilt mode: registry tag; local build: Dockerfile content.
+ */
 export function pipelineImageHash(pluginDir: string): string {
 	try {
 		const source: string | Uint8Array = usePrebuiltImage
@@ -164,14 +168,14 @@ function builtImageHash(): Promise<string | null> {
 
 export type ImageStatus = 'missing' | 'stale' | 'current';
 
-// Present and built from the current Dockerfile? 'stale' also covers pre-label images.
+/** Present and built from the current Dockerfile? 'stale' also covers pre-label images. */
 export async function imageStatus(pluginDir: string): Promise<ImageStatus> {
 	const built = await builtImageHash();
 	if (built === null) return 'missing';
 	return built === pipelineImageHash(pluginDir) ? 'current' : 'stale';
 }
 
-// Remove the Docker image.
+/** Remove the Docker image. */
 export async function removeImage(): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		execFile(
@@ -183,7 +187,7 @@ export async function removeImage(): Promise<void> {
 	});
 }
 
-// Delete build artifacts but preserve the build/ directory structure.
+/** Delete build artifacts but preserve the build/ directory structure. */
 export function cleanupBuildFolder(pluginDir: string): number {
 	const buildDir = join(pluginDir, 'pipeline', 'build');
 	if (!existsSync(buildDir)) return 0;
@@ -194,13 +198,15 @@ export function cleanupBuildFolder(pluginDir: string): number {
 	return entries.length;
 }
 
-// Remove per-document build directory and LaTeX intermediates after successful export.
+/** Remove per-document build directory and LaTeX intermediates after successful export. */
 export function cleanupIntermediates(workDir: string): void {
 	rmSync(workDir, { recursive: true, force: true });
 }
 
-// Build Docker image; logs written to build/last-build.log.
-// `onOutput` receives every stdout/stderr chunk for live progress reporting.
+/**
+ * Build Docker image; logs written to build/last-build.log.
+ * `onOutput` receives every stdout/stderr chunk for live progress reporting.
+ */
 export async function buildImage(
 	pluginDir: string,
 	noCache: boolean = false,
@@ -260,8 +266,10 @@ export async function buildImage(
 	});
 }
 
-// Run the export pipeline for a given markdown file.
-// `onOutput` receives every stdout/stderr chunk for live progress reporting.
+/**
+ * Run the export pipeline for a given markdown file.
+ * `onOutput` receives every stdout/stderr chunk for live progress reporting.
+ */
 export async function runPipeline(
 	pluginDir: string,
 	vaultPath: string,

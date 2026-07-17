@@ -1,4 +1,5 @@
--- nope-prepare.lua — container-side export preprocessing.
+--- nope-prepare.lua: container-side export preprocessing.
+-- @module nope-prepare
 --
 -- Runs as a lightweight pandoc pass BEFORE the main conversion (see build.sh):
 -- it materializes into $NOPE_WORK_DIR exactly the fixed-name files the main
@@ -138,6 +139,9 @@ end
 -- Custom template (nope-template)
 -- ============================================================================
 
+--- Resolve nope-template (doc or branding frontmatter) and copy it to
+-- $WORK/custom-template.tex. Aborts if the referenced template is not found.
+-- @tparam table doc_meta @tparam table branding_meta
 local function prepare_template(doc_meta, branding_meta)
   local linkpath = meta_linkpath(doc_meta["nope-template"])
   if not linkpath and branding_meta then
@@ -173,6 +177,9 @@ end
 -- Bibliography (bibliography / csl)
 -- ============================================================================
 
+--- Resolve bibliography and csl, copy them into $WORK. A preinstalled
+-- /app/csl/<name>.csl wins over a vault file. Aborts on a missing file.
+-- @tparam table doc_meta
 local function prepare_bibliography(doc_meta)
   local raw = doc_meta["bibliography"]
   if raw == nil then return end
@@ -236,6 +243,9 @@ local function parse_logo_inner(inner)
   return strip_link_extras(inner), nil
 end
 
+--- Resolve nope-branding, expand logo wikilinks and asset paths, then write
+-- $WORK/branding-override.yml. Assets are copied into $WORK/branding/.
+-- @tparam table doc_meta
 local function prepare_branding(doc_meta)
   local raw = doc_meta["nope-branding"]
   if raw == nil then return nil end
@@ -441,6 +451,9 @@ end
 
 -- Walk the link + embed graph from the export doc; collect every note with a
 -- citekey. Recurses into embedded md notes (mirrors the plugin's old BFS).
+--- Walk the link and embed graph for notes with a citekey and generate
+-- $WORK/references-notes.bib. Frontmatter is parsed as real YAML via note_meta.
+-- @tparam table doc_blocks
 local function prepare_citations(doc_blocks)
   local entries = {}       -- citekey → bibtex string
   local entry_keys = {}    -- stable output order
@@ -514,6 +527,8 @@ end
 -- Entry point
 -- ============================================================================
 
+--- Entry point. Run template, bibliography, branding and citation preparation
+-- against the document frontmatter and body. Returns the document unchanged.
 function Pandoc(doc)
   if not WORK or WORK == "" then
     fail("NOPE_WORK_DIR is not set — nope-prepare.lua must run via build.sh")

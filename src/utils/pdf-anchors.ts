@@ -1,8 +1,8 @@
-// Map source anchors (pandoc heading ids, filter labels) to PDF named destinations via the .aux file.
+/** Map source anchors (pandoc heading ids, filter labels) to PDF named destinations via the .aux file. */
 
 import { existsSync, readFileSync } from 'fs';
 
-// Replicate pandoc's auto_identifiers algorithm; verify against pandoc on major bumps.
+/** Replicate pandoc's auto_identifiers slug. Verify against pandoc on major version bumps. */
 export function pandocAutoIdentifier(text: string): string {
 	const cleaned = text
 		.replace(/[^\p{L}\p{N}\s_.-]/gu, '')
@@ -13,12 +13,12 @@ export function pandocAutoIdentifier(text: string): string {
 	return fromLetter === '' ? 'section' : fromLetter;
 }
 
-// Mirror of sanitize_label_id in obsidian-transclude.lua (lua %w is ASCII-only).
+/** Mirror of sanitize_label_id in obsidian-transclude.lua. */
 export function sanitizeLabelId(s: string): string {
 	return s.replace(/[^A-Za-z0-9_:-]/g, '_');
 }
 
-// \newlabel{<name>}{{num}{page}{title}{<dest>}{}} — title may nest braces, so anchor at line end.
+/** Parse \newlabel entries from the .aux into a name to destination map. First occurrence wins. */
 export function parseAuxDestinations(auxPath: string): Map<string, string> {
 	const map = new Map<string, string>();
 	if (!existsSync(auxPath)) return map;
